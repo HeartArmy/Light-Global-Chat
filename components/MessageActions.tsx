@@ -55,21 +55,21 @@ export default function MessageActions({
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-col gap-1 bg-opacity-90 backdrop-blur-sm rounded-lg p-1" style={{ background: 'var(--surface-elevated)' }}>
       {/* Reply Button */}
       <button
         onClick={onReply}
-        className="p-2 rounded transition-all duration-fast text-caption"
+        className="p-2 rounded-lg transition-all duration-fast text-caption hover:scale-110"
         style={{
-          background: 'var(--surface)',
+          background: 'transparent',
           color: 'var(--text-secondary)',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'var(--background)';
+          e.currentTarget.style.background = 'var(--surface)';
           e.currentTarget.style.color = 'var(--text-primary)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'var(--surface)';
+          e.currentTarget.style.background = 'transparent';
           e.currentTarget.style.color = 'var(--text-secondary)';
         }}
         title="Reply"
@@ -81,18 +81,22 @@ export default function MessageActions({
       <div className="relative">
         <button
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="p-2 rounded transition-all duration-fast text-caption"
+          className="p-2 rounded-lg transition-all duration-fast text-caption hover:scale-110"
           style={{
-            background: 'var(--surface)',
-            color: 'var(--text-secondary)' ,
+            background: showEmojiPicker ? 'var(--surface)' : 'transparent',
+            color: 'var(--text-secondary)',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--background)';
-            e.currentTarget.style.color = 'var(--text-primary)';
+            if (!showEmojiPicker) {
+              e.currentTarget.style.background = 'var(--surface)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--surface)';
-            e.currentTarget.style.color = 'var(--text-secondary)';
+            if (!showEmojiPicker) {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }
           }}
           title="React"
         >
@@ -100,12 +104,16 @@ export default function MessageActions({
         </button>
 
         {showEmojiPicker && (
-          <div className="absolute bottom-full mb-2 left-0 z-10">
-            <div className="flex flex-col gap-2">
+          <div className="fixed z-50" style={{ 
+            top: '50%', 
+            left: '50%', 
+            transform: 'translate(-50%, -50%)'
+          }}>
+            <div className="flex flex-col gap-2 shadow-2xl">
               <EmojiPicker mode="quick" onSelect={handleEmojiSelect} />
               <button
                 onClick={() => setShowExtendedPicker(!showExtendedPicker)}
-                className="px-3 py-1 text-caption rounded-sm transition-all duration-fast"
+                className="px-3 py-2 text-caption rounded-lg transition-all duration-fast"
                 style={{
                   background: 'var(--surface-elevated)',
                   border: '1px solid var(--border)',
@@ -126,17 +134,17 @@ export default function MessageActions({
       {isOwn && canEditDelete && (
         <button
           onClick={onEdit}
-          className="p-2 rounded transition-all duration-fast text-caption"
+          className="p-2 rounded-lg transition-all duration-fast text-caption hover:scale-110"
           style={{
-            background: 'var(--surface)',
+            background: 'transparent',
             color: 'var(--text-secondary)',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--background)';
+            e.currentTarget.style.background = 'var(--surface)';
             e.currentTarget.style.color = 'var(--text-primary)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--surface)';
+            e.currentTarget.style.background = 'transparent';
             e.currentTarget.style.color = 'var(--text-secondary)';
           }}
           title="Edit"
@@ -149,17 +157,17 @@ export default function MessageActions({
       {isOwn && canEditDelete && (
         <button
           onClick={onDelete}
-          className="p-2 rounded transition-all duration-fast text-caption"
+          className="p-2 rounded-lg transition-all duration-fast text-caption hover:scale-110"
           style={{
-            background: 'var(--surface)',
+            background: 'transparent',
             color: 'var(--text-secondary)',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--background)';
+            e.currentTarget.style.background = 'var(--surface)';
             e.currentTarget.style.color = 'var(--error)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--surface)';
+            e.currentTarget.style.background = 'transparent';
             e.currentTarget.style.color = 'var(--text-secondary)';
           }}
           title="Delete"
