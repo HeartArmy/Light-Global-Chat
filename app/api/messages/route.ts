@@ -4,6 +4,7 @@ import Message from '@/models/Message';
 import { getPusherInstance } from '@/lib/pusher';
 import { getCountryFromIP, getClientIP } from '@/lib/country';
 import { checkRateLimit } from '@/lib/security';
+import { sendNewMessageNotification } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,6 +101,11 @@ export async function POST(request: NextRequest) {
     // Trigger Pusher event
     const pusher = getPusherInstance();
     await pusher.trigger('chat-room', 'new-message', populatedMessage);
+
+    // Send email notification (async, don't wait)
+    sendNewMessageNotification(userName, content).catch(err => 
+      console.error('Email notification failed:', err)
+    );
 
     return NextResponse.json({ message: populatedMessage });
   } catch (error) {

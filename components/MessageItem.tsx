@@ -106,16 +106,18 @@ export default function MessageItem({
       }}
     >
       <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} items-start gap-2`}>
-        {/* Actions on left for own messages */}
+        {/* Actions on left for own messages - DESKTOP ONLY */}
         {showActions && !isEditing && isOwn && (
-          <MessageActions
-            message={message}
-            isOwn={isOwn}
-            onReply={onReply}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onReact={onReact}
-          />
+          <div className="hidden md:block">
+            <MessageActions
+              message={message}
+              isOwn={isOwn}
+              onReply={onReply}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onReact={onReact}
+            />
+          </div>
         )}
 
         <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[70%]`}>
@@ -251,6 +253,20 @@ export default function MessageItem({
 
           </div>
 
+          {/* Actions below bubble - MOBILE ONLY */}
+          {showActions && !isEditing && (
+            <div className="md:hidden mt-1">
+              <MessageActions
+                message={message}
+                isOwn={isOwn}
+                onReply={onReply}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onReact={onReact}
+              />
+            </div>
+          )}
+
           {/* Reactions */}
           {Object.keys(groupedReactions).length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1 px-2">
@@ -276,16 +292,18 @@ export default function MessageItem({
           )}
         </div>
 
-        {/* Actions on right for other users' messages */}
+        {/* Actions on right for other users' messages - DESKTOP ONLY */}
         {showActions && !isEditing && !isOwn && (
-          <MessageActions
-            message={message}
-            isOwn={isOwn}
-            onReply={onReply}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onReact={onReact}
-          />
+          <div className="hidden md:block">
+            <MessageActions
+              message={message}
+              isOwn={isOwn}
+              onReply={onReply}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onReact={onReact}
+            />
+          </div>
         )}
       </div>
 
