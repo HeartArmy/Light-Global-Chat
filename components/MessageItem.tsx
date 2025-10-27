@@ -237,9 +237,9 @@ export default function MessageItem({
               )}
             </div>
 
-            {/* Actions - positioned absolutely */}
+            {/* Actions - positioned absolutely below bubble */}
             {showActions && !isEditing && (
-              <div className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} px-2`}>
+              <div className={`absolute -bottom-8 ${isOwn ? 'right-0' : 'left-0'}`}>
                 <MessageActions
                   message={message}
                   isOwn={isOwn}
