@@ -3,6 +3,8 @@ import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import { getPusherInstance } from '@/lib/pusher';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

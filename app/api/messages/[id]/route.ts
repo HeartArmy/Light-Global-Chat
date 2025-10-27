@@ -3,6 +3,8 @@ import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import { getPusherInstance } from '@/lib/pusher';
 
+export const dynamic = 'force-dynamic';
+
 const TEN_MINUTES = 10 * 60 * 1000;
 
 // PATCH - Edit message
