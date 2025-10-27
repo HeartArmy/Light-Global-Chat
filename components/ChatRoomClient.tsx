@@ -290,9 +290,9 @@ export default function ChatRoomClient() {
                 background: 'var(--surface-elevated)',
                 color: 'var(--text-secondary)',
               }}
-              title="Current UTC time"
+              title="Current UTC date and time"
             >
-              🕐 {currentTime.toUTCString().slice(17, 25)} UTC
+              📅 {currentTime.toUTCString().slice(0, 16)} • {currentTime.toUTCString().slice(17, 25)} UTC
             </span>
           </div>
         </div>
