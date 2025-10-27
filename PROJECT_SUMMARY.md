@@ -1,4 +1,4 @@
-# Global Live Room - Project Summary
+# Global Live Chat Room - Project Summary
 
 ## Overview
 

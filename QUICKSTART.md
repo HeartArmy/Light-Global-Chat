@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get your Global Live Room up and running in 5 minutes!
+Get your Global Live Chat Room up and running in 5 minutes!
 
 ## Prerequisites
 
