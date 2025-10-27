@@ -208,7 +208,7 @@ export default function MessageItem({
                 <>
                   <div
                     className="text-body break-words whitespace-pre-wrap"
-                    dangerouslySetInnerHTML={{ __html: linkifyText(message.content) }}
+                    dangerouslySetInnerHTML={{ __html: linkifyText(message.content, isOwn) }}
                   />
 
                   {/* Attachments */}
