@@ -124,15 +124,20 @@ export default function ChatRoomClient() {
     const presenceChannel = pusher.subscribe('presence-chat-room');
     
     presenceChannel.bind('pusher:subscription_succeeded', (members: any) => {
-      setOnlineCount(members.count);
+      setOnlineCount(members.count || 1);
     });
 
     presenceChannel.bind('pusher:member_added', () => {
-      setOnlineCount((prev) => prev + 1);
+      setOnlineCount((prev) => (prev || 1) + 1);
     });
 
     presenceChannel.bind('pusher:member_removed', () => {
-      setOnlineCount((prev) => Math.max(0, prev - 1));
+      setOnlineCount((prev) => Math.max(1, (prev || 1) - 1));
+    });
+
+    presenceChannel.bind('pusher:subscription_error', () => {
+      // Fallback to showing at least 1 (yourself)
+      setOnlineCount(1);
     });
 
     return () => {
@@ -272,18 +277,16 @@ export default function ChatRoomClient() {
               }}
               title={isConnected ? 'Connected' : 'Disconnected'}
             />
-            {onlineCount > 0 && (
-              <span 
-                className="text-caption px-2 py-0.5 rounded-full"
-                style={{ 
-                  background: 'var(--surface-elevated)',
-                  color: 'var(--text-secondary)',
-                }}
-                title="Users online"
-              >
-                👥 {onlineCount}
-              </span>
-            )}
+            <span 
+              className="text-caption px-2 py-0.5 rounded-full"
+              style={{ 
+                background: 'var(--surface-elevated)',
+                color: 'var(--text-secondary)',
+              }}
+              title="Users online"
+            >
+              👥 {onlineCount || 1}
+            </span>
             <span 
               className="text-caption px-2 py-0.5 rounded-full font-mono"
               style={{ 

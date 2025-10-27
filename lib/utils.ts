@@ -26,10 +26,12 @@ export function formatTimestamp(date: Date): string {
 }
 
 // Detect and linkify URLs in text
-export function linkifyText(text: string): string {
+export function linkifyText(text: string, isOwnMessage: boolean = false): string {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   return text.replace(urlRegex, (url) => {
-    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">${url}</a>`;
+    // Use white color for own messages (blue bubble), accent color for others
+    const linkColor = isOwnMessage ? '#ffffff' : 'var(--accent)';
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: ${linkColor}; text-decoration: underline; font-weight: 600;">${url}</a>`;
   });
 }
 
