@@ -28,6 +28,11 @@ export async function sendNewMessageNotification(
     return;
   }
 
+  // Don't send email if the message is from Arham
+  if (userName.toLowerCase() === 'arham') {
+    return;
+  }
+
   // Get country flag emoji
   const getCountryFlag = (code: string) => {
     if (code === 'XX' || !code) return '🌍';
