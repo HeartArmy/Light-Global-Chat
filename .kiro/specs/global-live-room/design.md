@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Global Live Room is a real-time chat application built with Next.js 14+ (App Router), leveraging Pusher for WebSocket-based real-time communication, MongoDB for message persistence, and UploadThing for file uploads. The architecture follows a serverless approach optimized for Vercel deployment, with a focus on minimal bundle size, fast load times, and Apple-inspired UI aesthetics.
+The Global Live Chat Room is a real-time chat application built with Next.js 14+ (App Router), leveraging Pusher for WebSocket-based real-time communication, MongoDB for message persistence, and UploadThing for file uploads. The architecture follows a serverless approach optimized for Vercel deployment, with a focus on minimal bundle size, fast load times, and Apple-inspired UI aesthetics.
 
 ### Technology Stack
 

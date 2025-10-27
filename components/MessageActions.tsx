@@ -104,12 +104,12 @@ export default function MessageActions({
         </button>
 
         {showEmojiPicker && (
-          <div className="absolute bottom-full mb-2 z-50">
-            <div className="flex flex-col gap-1 shadow-2xl">
+          <div className={`absolute bottom-full mb-2 z-50 ${isOwn ? 'right-0' : 'left-0'}`}>
+            <div className="flex flex-col gap-2 shadow-2xl">
               <EmojiPicker mode="quick" onSelect={handleEmojiSelect} />
               <button
                 onClick={() => setShowExtendedPicker(!showExtendedPicker)}
-                className="px-2 py-1 text-small rounded-md transition-all duration-fast"
+                className="px-3 py-2 text-caption rounded-lg transition-all duration-fast"
                 style={{
                   background: 'var(--surface-elevated)',
                   border: '1px solid var(--border)',

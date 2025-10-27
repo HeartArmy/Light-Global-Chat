@@ -51,7 +51,7 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
         }}
       >
         <h2 className="mb-2 text-display" style={{ color: 'var(--text-primary)' }}>
-          {currentName ? 'Change Your Name' : 'Welcome to Global Live Room'}
+          {currentName ? 'Change Your Name' : 'Welcome to Global Live Chat Room'}
         </h2>
         <p className="mb-6 text-body" style={{ color: 'var(--text-secondary)' }}>
           {currentName ? 'Enter a new display name' : 'Choose a display name to get started'}

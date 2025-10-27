@@ -1,5 +1,5 @@
 
-# 🌐 Global Live Room
+# 🌐 Global Live Chat Room
 
 A **real-time global chat room application** with a beautiful, minimalist design philosophy. Connect instantly with users worldwide without any sign-up process.
 

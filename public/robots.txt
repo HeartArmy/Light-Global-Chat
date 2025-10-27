@@ -1,0 +1,13 @@
+# Global Live Chat Room - Robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://your-domain.com/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 0
+
+# Disallow API routes from indexing
+User-agent: *
+Disallow: /api/
