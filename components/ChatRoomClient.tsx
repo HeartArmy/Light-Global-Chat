@@ -20,7 +20,6 @@ export default function ChatRoomClient() {
   const [hasMore, setHasMore] = useState(true);
   const [onlineCount, setOnlineCount] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [unreadCount, setUnreadCount] = useState(0);
 
   // Initialize user session
   useEffect(() => {
@@ -47,20 +46,6 @@ export default function ChatRoomClient() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
-
-  // Track tab visibility for unread notifications
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // Tab became visible - reset unread count
-        setUnreadCount(0);
-        document.title = 'Global Live Chat Room - Free Real-Time Chat Room | Live Chat Online';
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   // Load initial messages
@@ -108,15 +93,6 @@ export default function ChatRoomClient() {
     // Listen for new messages
     channel.bind('new-message', (message: Message) => {
       setMessages((prev) => [...prev, message]);
-      
-      // Increment unread count if tab is hidden
-      if (document.hidden) {
-        setUnreadCount((prev) => {
-          const newCount = prev + 1;
-          document.title = `(${newCount}) Global Live Chat Room`;
-          return newCount;
-        });
-      }
     });
 
     // Listen for message updates
