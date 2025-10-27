@@ -105,7 +105,19 @@ export default function MessageItem({
         swipeHandlers.onTouchEnd(e);
       }}
     >
-      <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+      <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} items-start gap-2`}>
+        {/* Actions on left for own messages */}
+        {showActions && !isEditing && isOwn && (
+          <MessageActions
+            message={message}
+            isOwn={isOwn}
+            onReply={onReply}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onReact={onReact}
+          />
+        )}
+
         <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[70%]`}>
           {/* User Info */}
           <div className="flex items-center gap-2 mb-1 px-2">
@@ -237,19 +249,6 @@ export default function MessageItem({
               )}
             </div>
 
-            {/* Actions - positioned absolutely below bubble */}
-            {showActions && !isEditing && (
-              <div className={`absolute -bottom-8 ${isOwn ? 'right-0' : 'left-0'}`}>
-                <MessageActions
-                  message={message}
-                  isOwn={isOwn}
-                  onReply={onReply}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onReact={onReact}
-                />
-              </div>
-            )}
           </div>
 
           {/* Reactions */}
@@ -276,6 +275,18 @@ export default function MessageItem({
             </div>
           )}
         </div>
+
+        {/* Actions on right for other users' messages */}
+        {showActions && !isEditing && !isOwn && (
+          <MessageActions
+            message={message}
+            isOwn={isOwn}
+            onReply={onReply}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onReact={onReact}
+          />
+        )}
       </div>
 
       {/* Delete Confirmation */}
