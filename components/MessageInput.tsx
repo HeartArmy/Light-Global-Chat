@@ -86,7 +86,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
 
   return (
     <div 
-      className="border-t p-4"
+      className="border-t p-3 md:p-4"
       style={{
         background: 'var(--surface)',
         borderColor: 'var(--border)',
@@ -95,23 +95,23 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
       {/* Reply Context */}
       {replyingTo && (
         <div 
-          className="mb-3 p-3 rounded-sm flex items-start justify-between"
+          className="mb-2 p-2 rounded-lg flex items-start justify-between"
           style={{
             background: 'var(--background)',
-            border: '1px solid var(--border)',
+            border: '1px solid var(--accent)',
           }}
         >
           <div className="flex-1 min-w-0">
-            <p className="text-caption font-semibold mb-1" style={{ color: 'var(--accent)' }}>
-              Replying to {replyingTo.userName}
+            <p className="text-small font-semibold mb-0.5" style={{ color: 'var(--accent)' }}>
+              ↩️ Replying to {replyingTo.userName}
             </p>
-            <p className="text-caption truncate" style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-small truncate" style={{ color: 'var(--text-secondary)' }}>
               {replyingTo.content}
             </p>
           </div>
           <button
             onClick={onCancelReply}
-            className="ml-3 text-caption hover:opacity-70 transition-opacity"
+            className="ml-2 p-1 hover:opacity-70 transition-opacity"
             style={{ color: 'var(--text-secondary)' }}
           >
             ✕
@@ -121,36 +121,52 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
 
       {/* Attachments Preview */}
       {attachments.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
+        <div className="mb-2 flex flex-wrap gap-2">
           {attachments.map((attachment, index) => (
             <div
               key={index}
-              className="relative p-2 rounded-sm flex items-center gap-2"
+              className="relative rounded-lg overflow-hidden"
               style={{
                 background: 'var(--background)',
                 border: '1px solid var(--border)',
               }}
             >
               {attachment.type === 'image' ? (
-                <img
-                  src={attachment.url}
-                  alt={attachment.name}
-                  className="w-16 h-16 object-cover rounded"
-                />
+                <div className="relative">
+                  <img
+                    src={attachment.url}
+                    alt={attachment.name}
+                    className="w-20 h-20 object-cover"
+                  />
+                  <button
+                    onClick={() => removeAttachment(index)}
+                    className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-small transition-all duration-fast hover:scale-110"
+                    style={{ 
+                      background: 'var(--error)',
+                      color: '#ffffff',
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <span className="text-caption" style={{ color: 'var(--text-primary)' }}>
-                    📄 {attachment.name}
+                <div className="flex items-center gap-2 p-2 pr-8">
+                  <span className="text-xl">📄</span>
+                  <span className="text-small truncate max-w-[100px]" style={{ color: 'var(--text-primary)' }}>
+                    {attachment.name}
                   </span>
+                  <button
+                    onClick={() => removeAttachment(index)}
+                    className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-small transition-all duration-fast hover:scale-110"
+                    style={{ 
+                      background: 'var(--error)',
+                      color: '#ffffff',
+                    }}
+                  >
+                    ✕
+                  </button>
                 </div>
               )}
-              <button
-                onClick={() => removeAttachment(index)}
-                className="text-caption hover:opacity-70"
-                style={{ color: 'var(--error)' }}
-              >
-                ✕
-              </button>
             </div>
           ))}
         </div>
@@ -169,19 +185,11 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="p-3 rounded-sm transition-all duration-fast disabled:opacity-50"
+          className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
           style={{
             background: 'var(--background)',
             border: '1px solid var(--border)',
             color: 'var(--text-primary)',
-          }}
-          onMouseEnter={(e) => {
-            if (!isUploading) {
-              e.currentTarget.style.background = 'var(--surface-elevated)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--background)';
           }}
           title="Attach file"
         >
@@ -197,12 +205,12 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
             placeholder="Type a message..."
             rows={1}
             maxLength={5000}
-            className="w-full px-4 py-3 rounded-sm resize-none transition-all duration-fast"
+            className="w-full px-4 py-2.5 rounded-full resize-none transition-all duration-fast"
             style={{
               background: 'var(--background)',
               border: `1px solid ${isOverLimit ? 'var(--error)' : 'var(--border)'}`,
               color: 'var(--text-primary)',
-              maxHeight: '200px',
+              maxHeight: '120px',
               outline: 'none',
             }}
             onFocus={(e) => {
@@ -214,10 +222,13 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
               e.target.style.borderColor = isOverLimit ? 'var(--error)' : 'var(--border)';
             }}
           />
-          {charCount > 0 && (
+          {charCount > 4500 && (
             <span 
-              className="absolute bottom-2 right-2 text-small"
-              style={{ color: isOverLimit ? 'var(--error)' : 'var(--text-secondary)' }}
+              className="absolute bottom-1 right-3 text-small px-2 py-0.5 rounded-full"
+              style={{ 
+                color: isOverLimit ? 'var(--error)' : 'var(--text-secondary)',
+                background: 'var(--surface)',
+              }}
             >
               {charCount}/5000
             </span>
@@ -227,21 +238,14 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
         <button
           onClick={handleSend}
           disabled={(!content.trim() && attachments.length === 0) || isOverLimit || isUploading}
-          className="p-3 rounded-sm font-semibold transition-all duration-fast disabled:opacity-50"
+          className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
           style={{
             background: 'var(--accent)',
             color: '#ffffff',
           }}
-          onMouseEnter={(e) => {
-            if (!e.currentTarget.disabled) {
-              e.currentTarget.style.background = 'var(--accent-hover)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--accent)';
-          }}
+          title="Send message"
         >
-          Send
+          ➤
         </button>
       </div>
     </div>
