@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Message, Reaction } from '@/types';
 import MessageActions from './MessageActions';
 import { formatTimestamp, linkifyText, formatFileSize, getCountryFlag } from '@/lib/utils';
+import { useSwipe } from '@/lib/gestures';
 
 interface MessageItemProps {
   message: Message;
@@ -30,7 +31,6 @@ export default function MessageItem({
   const [editContent, setEditContent] = useState(message.content);
   const [showActions, setShowActions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -72,54 +72,23 @@ export default function MessageItem({
 
   const replyToMessage = typeof message.replyTo === 'object' ? message.replyTo : null;
 
+  // Swipe gesture for reply
+  const swipeHandlers = useSwipe(() => {
+    onReply();
+  });
+
   // Long press for actions on mobile
   let longPressTimer: NodeJS.Timeout | null = null;
-  
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartPos({
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    });
-    
-    // Start long press timer
+  const handleTouchStart = () => {
     longPressTimer = setTimeout(() => {
       setShowActions(true);
     }, 500);
   };
 
-  const handleTouchMove = () => {
-    // If user is moving finger, they might be selecting text
-    // Cancel long press
+  const handleTouchEnd = () => {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
-      longPressTimer = null;
     }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-    }
-    
-    // Check if this was a swipe or just a tap/selection
-    if (touchStartPos) {
-      const deltaX = e.changedTouches[0].clientX - touchStartPos.x;
-      const deltaY = e.changedTouches[0].clientY - touchStartPos.y;
-      
-      // Only trigger swipe if horizontal movement is significant
-      // and no text is selected
-      const selection = window.getSelection();
-      const hasSelection = selection && selection.toString().length > 0;
-      
-      if (!hasSelection && Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
-        if (deltaX > 0) {
-          onReply();
-        }
-      }
-    }
-    
-    setTouchStartPos(null);
   };
 
   return (
@@ -127,9 +96,14 @@ export default function MessageItem({
       className="group px-4 py-2 transition-all duration-fast"
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      onTouchStart={(e) => {
+        handleTouchStart();
+        swipeHandlers.onTouchStart(e);
+      }}
+      onTouchEnd={(e) => {
+        handleTouchEnd();
+        swipeHandlers.onTouchEnd(e);
+      }}
     >
       <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} items-start gap-2`}>
         {/* Actions on left for own messages - DESKTOP ONLY */}

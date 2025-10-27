@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     await pusher.trigger('chat-room', 'new-message', populatedMessage);
 
     // Send email notification (async, don't wait)
-    sendNewMessageNotification(userName, content, message.timestamp).catch(err => 
+    sendNewMessageNotification(userName, content).catch(err => 
       console.error('Email notification failed:', err)
     );
 
