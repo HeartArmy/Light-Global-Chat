@@ -5,6 +5,8 @@ import { getPusherInstance } from '@/lib/pusher';
 import { getCountryFromIP, getClientIP } from '@/lib/country';
 import { checkRateLimit } from '@/lib/security';
 
+export const dynamic = 'force-dynamic';
+
 // POST - Create new message
 export async function POST(request: NextRequest) {
   try {
