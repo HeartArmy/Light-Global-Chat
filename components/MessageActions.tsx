@@ -55,11 +55,11 @@ export default function MessageActions({
   };
 
   return (
-    <div className="flex flex-col gap-1 bg-opacity-90 backdrop-blur-sm rounded-lg p-1" style={{ background: 'var(--surface-elevated)' }}>
+    <div className="flex items-center gap-1 bg-opacity-90 backdrop-blur-sm rounded-full px-2 py-1 shadow-lg" style={{ background: 'var(--surface-elevated)' }}>
       {/* Reply Button */}
       <button
         onClick={onReply}
-        className="p-2 rounded-lg transition-all duration-fast text-caption hover:scale-110"
+        className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
         style={{
           background: 'transparent',
           color: 'var(--text-secondary)',
@@ -81,7 +81,7 @@ export default function MessageActions({
       <div className="relative">
         <button
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="p-2 rounded-lg transition-all duration-fast text-caption hover:scale-110"
+          className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
           style={{
             background: showEmojiPicker ? 'var(--surface)' : 'transparent',
             color: 'var(--text-secondary)',
@@ -134,7 +134,7 @@ export default function MessageActions({
       {isOwn && canEditDelete && (
         <button
           onClick={onEdit}
-          className="p-2 rounded-lg transition-all duration-fast text-caption hover:scale-110"
+          className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
           style={{
             background: 'transparent',
             color: 'var(--text-secondary)',
@@ -157,7 +157,7 @@ export default function MessageActions({
       {isOwn && canEditDelete && (
         <button
           onClick={onDelete}
-          className="p-2 rounded-lg transition-all duration-fast text-caption hover:scale-110"
+          className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
           style={{
             background: 'transparent',
             color: 'var(--text-secondary)',
