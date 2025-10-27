@@ -15,16 +15,11 @@ const transporter = nodemailer.createTransport({
 let lastEmailSent = 0;
 const TWO_HOURS = 2 * 60 * 60 * 1000;
 
-export async function sendNewMessageNotification(userName: string, content: string) {
+export async function sendNewMessageNotification(userName: string, content: string, messageTimestamp: Date) {
   // Check if 2 hours have passed since last email
-  const now = Date.now();
+  const now = messageTimestamp.getTime();
   if (now - lastEmailSent < TWO_HOURS) {
     console.log('Email cooldown active, skipping notification');
-    return;
-  }
-
-  // Don't send email if the message is from Arham
-  if (userName.toLowerCase() === 'arham') {
     return;
   }
 
