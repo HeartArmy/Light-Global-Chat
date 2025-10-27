@@ -8,6 +8,10 @@ const nextConfig = {
       },
     ],
   },
+  // Disable static optimization for pages that use client-side features
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
 }
 
 module.exports = nextConfig
