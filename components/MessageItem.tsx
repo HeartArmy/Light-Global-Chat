@@ -93,10 +93,7 @@ export default function MessageItem({
 
   return (
     <div
-      className="group px-4 py-3 hover:bg-opacity-50 transition-all duration-fast"
-      style={{
-        background: showActions ? 'var(--surface)' : 'transparent',
-      }}
+      className="group px-4 py-2 transition-all duration-fast"
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
       onTouchStart={(e) => {
@@ -108,163 +105,177 @@ export default function MessageItem({
         swipeHandlers.onTouchEnd(e);
       }}
     >
-      {/* Reply Context */}
-      {replyToMessage && (
-        <div
-          className="mb-2 ml-8 pl-3 py-1 border-l-2 cursor-pointer"
-          style={{
-            borderColor: 'var(--accent)',
-            opacity: 0.7,
-          }}
-          onClick={onScrollToParent}
-        >
-          <p className="text-caption" style={{ color: 'var(--text-secondary)' }}>
-            <span style={{ color: 'var(--accent)' }}>↩️ Replying to {replyToMessage.userName}</span>
-            {': '}
-            {replyToMessage.content.substring(0, 100)}
-            {replyToMessage.content.length > 100 && '...'}
-          </p>
-        </div>
-      )}
-
-      <div className="flex items-start gap-3">
-        {/* User Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-body font-semibold" style={{ color: 'var(--text-primary)' }}>
+      <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[70%]`}>
+          {/* User Info */}
+          <div className="flex items-center gap-2 mb-1 px-2">
+            <span className="text-caption font-semibold" style={{ color: 'var(--text-secondary)' }}>
               {getCountryFlag(message.userCountry)} {message.userName}
             </span>
-            <span className="text-caption" style={{ color: 'var(--text-secondary)' }}>
+            <span className="text-small" style={{ color: 'var(--text-secondary)' }}>
               {formatTimestamp(message.timestamp)}
             </span>
             {message.edited && (
-              <span className="text-caption italic" style={{ color: 'var(--text-secondary)' }}>
+              <span className="text-small italic" style={{ color: 'var(--text-secondary)' }}>
                 (edited)
               </span>
             )}
           </div>
 
-          {/* Message Content */}
-          {isEditing ? (
-            <div className="mt-2">
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="w-full px-3 py-2 rounded-sm resize-none"
-                style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-primary)',
-                }}
-                rows={3}
-                maxLength={5000}
-                autoFocus
-              />
-              <div className="flex gap-2 mt-2">
-                <button
-                  onClick={handleSaveEdit}
-                  className="px-4 py-2 text-caption rounded-sm transition-all duration-fast"
-                  style={{
-                    background: 'var(--accent)',
-                    color: '#ffffff',
-                  }}
-                >
-                  Save
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  className="px-4 py-2 text-caption rounded-sm transition-all duration-fast"
-                  style={{
-                    background: 'var(--surface)',
-                    color: 'var(--text-primary)',
-                    border: '1px solid var(--border)',
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
+          {/* Reply Context */}
+          {replyToMessage && (
+            <div
+              className="mb-1 px-3 py-2 rounded-lg cursor-pointer max-w-full"
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                opacity: 0.8,
+              }}
+              onClick={onScrollToParent}
+            >
+              <p className="text-caption truncate" style={{ color: 'var(--text-secondary)' }}>
+                <span style={{ color: 'var(--accent)' }}>↩️ {replyToMessage.userName}</span>
+                {': '}
+                {replyToMessage.content.substring(0, 50)}
+                {replyToMessage.content.length > 50 && '...'}
+              </p>
             </div>
-          ) : (
-            <>
-              <div
-                className="text-body break-words"
-                style={{ color: 'var(--text-primary)' }}
-                dangerouslySetInnerHTML={{ __html: linkifyText(message.content) }}
-              />
+          )}
 
-              {/* Attachments */}
-              {message.attachments && message.attachments.length > 0 && (
-                <div className="mt-2 space-y-2">
-                  {message.attachments.map((attachment, index) => (
-                    <div key={index}>
-                      {attachment.type === 'image' ? (
-                        <img
-                          src={attachment.url}
-                          alt={attachment.name}
-                          className="max-w-md rounded-md"
-                          style={{ maxHeight: '400px', objectFit: 'contain' }}
-                        />
-                      ) : (
-                        <a
-                          href={attachment.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-3 py-2 rounded-sm transition-all duration-fast"
-                          style={{
-                            background: 'var(--surface)',
-                            border: '1px solid var(--border)',
-                            color: 'var(--accent)',
-                          }}
-                        >
-                          <span>📄</span>
-                          <span className="text-caption">
-                            {attachment.name} ({formatFileSize(attachment.size)})
-                          </span>
-                        </a>
-                      )}
+          {/* Message Bubble */}
+          <div className="relative">
+            <div
+              className="rounded-2xl px-4 py-2 shadow-sm"
+              style={{
+                background: isOwn ? 'var(--accent)' : 'var(--surface)',
+                color: isOwn ? '#ffffff' : 'var(--text-primary)',
+              }}
+            >
+
+              {/* Message Content */}
+              {isEditing ? (
+                <div className="w-full">
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg resize-none"
+                    style={{
+                      background: 'var(--background)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-primary)',
+                    }}
+                    rows={3}
+                    maxLength={5000}
+                    autoFocus
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={handleSaveEdit}
+                      className="px-4 py-2 text-caption rounded-lg transition-all duration-fast"
+                      style={{
+                        background: 'var(--accent)',
+                        color: '#ffffff',
+                      }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-4 py-2 text-caption rounded-lg transition-all duration-fast"
+                      style={{
+                        background: 'var(--surface)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div
+                    className="text-body break-words whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: linkifyText(message.content) }}
+                  />
+
+                  {/* Attachments */}
+                  {message.attachments && message.attachments.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {message.attachments.map((attachment, index) => (
+                        <div key={index}>
+                          {attachment.type === 'image' ? (
+                            <img
+                              src={attachment.url}
+                              alt={attachment.name}
+                              className="rounded-lg max-w-full"
+                              style={{ maxHeight: '300px', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <a
+                              href={attachment.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-fast"
+                              style={{
+                                background: isOwn ? 'rgba(255,255,255,0.2)' : 'var(--background)',
+                                border: `1px solid ${isOwn ? 'rgba(255,255,255,0.3)' : 'var(--border)'}`,
+                                color: isOwn ? '#ffffff' : 'var(--accent)',
+                              }}
+                            >
+                              <span>📄</span>
+                              <span className="text-caption">
+                                {attachment.name} ({formatFileSize(attachment.size)})
+                              </span>
+                            </a>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
+            </div>
 
-              {/* Reactions */}
-              {Object.keys(groupedReactions).length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {Object.entries(groupedReactions).map(([emoji, users]) => {
-                    const hasReacted = users.includes(currentUserName);
-                    return (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReactionClick(emoji)}
-                        className="px-2 py-1 rounded-sm text-caption transition-all duration-fast"
-                        style={{
-                          background: hasReacted ? 'var(--accent)' : 'var(--surface)',
-                          border: `1px solid ${hasReacted ? 'var(--accent)' : 'var(--border)'}`,
-                          color: hasReacted ? '#ffffff' : 'var(--text-primary)',
-                        }}
-                        title={users.join(', ')}
-                      >
-                        {emoji} {users.length}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </>
+            {/* Actions - positioned absolutely */}
+            {showActions && !isEditing && (
+              <div className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} px-2`}>
+                <MessageActions
+                  message={message}
+                  isOwn={isOwn}
+                  onReply={onReply}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onReact={onReact}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Reactions */}
+          {Object.keys(groupedReactions).length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1 px-2">
+              {Object.entries(groupedReactions).map(([emoji, users]) => {
+                const hasReacted = users.includes(currentUserName);
+                return (
+                  <button
+                    key={emoji}
+                    onClick={() => handleReactionClick(emoji)}
+                    className="px-2 py-1 rounded-full text-caption transition-all duration-fast hover:scale-110"
+                    style={{
+                      background: hasReacted ? 'var(--accent)' : 'var(--surface)',
+                      border: `1px solid ${hasReacted ? 'var(--accent)' : 'var(--border)'}`,
+                      color: hasReacted ? '#ffffff' : 'var(--text-primary)',
+                    }}
+                    title={users.join(', ')}
+                  >
+                    {emoji} {users.length}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
-
-        {/* Actions */}
-        {showActions && !isEditing && (
-          <MessageActions
-            message={message}
-            isOwn={isOwn}
-            onReply={onReply}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onReact={onReact}
-          />
-        )}
       </div>
 
       {/* Delete Confirmation */}
