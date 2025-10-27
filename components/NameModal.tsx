@@ -11,6 +11,8 @@ interface NameModalProps {
 export default function NameModal({ isOpen, currentName, onSubmit }: NameModalProps) {
   const [name, setName] = useState(currentName || '');
   const [error, setError] = useState('');
+  const [showKeywordPrompt, setShowKeywordPrompt] = useState(false);
+  const [keyword, setKeyword] = useState('');
 
   useEffect(() => {
     if (currentName) {
@@ -34,8 +36,39 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = name.trim();
-    if (validateName(trimmedName)) {
-      onSubmit(trimmedName);
+    
+    if (!validateName(trimmedName)) {
+      return;
+    }
+
+    // Check if trying to use protected name "Arham"
+    if (trimmedName.toLowerCase() === 'arham') {
+      // Check if already verified
+      const verified = localStorage.getItem('arham_verified');
+      if (verified === 'true') {
+        onSubmit(trimmedName);
+        return;
+      }
+      
+      // Show keyword prompt
+      setShowKeywordPrompt(true);
+      return;
+    }
+
+    onSubmit(trimmedName);
+  };
+
+  const handleKeywordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Verify keyword
+    if (keyword === process.env.NEXT_PUBLIC_ARHAM_KEYWORD) {
+      localStorage.setItem('arham_verified', 'true');
+      setShowKeywordPrompt(false);
+      onSubmit(name.trim());
+    } else {
+      setError('Incorrect keyword. This name is protected.');
+      setKeyword('');
     }
   };
 
@@ -50,14 +83,82 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
           border: '1px solid var(--border)',
         }}
       >
-        <h2 className="mb-2 text-display" style={{ color: 'var(--text-primary)' }}>
-          {currentName ? 'Change Your Name' : 'Welcome to Global Live Chat Room'}
-        </h2>
-        <p className="mb-6 text-body" style={{ color: 'var(--text-secondary)' }}>
-          {currentName ? 'Enter a new display name' : 'Choose a display name to get started'}
-        </p>
+        {showKeywordPrompt ? (
+          <>
+            <h2 className="mb-2 text-display" style={{ color: 'var(--text-primary)' }}>
+              🔒 Protected Name
+            </h2>
+            <p className="mb-6 text-body" style={{ color: 'var(--text-secondary)' }}>
+              The name "Arham" is protected. Please enter the keyword to continue.
+            </p>
 
-        <form onSubmit={handleSubmit}>
+            <form onSubmit={handleKeywordSubmit}>
+              <input
+                type="password"
+                value={keyword}
+                onChange={(e) => {
+                  setKeyword(e.target.value);
+                  setError('');
+                }}
+                placeholder="Enter keyword"
+                autoFocus
+                className="w-full px-4 py-3 mb-2 text-body rounded-sm transition-all duration-fast"
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                }}
+              />
+              
+              {error && (
+                <p className="mb-4 text-caption" style={{ color: 'var(--error)' }}>
+                  {error}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowKeywordPrompt(false);
+                    setKeyword('');
+                    setError('');
+                    setName('');
+                  }}
+                  className="px-6 py-3 text-body rounded-sm transition-all duration-fast"
+                  style={{
+                    background: 'var(--surface)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!keyword.trim()}
+                  className="px-6 py-3 text-body font-semibold rounded-sm transition-all duration-fast disabled:opacity-50"
+                  style={{
+                    background: 'var(--accent)',
+                    color: '#ffffff',
+                  }}
+                >
+                  Verify
+                </button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <>
+            <h2 className="mb-2 text-display" style={{ color: 'var(--text-primary)' }}>
+              {currentName ? 'Change Your Name' : 'Welcome to Global Live Chat Room'}
+            </h2>
+            <p className="mb-6 text-body" style={{ color: 'var(--text-secondary)' }}>
+              {currentName ? 'Enter a new display name' : 'Choose a display name to get started'}
+            </p>
+
+            <form onSubmit={handleSubmit}>
           <input
             type="text"
             value={name}
@@ -131,6 +232,8 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
             </button>
           </div>
         </form>
+          </>
+        )}
       </div>
     </div>
   );
