@@ -193,7 +193,8 @@ export default function ChatRoomClient() {
 
   const handleSendMessage = async (content: string, attachments: Attachment[], replyTo?: string) => {
     try {
-      await fetch('/api/messages', {
+      console.log('Sending message:', { content, attachments, userName, replyTo });
+      const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -203,6 +204,14 @@ export default function ChatRoomClient() {
           replyTo,
         }),
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Server error:', error);
+        alert(`Failed to send message: ${error.error}`);
+        return;
+      }
+      
       setReplyingTo(null);
     } catch (error) {
       console.error('Failed to send message:', error);

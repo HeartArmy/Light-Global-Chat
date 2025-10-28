@@ -35,7 +35,8 @@ const ReactionSchema = new Schema({
 const MessageSchema = new Schema({
   content: {
     type: String,
-    required: true,
+    required: false,
+    default: '',
     maxlength: 5000,
   },
   userName: {
