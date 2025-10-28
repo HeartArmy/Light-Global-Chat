@@ -208,14 +208,16 @@ export default function MessageItem({
                 </div>
               ) : (
                 <>
-                  <div
-                    className="text-body break-words whitespace-pre-wrap"
-                    dangerouslySetInnerHTML={{ __html: linkifyText(message.content, isOwn) }}
-                  />
+                  {message.content && (
+                    <div
+                      className="text-body break-words whitespace-pre-wrap"
+                      dangerouslySetInnerHTML={{ __html: linkifyText(message.content, isOwn) }}
+                    />
+                  )}
 
                   {/* Attachments */}
                   {message.attachments && message.attachments.length > 0 && (
-                    <div className="mt-2 space-y-2">
+                    <div className={message.content ? "mt-2 space-y-2" : "space-y-2"}>
                       {message.attachments.map((attachment, index) => (
                         <div key={index}>
                           {attachment.type === 'image' ? (
