@@ -24,7 +24,10 @@ export async function POST(request: NextRequest) {
     const { content, userName, attachments = [], replyTo } = body;
 
     // Validation - require either content or attachments
-    if ((!content || typeof content !== 'string' || !content.trim()) && attachments.length === 0) {
+    const hasContent = content && typeof content === 'string' && content.trim().length > 0;
+    const hasAttachments = attachments && attachments.length > 0;
+    
+    if (!hasContent && !hasAttachments) {
       return NextResponse.json(
         { error: 'Content or attachment is required', code: 'INVALID_INPUT' },
         { status: 400 }

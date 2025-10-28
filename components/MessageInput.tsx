@@ -37,8 +37,10 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
 
   const handleSend = async () => {
     const trimmedContent = content.trim();
+    // Allow sending if there's content OR attachments
     if (!trimmedContent && attachments.length === 0) return;
 
+    // Pass the trimmed content (can be empty string if only attachments)
     onSend(trimmedContent, attachments, replyingTo?._id);
     setContent('');
     setAttachments([]);

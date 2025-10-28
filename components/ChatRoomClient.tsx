@@ -152,15 +152,28 @@ export default function ChatRoomClient() {
     const presenceChannel = pusher.subscribe('presence-chat-room');
     
     presenceChannel.bind('pusher:subscription_succeeded', (members: any) => {
+      console.log('Presence channel subscribed, member count:', members.count);
       setOnlineCount(members.count);
     });
 
     presenceChannel.bind('pusher:member_added', () => {
-      setOnlineCount((prev) => prev + 1);
+      setOnlineCount((prev) => {
+        const newCount = prev + 1;
+        console.log('Member added, new count:', newCount);
+        return newCount;
+      });
     });
 
     presenceChannel.bind('pusher:member_removed', () => {
-      setOnlineCount((prev) => Math.max(0, prev - 1));
+      setOnlineCount((prev) => {
+        const newCount = Math.max(0, prev - 1);
+        console.log('Member removed, new count:', newCount);
+        return newCount;
+      });
+    });
+
+    presenceChannel.bind('pusher:subscription_error', (status: any) => {
+      console.error('Presence channel subscription error:', status);
     });
 
     return () => {
@@ -309,18 +322,16 @@ export default function ChatRoomClient() {
               />
               {isConnected ? 'Connected' : 'Disconnected'}
             </span>
-            {onlineCount > 0 && (
-              <span 
-                className="text-caption px-2 py-0.5 rounded-full"
-                style={{ 
-                  background: 'var(--surface-elevated)',
-                  color: 'var(--text-secondary)',
-                }}
-                title="Users online"
-              >
-                👥 {onlineCount}
-              </span>
-            )}
+            <span 
+              className="text-caption px-2 py-0.5 rounded-full"
+              style={{ 
+                background: 'var(--surface-elevated)',
+                color: 'var(--text-secondary)',
+              }}
+              title="Users online"
+            >
+              👥 {onlineCount || '...'}
+            </span>
             <span 
               className="text-caption px-2 py-0.5 rounded-full font-mono"
               style={{ 
