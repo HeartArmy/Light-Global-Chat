@@ -23,11 +23,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { content, userName, attachments = [], replyTo } = body;
 
+    console.log('Received message request:', { content, contentLength: content?.length, attachmentsCount: attachments?.length, userName });
+
     // Validation - require either content or attachments
     const hasContent = content && typeof content === 'string' && content.trim().length > 0;
-    const hasAttachments = attachments && attachments.length > 0;
+    const hasAttachments = attachments && Array.isArray(attachments) && attachments.length > 0;
+    
+    console.log('Validation:', { hasContent, hasAttachments });
     
     if (!hasContent && !hasAttachments) {
+      console.error('Validation failed: no content or attachments');
       return NextResponse.json(
         { error: 'Content or attachment is required', code: 'INVALID_INPUT' },
         { status: 400 }
