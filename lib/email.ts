@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
 
 // Create reusable transporter
 const transporter = nodemailer.createTransport({
@@ -11,9 +13,30 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Track last email sent time
-let lastEmailSent = 0;
 const TWO_HOURS = 2 * 60 * 60 * 1000;
+const COOLDOWN_FILE = path.join(process.cwd(), '.email-cooldown');
+
+// Get last email sent time from file
+function getLastEmailSent(): number {
+  try {
+    if (fs.existsSync(COOLDOWN_FILE)) {
+      const data = fs.readFileSync(COOLDOWN_FILE, 'utf-8');
+      return parseInt(data) || 0;
+    }
+  } catch (error) {
+    console.error('Error reading cooldown file:', error);
+  }
+  return 0;
+}
+
+// Save last email sent time to file
+function saveLastEmailSent(timestamp: number): void {
+  try {
+    fs.writeFileSync(COOLDOWN_FILE, timestamp.toString());
+  } catch (error) {
+    console.error('Error writing cooldown file:', error);
+  }
+}
 
 export async function sendNewMessageNotification(
   userName: string, 
@@ -23,8 +46,10 @@ export async function sendNewMessageNotification(
 ) {
   // Check if 2 hours have passed since last email
   const now = Date.now();
+  const lastEmailSent = getLastEmailSent();
   if (now - lastEmailSent < TWO_HOURS) {
-    console.log('Email cooldown active, skipping notification');
+    const remainingMinutes = Math.ceil((TWO_HOURS - (now - lastEmailSent)) / 60000);
+    console.log(`Email cooldown active, skipping notification. ${remainingMinutes} minutes remaining.`);
     return;
   }
 
@@ -89,7 +114,7 @@ export async function sendNewMessageNotification(
       `,
     });
 
-    lastEmailSent = now;
+    saveLastEmailSent(now);
     console.log('Email notification sent successfully');
   } catch (error) {
     console.error('Failed to send email notification:', error);

@@ -18,7 +18,6 @@ export default function ChatRoomClient() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [onlineCount, setOnlineCount] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [unreadCount, setUnreadCount] = useState(0);
   const [isTabVisible, setIsTabVisible] = useState(true);
@@ -147,31 +146,9 @@ export default function ChatRoomClient() {
       );
     });
 
-    // Subscribe to presence channel for online count
-    const presenceChannel = pusher.subscribe('presence-chat-room');
-    
-    presenceChannel.bind('pusher:subscription_succeeded', (members: any) => {
-      setOnlineCount(members.count || 1);
-    });
-
-    presenceChannel.bind('pusher:member_added', () => {
-      setOnlineCount((prev) => (prev || 1) + 1);
-    });
-
-    presenceChannel.bind('pusher:member_removed', () => {
-      setOnlineCount((prev) => Math.max(1, (prev || 1) - 1));
-    });
-
-    presenceChannel.bind('pusher:subscription_error', () => {
-      // Fallback to showing at least 1 (yourself)
-      setOnlineCount(1);
-    });
-
     return () => {
       channel.unbind_all();
       channel.unsubscribe();
-      presenceChannel.unbind_all();
-      presenceChannel.unsubscribe();
       pusher.disconnect();
     };
   }, [userName]);
@@ -297,22 +274,21 @@ export default function ChatRoomClient() {
             🌐 Global Live Chat Room
           </h1>
           <div className="flex items-center gap-2">
-            <div
-              className="w-2 h-2 rounded-full"
-              style={{
-                background: isConnected ? 'var(--success)' : 'var(--error)',
-              }}
-              title={isConnected ? 'Connected' : 'Disconnected'}
-            />
             <span 
-              className="text-caption px-2 py-0.5 rounded-full"
+              className="text-caption px-2 py-0.5 rounded-full flex items-center gap-1.5"
               style={{ 
                 background: 'var(--surface-elevated)',
                 color: 'var(--text-secondary)',
               }}
-              title="Users online"
+              title={isConnected ? 'Connected' : 'Disconnected'}
             >
-              👥 {onlineCount || 1}
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{
+                  background: isConnected ? 'var(--success)' : 'var(--error)',
+                }}
+              />
+              {isConnected ? 'Connected' : 'Disconnected'}
             </span>
             <span 
               className="text-caption px-2 py-0.5 rounded-full font-mono"

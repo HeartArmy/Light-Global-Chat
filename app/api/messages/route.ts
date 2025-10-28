@@ -23,15 +23,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { content, userName, attachments = [], replyTo } = body;
 
-    // Validation
-    if (!content || typeof content !== 'string') {
+    // Validation - require either content or attachments
+    if ((!content || typeof content !== 'string' || !content.trim()) && attachments.length === 0) {
       return NextResponse.json(
-        { error: 'Content is required', code: 'INVALID_INPUT' },
+        { error: 'Content or attachment is required', code: 'INVALID_INPUT' },
         { status: 400 }
       );
     }
 
-    if (content.length > 5000) {
+    if (content && content.length > 5000) {
       return NextResponse.json(
         { error: 'Content exceeds 5000 characters', code: 'INVALID_INPUT' },
         { status: 400 }
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     // Create message
     const message = await Message.create({
-      content,
+      content: content || '',
       userName,
       userCountry: countryCode,
       attachments,
@@ -103,7 +103,8 @@ export async function POST(request: NextRequest) {
     await pusher.trigger('chat-room', 'new-message', populatedMessage);
 
     // Send email notification (async, don't wait)
-    sendNewMessageNotification(userName, content, message.timestamp, countryCode).catch(err => 
+    const emailContent = content || `[Attachment: ${attachments.map((a: any) => a.name).join(', ')}]`;
+    sendNewMessageNotification(userName, emailContent, message.timestamp, countryCode).catch(err => 
       console.error('Email notification failed:', err)
     );
 
