@@ -6,8 +6,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { socket_id, channel_name } = body;
 
+    console.log('Pusher auth request:', { socket_id, channel_name });
+
     // Only allow presence channel authentication
     if (!channel_name.startsWith('presence-')) {
+      console.error('Invalid channel name:', channel_name);
       return NextResponse.json(
         { error: 'Invalid channel' },
         { status: 403 }
@@ -24,6 +27,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    console.log('Pusher auth successful');
     return NextResponse.json(authResponse);
   } catch (error) {
     console.error('Pusher auth error:', error);
