@@ -21,6 +21,7 @@ export default function ChatRoomClient() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [unreadCount, setUnreadCount] = useState(0);
   const [isTabVisible, setIsTabVisible] = useState(true);
+  const [onlineCount, setOnlineCount] = useState(0);
 
   // Initialize user session
   useEffect(() => {
@@ -89,6 +90,7 @@ export default function ChatRoomClient() {
 
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+      authEndpoint: '/api/pusher/auth',
     });
 
     const channel = pusher.subscribe('chat-room');
@@ -146,9 +148,26 @@ export default function ChatRoomClient() {
       );
     });
 
+    // Subscribe to presence channel for online count
+    const presenceChannel = pusher.subscribe('presence-chat-room');
+    
+    presenceChannel.bind('pusher:subscription_succeeded', (members: any) => {
+      setOnlineCount(members.count);
+    });
+
+    presenceChannel.bind('pusher:member_added', () => {
+      setOnlineCount((prev) => prev + 1);
+    });
+
+    presenceChannel.bind('pusher:member_removed', () => {
+      setOnlineCount((prev) => Math.max(0, prev - 1));
+    });
+
     return () => {
       channel.unbind_all();
       channel.unsubscribe();
+      presenceChannel.unbind_all();
+      presenceChannel.unsubscribe();
       pusher.disconnect();
     };
   }, [userName]);
@@ -290,6 +309,18 @@ export default function ChatRoomClient() {
               />
               {isConnected ? 'Connected' : 'Disconnected'}
             </span>
+            {onlineCount > 0 && (
+              <span 
+                className="text-caption px-2 py-0.5 rounded-full"
+                style={{ 
+                  background: 'var(--surface-elevated)',
+                  color: 'var(--text-secondary)',
+                }}
+                title="Users online"
+              >
+                👥 {onlineCount}
+              </span>
+            )}
             <span 
               className="text-caption px-2 py-0.5 rounded-full font-mono"
               style={{ 
