@@ -32,10 +32,9 @@ function escapeHtml(text: string): string {
     '<': '&lt;',
     '>': '&gt;',
     '"': '&quot;',
-    "'": '&#x27;',
-    '/': '&#x2F;'
+    "'": '&#x27;'
   };
-  return text.replace(/[&<>"'\/]/g, (char) => htmlEscapes[char]);
+  return text.replace(/[&<>"']/g, (char) => htmlEscapes[char]);
 }
 
 // Detect and linkify URLs in text (with XSS protection)
@@ -43,9 +42,14 @@ export function linkifyText(text: string, isOwnMessage: boolean = false): string
   // First, escape all HTML to prevent XSS
   const escapedText = escapeHtml(text);
   
-  // Then linkify URLs
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  // Then linkify URLs (only http:// and https://)
+  const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
   return escapedText.replace(urlRegex, (url) => {
+    // Sanitize the URL to prevent javascript: or data: URLs
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return url; // Don't linkify if not http/https
+    }
+    
     // Use white color for own messages (blue bubble), accent color for others
     const linkColor = isOwnMessage ? '#ffffff' : 'var(--accent)';
     return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: ${linkColor}; text-decoration: underline; font-weight: 600;">${url}</a>`;
