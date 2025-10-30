@@ -106,15 +106,15 @@ export async function POST(request: NextRequest) {
     // Populate replyTo if it exists
     const populatedMessage = await Message.findById(message._id).populate('replyTo').lean();
 
-    // Trigger Pusher event
+    // Trigger Pusher event and send notifications in parallel
     const pusher = getPusherInstance();
-    await pusher.trigger('chat-room', 'new-message', populatedMessage);
-
-    // Send email notification (async, don't wait)
     const emailContent = content || `[Attachment: ${attachments.map((a: any) => a.name).join(', ')}]`;
-    sendNewMessageNotification(userName, emailContent, message.timestamp, countryCode).catch(err => 
-      console.error('Email notification failed:', err)
-    );
+    
+    // Run Pusher and notifications in parallel, but wait for both
+    await Promise.allSettled([
+      pusher.trigger('chat-room', 'new-message', populatedMessage),
+      sendNewMessageNotification(userName, emailContent, message.timestamp, countryCode)
+    ]);
 
     return NextResponse.json({ message: populatedMessage });
   } catch (error) {
