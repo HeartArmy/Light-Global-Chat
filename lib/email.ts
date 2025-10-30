@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
-import fs from 'fs';
-import path from 'path';
+import connectDB from '@/lib/mongodb';
+import Notification from '@/models/Notification';
 
 // Create reusable transporter
 const transporter = nodemailer.createTransport({
@@ -13,28 +13,94 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const TWO_HOURS = 2 * 60 * 60 * 1000;
-const COOLDOWN_FILE = path.join(process.cwd(), '.email-cooldown');
+const ONE_HOUR = 60 * 60 * 1000;
+const FIVE_MINUTES = 5 * 60 * 1000;
 
-// Get last email sent time from file
-function getLastEmailSent(): number {
+// Check if enough time has passed since last notification
+async function canSendNotification(type: 'email' | 'telegram'): Promise<boolean> {
   try {
-    if (fs.existsSync(COOLDOWN_FILE)) {
-      const data = fs.readFileSync(COOLDOWN_FILE, 'utf-8');
-      return parseInt(data) || 0;
+    await connectDB();
+    const cooldown = type === 'email' ? ONE_HOUR : FIVE_MINUTES;
+    
+    const notification = await Notification.findOne({ type });
+    
+    if (!notification) {
+      return true;
     }
+    
+    const timeSinceLastSent = Date.now() - notification.lastSentAt.getTime();
+    return timeSinceLastSent >= cooldown;
   } catch (error) {
-    console.error('Error reading cooldown file:', error);
+    console.error(`Error checking ${type} cooldown:`, error);
+    return false;
   }
-  return 0;
 }
 
-// Save last email sent time to file
-function saveLastEmailSent(timestamp: number): void {
+// Update last sent time in database
+async function updateNotificationTime(type: 'email' | 'telegram'): Promise<void> {
   try {
-    fs.writeFileSync(COOLDOWN_FILE, timestamp.toString());
+    await connectDB();
+    await Notification.findOneAndUpdate(
+      { type },
+      { lastSentAt: new Date() },
+      { upsert: true }
+    );
   } catch (error) {
-    console.error('Error writing cooldown file:', error);
+    console.error(`Error updating ${type} notification time:`, error);
+  }
+}
+
+// Send Telegram notification
+async function sendTelegramNotification(
+  userName: string,
+  content: string,
+  timestamp: Date,
+  countryCode: string
+): Promise<void> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!botToken || !chatId) {
+    console.log('Telegram credentials not configured, skipping notification');
+    return;
+  }
+
+  const getCountryFlag = (code: string) => {
+    if (code === 'XX' || !code) return '🌍';
+    const codePoints = code.toUpperCase().split('').map(c => c.charCodeAt(0) + 127397);
+    return String.fromCodePoint(...codePoints);
+  };
+
+  const flag = getCountryFlag(countryCode);
+  const formattedTime = timestamp.toUTCString();
+
+  const message = `🌐 *New Message in Global Chat*\n\n` +
+    `👤 *From:* ${userName} ${flag}\n` +
+    `🌍 *Country:* ${countryCode}\n` +
+    `🕐 *Time:* ${formattedTime}\n\n` +
+    `💬 *Message:*\n${content}\n\n` +
+    `🔗 [View in chat room](${process.env.NEXT_PUBLIC_SITE_URL})`;
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'Markdown',
+        disable_web_page_preview: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Telegram API error:', error);
+    } else {
+      console.log('Telegram notification sent successfully');
+    }
+  } catch (error) {
+    console.error('Failed to send Telegram notification:', error);
   }
 }
 
@@ -44,17 +110,25 @@ export async function sendNewMessageNotification(
   timestamp: Date,
   countryCode: string
 ) {
-  // Check if 2 hours have passed since last email
-  const now = Date.now();
-  const lastEmailSent = getLastEmailSent();
-  if (now - lastEmailSent < TWO_HOURS) {
-    const remainingMinutes = Math.ceil((TWO_HOURS - (now - lastEmailSent)) / 60000);
-    console.log(`Email cooldown active, skipping notification. ${remainingMinutes} minutes remaining.`);
+  // Don't send notifications if the message is from Arham
+  if (userName.toLowerCase() === 'arham') {
+    console.log('Skipping notifications for message from Arham');
     return;
   }
 
-  // Don't send email if the message is from Arham
-  if (userName.toLowerCase() === 'arham') {
+  // Send Telegram notification (5-minute cooldown)
+  const canSendTelegram = await canSendNotification('telegram');
+  if (canSendTelegram) {
+    await sendTelegramNotification(userName, content, timestamp, countryCode);
+    await updateNotificationTime('telegram');
+  } else {
+    console.log('Telegram cooldown active, skipping notification');
+  }
+
+  // Send email notification (1-hour cooldown)
+  const canSendEmail = await canSendNotification('email');
+  if (!canSendEmail) {
+    console.log('Email cooldown active, skipping notification');
     return;
   }
 
@@ -114,7 +188,7 @@ export async function sendNewMessageNotification(
       `,
     });
 
-    saveLastEmailSent(now);
+    await updateNotificationTime('email');
     console.log('Email notification sent successfully');
   } catch (error) {
     console.error('Failed to send email notification:', error);
