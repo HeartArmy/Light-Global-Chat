@@ -9,7 +9,7 @@ export function formatTimestamp(date: Date): string {
     now.getUTCDate() === messageDate.getUTCDate();
 
   if (isToday) {
-    // HH:MM:SS UTC
+    // HH:MM:SS UTC here
     const hours = messageDate.getUTCHours().toString().padStart(2, '0');
     const minutes = messageDate.getUTCMinutes().toString().padStart(2, '0');
     const seconds = messageDate.getUTCSeconds().toString().padStart(2, '0');
