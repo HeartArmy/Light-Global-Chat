@@ -121,8 +121,8 @@ export async function POST(request: NextRequest) {
     console.log('🤖 Checking if should trigger Gemmie for user:', userName);
     if (userName.toLowerCase() !== 'arham1' && userName.toLowerCase() !== 'gemmie') {
       console.log('✅ Triggering Gemmie response for:', userName);
-      // Trigger Gemmie response asynchronously (don't wait)
-      triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
+      // Wait for Gemmie response to complete (prevents serverless function from dying)
+      await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
         console.error('❌ Gemmie response failed:', err)
       );
     } else {
@@ -179,6 +179,11 @@ export async function GET(request: NextRequest) {
 async function triggerGemmieResponse(userName: string, userMessage: string, userCountry: string): Promise<void> {
   try {
     console.log('🤖 Starting Gemmie response process for:', userName);
+    
+    // Wait a bit to seem more natural (1-3 seconds)
+    const delay = 500 + Math.random() * 1000;
+    console.log(`⏰ Waiting ${Math.round(delay)}ms before responding...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
     
     // Generate response
     console.log('🧠 Generating AI response...');
