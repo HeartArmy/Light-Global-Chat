@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     // If message is from someone other than arham or gemmie, trigger Gemmie response
     console.log('🤖 Checking if should trigger Gemmie for user:', userName);
-    if (userName.toLowerCase() !== 'arham1' && userName.toLowerCase() !== 'gemmie') {
+    if (userName.toLowerCase() !== 'arham' && userName.toLowerCase() !== 'gemmie') {
       console.log('✅ Triggering Gemmie response for:', userName);
       // Wait for Gemmie response to complete (prevents serverless function from dying)
       await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
