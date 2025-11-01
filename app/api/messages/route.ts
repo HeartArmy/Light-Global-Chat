@@ -118,11 +118,15 @@ export async function POST(request: NextRequest) {
     ]);
 
     // If message is from someone other than arham or gemmie, trigger Gemmie response
+    console.log('🤖 Checking if should trigger Gemmie for user:', userName);
     if (userName.toLowerCase() !== 'arham1' && userName.toLowerCase() !== 'gemmie') {
+      console.log('✅ Triggering Gemmie response for:', userName);
       // Trigger Gemmie response asynchronously (don't wait)
       triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
-        console.error('Gemmie response failed:', err)
+        console.error('❌ Gemmie response failed:', err)
       );
+    } else {
+      console.log('⏭️ Skipping Gemmie response (user is arham or gemmie)');
     }
 
     return NextResponse.json({ message: populatedMessage });
@@ -174,14 +178,20 @@ export async function GET(request: NextRequest) {
 // Trigger Gemmie's AI response
 async function triggerGemmieResponse(userName: string, userMessage: string, userCountry: string): Promise<void> {
   try {
+    console.log('🤖 Starting Gemmie response process for:', userName);
+    
     // Wait a bit to seem more natural (1-3 seconds)
     const delay = 1000 + Math.random() * 2000;
+    console.log(`⏰ Waiting ${Math.round(delay)}ms before responding...`);
     await new Promise(resolve => setTimeout(resolve, delay));
     
     // Generate response
+    console.log('🧠 Generating AI response...');
     const response = await generateGemmieResponse(userName, userMessage, userCountry);
+    console.log('💬 Generated response:', response);
     
     // Send to chat
+    console.log('📤 Sending Gemmie message to chat...');
     await sendGemmieMessage(response);
     
     // Trigger Pusher event for real-time update
@@ -200,7 +210,8 @@ async function triggerGemmieResponse(userName: string, userMessage: string, user
     };
     
     await pusher.trigger('chat-room', 'new-message', gemmieMessage);
+    console.log('✅ Gemmie response complete!');
   } catch (error) {
-    console.error('Error in Gemmie response:', error);
+    console.error('❌ Error in Gemmie response:', error);
   }
 }

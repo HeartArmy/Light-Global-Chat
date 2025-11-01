@@ -42,6 +42,8 @@ export async function generateGemmieResponse(
   userCountry: string
 ): Promise<string> {
   try {
+    console.log('🔧 OpenRouter API call starting...');
+    console.log('📝 User:', userName, 'Country:', userCountry, 'Message:', userMessage);
     // Get recent conversation context
     const recentMessages = await getRecentMessages();
     const userFlag = getCountryFlag(userCountry);
@@ -78,11 +80,15 @@ Respond as gemmie (remember: no capitals, max 2 sentences, be curious about them
     });
 
     if (!response.ok) {
-      throw new Error(`OpenRouter API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ OpenRouter API error:', response.status, errorText);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('📡 OpenRouter API response:', data);
     let text = data.choices[0]?.message?.content?.trim() || '';
+    console.log('🎯 Raw AI response:', text);
     
     // Ensure no capitals and clean up
     text = text.toLowerCase();
