@@ -1,7 +1,28 @@
 #!/usr/bin/env node
 
 // Test script for Gemini AI integration
-require('dotenv').config({ path: '.env.local' });
+const fs = require('fs');
+const path = require('path');
+
+// Load .env.local manually
+function loadEnv() {
+  try {
+    const envPath = path.join(__dirname, '..', '.env.local');
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    
+    envContent.split('\n').forEach(line => {
+      const [key, ...valueParts] = line.split('=');
+      if (key && valueParts.length > 0) {
+        const value = valueParts.join('=').trim();
+        process.env[key.trim()] = value;
+      }
+    });
+  } catch (error) {
+    console.log('⚠️  .env.local not found, using system environment variables');
+  }
+}
+
+loadEnv();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 async function testGemini() {
