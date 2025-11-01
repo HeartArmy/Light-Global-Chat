@@ -180,11 +180,6 @@ async function triggerGemmieResponse(userName: string, userMessage: string, user
   try {
     console.log('🤖 Starting Gemmie response process for:', userName);
     
-    // Wait a bit to seem more natural (1-3 seconds)
-    const delay = 1000 + Math.random() * 2000;
-    console.log(`⏰ Waiting ${Math.round(delay)}ms before responding...`);
-    await new Promise(resolve => setTimeout(resolve, delay));
-    
     // Generate response
     console.log('🧠 Generating AI response...');
     const response = await generateGemmieResponse(userName, userMessage, userCountry);
