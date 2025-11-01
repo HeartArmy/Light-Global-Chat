@@ -56,7 +56,7 @@ ${recentMessages}
 Current user: ${userName} ${userFlag} from ${userCountry}
 Their message: "${userMessage}"
 
-Respond as gemmie (remember: no capitals, ask about their region/life):`;
+Respond as gemmie (remember: no capitals, ask about their life):`;
 
     const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
       method: 'POST',
@@ -105,10 +105,10 @@ Respond as gemmie (remember: no capitals, ask about their region/life):`;
     console.error('HuggingFace API error:', error);
     // Fallback responses
     const fallbacks = [
-      'hey there, whats going on in your part of the world.',
-      'hi, tell me something interesting about where you live.',
-      'hello, what do you like to do for fun.',
-      'hey, are you in school or working right now.'
+      '.....',
+      '~~~~~~',
+      ':):):)',
+      ';););)'
     ];
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   }
