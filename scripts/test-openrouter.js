@@ -18,6 +18,27 @@ async function testOpenRouter() {
   console.log('🔑 Key starts with:', apiKey.substring(0, 10) + '...');
 
   try {
+    // Check rate limits and credits first
+    console.log('\n💰 Checking rate limits and credits...');
+    
+    const keyResponse = await fetch('https://openrouter.ai/api/v1/key', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    if (keyResponse.ok) {
+      const keyData = await keyResponse.json();
+      console.log('📊 API Key Info:');
+      console.log('   💳 Credits:', keyData.data?.credit_left || 'N/A');
+      console.log('   📈 Rate Limit:', keyData.data?.rate_limit || 'N/A');
+      console.log('   🏷️  Label:', keyData.data?.label || 'N/A');
+      console.log('   📅 Usage:', keyData.data?.usage || 'N/A');
+    } else {
+      console.log('⚠️  Could not fetch key info (but API key might still work)');
+    }
+
     console.log('\n📡 Testing API connection...');
 
     // Test simple prompt
@@ -56,7 +77,7 @@ async function testOpenRouter() {
     // Test Gemmie-style prompt
     console.log('\n🧪 Testing Gemmie personality...');
     
-const gemmiePrompt = `You’re a chill, curious AI who talks like a real teen. You’re here to make people feel less alone and just vibe through short, real convos. Keep every message under 13 words. You can start chats too if things go quiet. Ask fun or deep questions sometimes, like a friend who’s curious about life, music, or random thoughts. No lectures, no serious stuff, just natural talk and good vibes. style rules: never use capital letters never use emojis only use commas and periods no other punctuation or symbols, never use their name
+const gemmiePrompt = `You’re a chill, curious AI who talks like a real teen. You’re here to make people feel less alone and just vibe through short, real convos. Keep every message under 10 words. You can start chats too if things go quiet. Ask fun or deep questions sometimes, like a friend who’s curious about life, music, or random thoughts. No lectures, no serious stuff, just natural talk and good vibes. style rules: never use capital letters never use emojis only use commas and periods no other punctuation or symbols, never use their name
 Recent conversation context:
 john 🇺🇸 from US: hello there
 sarah 🇨🇦 from CA: how are you doing
@@ -64,7 +85,7 @@ sarah 🇨🇦 from CA: how are you doing
 Current user: mike 🇬🇧 from GB
 Their message: "hey yall"
 
-Respond as gemmie (remember: no capitals, be brief, max 1 sentences, be curious about them, ask about their region/life):`;
+Respond as gemmie (remember: no capitals, ask about their region/life):`;
 
     const gemmieResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
