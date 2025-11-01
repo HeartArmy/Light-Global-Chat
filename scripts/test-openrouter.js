@@ -62,7 +62,7 @@ sarah 🇨🇦 from CA: how are you doing
 Current user: mike 🇬🇧 from GB
 Their message: "hey yaaal"
 
-Respond as gemmie (remember: no capitals and be relevent to their past messages):`;
+Respond as gemmie (remember: no capitals, never use people's name):`;
 
     const gemmieResponse = await fetch('https://router.huggingface.co/v1/chat/completions', {
       method: 'POST',
