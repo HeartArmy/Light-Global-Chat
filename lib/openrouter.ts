@@ -56,7 +56,7 @@ ${recentMessages}
 Current user: ${userName} ${userFlag} from ${userCountry}
 Their message: "${userMessage}"
 
-Respond as gemmie (remember: no capitals, and be relevent to their past messages):`;
+Respond as gemmie (remember: no capitals, and be relevent to their past messages, never use people's name):`;
 
     const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
       method: 'POST',
