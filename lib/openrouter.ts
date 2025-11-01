@@ -58,36 +58,34 @@ Their message: "${userMessage}"
 
 Respond as gemmie (remember: no capitals, ask about their region/life):`;
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://globalchatroom.vercel.app',
-        'X-Title': 'Global Chat Room',
+        'Authorization': `Bearer ${process.env.HF_TOKEN}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.3-8b-instruct:free',
+        model: 'meta-llama/Llama-3.1-8B-Instruct:novita',
         messages: [
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 100, // Keep responses short and cheap
+        max_tokens: 50, // Keep responses short and cheap
         temperature: 0.8 // Make it more conversational
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ OpenRouter API error:', response.status, errorText);
-      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+      console.error('❌ HuggingFace API error:', response.status, errorText);
+      throw new Error(`HuggingFace API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('📡 OpenRouter API response:', data);
-    let text = data.choices[0]?.message?.content?.trim() || '';
+    console.log('📡 HuggingFace API response:', data);
+    let text = data.choices[0]?.message?.content?.trim() || data.choices[0]?.message?.reasoning_content?.trim() || '';
     console.log('🎯 Raw AI response:', text);
     
     // Ensure no capitals and clean up
@@ -104,7 +102,7 @@ Respond as gemmie (remember: no capitals, ask about their region/life):`;
     
     return text || 'hey there, how are you doing today.';
   } catch (error) {
-    console.error('OpenRouter API error:', error);
+    console.error('HuggingFace API error:', error);
     // Fallback responses
     const fallbacks = [
       'hey there, whats going on in your part of the world.',
