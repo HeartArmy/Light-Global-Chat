@@ -339,7 +339,7 @@ export default function ChatRoomClient() {
               }}
               title="Users online"
             >
-              👥 {onlineCount || '...'}
+              👥 {onlineCount ? onlineCount + 1 : 1}
             </span>
             <span
               className="text-caption px-2 py-0.5 rounded-full font-mono"
