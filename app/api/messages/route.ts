@@ -5,6 +5,7 @@ import { getPusherInstance } from '@/lib/pusher';
 import { getCountryFromIP, getClientIP } from '@/lib/country';
 import { checkRateLimit } from '@/lib/security';
 import { sendNewMessageNotification } from '@/lib/email';
+import { generateGemmieResponse, sendGemmieMessage } from '@/lib/gemini';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,6 +117,14 @@ export async function POST(request: NextRequest) {
       sendNewMessageNotification(userName, emailContent, message.timestamp, countryCode)
     ]);
 
+    // If message is from someone other than arham or gemmie, trigger Gemmie response
+    if (userName.toLowerCase() !== 'arham' && userName.toLowerCase() !== 'gemmie') {
+      // Trigger Gemmie response asynchronously (don't wait)
+      triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
+        console.error('Gemmie response failed:', err)
+      );
+    }
+
     return NextResponse.json({ message: populatedMessage });
   } catch (error) {
     console.error('Error creating message:', error);
@@ -159,5 +168,39 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch messages', code: 'SERVER_ERROR' },
       { status: 500 }
     );
+  }
+}
+
+// Trigger Gemmie's AI response
+async function triggerGemmieResponse(userName: string, userMessage: string, userCountry: string): Promise<void> {
+  try {
+    // Wait a bit to seem more natural (1-3 seconds)
+    const delay = 1000 + Math.random() * 2000;
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    // Generate response
+    const response = await generateGemmieResponse(userName, userMessage, userCountry);
+    
+    // Send to chat
+    await sendGemmieMessage(response);
+    
+    // Trigger Pusher event for real-time update
+    const pusher = getPusherInstance();
+    const gemmieMessage = {
+      _id: new Date().getTime().toString(), // Temporary ID
+      content: response,
+      userName: 'gemmie',
+      userCountry: 'US',
+      timestamp: new Date(),
+      attachments: [],
+      replyTo: null,
+      reactions: [],
+      edited: false,
+      editedAt: null
+    };
+    
+    await pusher.trigger('chat-room', 'new-message', gemmieMessage);
+  } catch (error) {
+    console.error('Error in Gemmie response:', error);
   }
 }
