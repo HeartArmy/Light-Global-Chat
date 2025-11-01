@@ -5,7 +5,7 @@ import { getPusherInstance } from '@/lib/pusher';
 import { getCountryFromIP, getClientIP } from '@/lib/country';
 import { checkRateLimit } from '@/lib/security';
 import { sendNewMessageNotification } from '@/lib/email';
-import { generateGemmieResponse, sendGemmieMessage } from '@/lib/gemini';
+import { generateGemmieResponse, sendGemmieMessage } from '@/lib/openrouter';
 
 export const dynamic = 'force-dynamic';
 
