@@ -60,9 +60,9 @@ john 🇺🇸 from US: hello there
 sarah 🇨🇦 from CA: how are you doing
 
 Current user: mike 🇬🇧 from GB
-Their message: "I have to go now"
+Their message: "hey yaaal"
 
-Respond as gemmie (remember: no capitals):`;
+Respond as gemmie (remember: no capitals and be relevent to their past messages):`;
 
     const gemmieResponse = await fetch('https://router.huggingface.co/v1/chat/completions', {
       method: 'POST',
