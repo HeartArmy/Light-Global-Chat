@@ -67,6 +67,35 @@ export default function ChatRoomClient() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
+  // Handle arham leaving (tab close, navigation, etc.)
+  useEffect(() => {
+    if (userName !== 'arham') return;
+
+    const handleBeforeUnload = () => {
+      // Use sendBeacon for reliable delivery even when page is closing
+      const data = JSON.stringify({ userName });
+      navigator.sendBeacon('/api/arham-disconnect', data);
+    };
+
+    const handleUnload = () => {
+      // Fallback for browsers that don't support sendBeacon
+      fetch('/api/arham-disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userName }),
+        keepalive: true, // Keep request alive even if page is closing
+      }).catch(() => {}); // Ignore errors since page is closing
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('unload', handleUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('unload', handleUnload);
+    };
+  }, [userName]);
+
   // Load initial messages and Gemmie status
   useEffect(() => {
     if (!userName) return;
@@ -181,6 +210,15 @@ export default function ChatRoomClient() {
     });
 
     return () => {
+      // If arham is leaving, re-enable Gemmie
+      if (userName === 'arham') {
+        fetch('/api/arham-disconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userName }),
+        }).catch(err => console.error('Failed to handle arham disconnect:', err));
+      }
+      
       channel.unbind_all();
       channel.unsubscribe();
       presenceChannel.unbind_all();
@@ -425,7 +463,7 @@ export default function ChatRoomClient() {
                 border: '1px solid var(--border)',
                 color: 'white',
               }}
-              title={`Gemmie is ${gemmieEnabled ? 'enabled' : 'disabled'}`}
+              title={`Gemmie is ${gemmieEnabled ? 'enabled' : 'disabled'}. Auto-enables when you leave.`}
             >
               🤖 {gemmieEnabled ? 'ON' : 'OFF'}
             </button>
