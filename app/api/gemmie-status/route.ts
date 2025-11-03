@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// In-memory storage for Gemmie status (in production, you'd use a database)
-let gemmieEnabled = true;
+import { getGemmieStatus, setGemmieStatus } from '@/lib/gemmie-status';
 
 export const dynamic = 'force-dynamic';
 
 // GET - Get Gemmie status
 export async function GET() {
-  return NextResponse.json({ enabled: gemmieEnabled });
+  const enabled = await getGemmieStatus();
+  return NextResponse.json({ enabled });
 }
 
 // POST - Toggle Gemmie status (only for arham)
@@ -16,18 +15,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userName, enabled } = body;
 
-    // Only allow arham to control Gemmie
-    if (userName !== 'arham') {
+    console.log('🔧 Gemmie toggle request:', { userName, enabled });
+
+    const success = await setGemmieStatus(enabled, userName);
+    
+    if (!success) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized or failed to update' },
         { status: 403 }
       );
     }
-
-    gemmieEnabled = enabled;
     
     return NextResponse.json({ 
-      enabled: gemmieEnabled,
+      enabled,
       message: `Gemmie ${enabled ? 'enabled' : 'disabled'}` 
     });
   } catch (error) {

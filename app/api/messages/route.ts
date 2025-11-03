@@ -117,14 +117,13 @@ export async function POST(request: NextRequest) {
       sendNewMessageNotification(userName, emailContent, message.timestamp, countryCode)
     ]);
 
-    // If message is from someone other than arham or gemmie, trigger Gemmie response
+    // If message is from someone other than arham or gemmie, check if should trigger Gemmie response
     console.log('🤖 Checking if should trigger Gemmie for user:', userName);
     if (userName.toLowerCase() !== 'arham' && userName.toLowerCase() !== 'gemmie') {
-      // Check if Gemmie is enabled
-      const gemmieStatusResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/gemmie-status`);
-      const gemmieStatus = await gemmieStatusResponse.json();
+      const { getGemmieStatus } = await import('@/lib/gemmie-status');
+      const isGemmieEnabled = await getGemmieStatus();
       
-      if (gemmieStatus.enabled) {
+      if (isGemmieEnabled) {
         console.log('✅ Triggering Gemmie response for:', userName);
         // Wait for Gemmie response to complete (prevents serverless function from dying)
         await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
