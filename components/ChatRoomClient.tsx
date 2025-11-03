@@ -22,6 +22,7 @@ export default function ChatRoomClient() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isTabVisible, setIsTabVisible] = useState(true);
   const [onlineCount, setOnlineCount] = useState(0);
+  const [gemmieEnabled, setGemmieEnabled] = useState(true);
 
   // Initialize user session
   useEffect(() => {
@@ -66,20 +67,23 @@ export default function ChatRoomClient() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  // Load initial messages
+  // Load initial messages and Gemmie status
   useEffect(() => {
     if (!userName) return;
 
     setIsLoading(true);
-    fetch('/api/messages?limit=50')
-      .then((res) => res.json())
-      .then((data) => {
-        setMessages(data.messages.reverse());
-        setHasMore(data.hasMore);
+    Promise.all([
+      fetch('/api/messages?limit=50').then(res => res.json()),
+      fetch('/api/gemmie-status').then(res => res.json())
+    ])
+      .then(([messagesData, gemmieData]) => {
+        setMessages(messagesData.messages.reverse());
+        setHasMore(messagesData.hasMore);
+        setGemmieEnabled(gemmieData.enabled);
         setIsLoading(false);
       })
       .catch((err) => {
-        console.error('Failed to load messages:', err);
+        console.error('Failed to load data:', err);
         setIsLoading(false);
       });
   }, [userName]);
@@ -292,6 +296,28 @@ export default function ChatRoomClient() {
     }
   }, [messages, hasMore, isLoading]);
 
+  const handleToggleGemmie = async () => {
+    if (userName !== 'arham') return;
+
+    try {
+      const response = await fetch('/api/gemmie-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userName,
+          enabled: !gemmieEnabled,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setGemmieEnabled(data.enabled);
+      }
+    } catch (error) {
+      console.error('Failed to toggle Gemmie:', error);
+    }
+  };
+
   if (!userName) {
     return (
       <div className="h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
@@ -388,6 +414,22 @@ export default function ChatRoomClient() {
               ✉️
             </a>
           </div>
+
+          {/* Gemmie Toggle - Only for arham */}
+          {userName === 'arham' && (
+            <button
+              onClick={handleToggleGemmie}
+              className="px-3 py-2 text-caption rounded-sm transition-all duration-fast"
+              style={{
+                background: gemmieEnabled ? 'var(--success)' : 'var(--error)',
+                border: '1px solid var(--border)',
+                color: 'white',
+              }}
+              title={`Gemmie is ${gemmieEnabled ? 'enabled' : 'disabled'}`}
+            >
+              🤖 {gemmieEnabled ? 'ON' : 'OFF'}
+            </button>
+          )}
 
           <button
             onClick={() => setShowNameModal(true)}

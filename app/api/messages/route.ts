@@ -120,11 +120,19 @@ export async function POST(request: NextRequest) {
     // If message is from someone other than arham or gemmie, trigger Gemmie response
     console.log('🤖 Checking if should trigger Gemmie for user:', userName);
     if (userName.toLowerCase() !== 'arham' && userName.toLowerCase() !== 'gemmie') {
-      console.log('✅ Triggering Gemmie response for:', userName);
-      // Wait for Gemmie response to complete (prevents serverless function from dying)
-      await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
-        console.error('❌ Gemmie response failed:', err)
-      );
+      // Check if Gemmie is enabled
+      const gemmieStatusResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/gemmie-status`);
+      const gemmieStatus = await gemmieStatusResponse.json();
+      
+      if (gemmieStatus.enabled) {
+        console.log('✅ Triggering Gemmie response for:', userName);
+        // Wait for Gemmie response to complete (prevents serverless function from dying)
+        await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
+          console.error('❌ Gemmie response failed:', err)
+        );
+      } else {
+        console.log('🔇 Gemmie is disabled, skipping response');
+      }
     } else {
       console.log('⏭️ Skipping Gemmie response (user is arham or gemmie)');
     }
