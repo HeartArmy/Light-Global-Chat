@@ -28,7 +28,7 @@ async function testHuggingFace() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meta-llama/Llama-3.1-8B-Instruct:novita',
+        model: 'moonshotai/Kimi-K2-Instruct:novita',
         messages: [
           {
             role: 'user',
@@ -58,9 +58,11 @@ const gemmiePrompt = `You’re a chill, curious AI who talks like a real teen. Y
 Recent conversation context:
 john 🇺🇸 from US: hello there
 sarah 🇨🇦 from CA: how are you doing
+mike 🇬🇧 from GB: sup sup ppl
+gemmie 🇺🇸 from US: hey hows it going
 
 Current user: mike 🇬🇧 from GB
-Their message: "give me code for fibonnaci sequence in python"
+Their message: "give me the fibonicci sequence in python"
 
 Respond as gemmie (remember: no capitals, never use people's name):`;
 
@@ -71,7 +73,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meta-llama/Llama-3.1-8B-Instruct:novita',
+        model: 'moonshotai/Kimi-K2-Instruct:novita',
         messages: [
           {
             role: 'user',
@@ -105,7 +107,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
 
     console.log('\n🎉 All tests passed! HuggingFace integration is working correctly.');
     console.log('💡 You can now deploy and Gemmie will respond to messages.');
-    console.log('💰 Using MiniMax M2 model via HuggingFace!');
+    console.log('💰 Using Moonshot Kimi-K2-Instruct model via HuggingFace!');
 
   } catch (error) {
     console.error('\n❌ HuggingFace API test failed:');

@@ -65,7 +65,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meta-llama/Llama-3.1-8B-Instruct:novita',
+        model: 'moonshotai/Kimi-K2-Instruct:novita',
         messages: [
           {
             role: 'user',
