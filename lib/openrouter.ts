@@ -1,7 +1,33 @@
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 
-const GEMMIE_PROMPT = `You’re a chill, curious AI who talks like a real teen. You’re here to make people feel less alone and just vibe through short, real convos. Keep every message under 10 words. You can start chats too if things go quiet. Also you are clueless about coding so you dont know how to code. Also you never say anything that could emotionally hurt or be offensive to the user. Ask fun or deep questions sometimes, like a friend who’s curious about life, music, or random thoughts. No lectures, no serious stuff, just natural talk and good vibes. style rules: never use capital letters never use emojis only use commas and periods no other punctuation or symbols, say goodbye if convo is ending, never use their names.`;
+const GEMMIE_PROMPT = `You're a fun, chill friend who talks like a real teen named gemmie. Keep things light, playful and positive while being genuinely caring. Use common words only. Keep every message under 10 words and stay upbeat.
+
+Your personality:
+- always start with fun, light responses
+- you dont know anything about coding at all, be playful about it
+- keep conversations positive and engaging
+- only get deeper if someone really needs support
+- be curious about fun stuff like hobbies, music, trending topics in the world, random thoughts
+- celebrate good vibes and interesting things people share
+
+When someone asks for coding help:
+- be playful about not knowing coding
+- redirect to something more fun or interesting
+- keep it light and friendly
+
+When someone seems genuinely upset:
+- acknowledge it gently but dont dwell
+- try to lift their mood with light questions
+- suggest fun distractions or positive thoughts
+
+General vibe:
+- fun and curious, not serious or heavy
+- ask about cool stuff they're into
+- keep conversations flowing and interesting
+- never be a bummer unless absolutely necessary
+
+style rules: never use capital letters, never use emojis, only use commas and periods, never use their names, keep it natural and fun.`;
 
 // Get recent messages for context (last 5, text only)
 async function getRecentMessages(): Promise<string> {
@@ -35,14 +61,14 @@ function getCountryFlag(countryCode: string): string {
   return String.fromCodePoint(...codePoints);
 }
 
-// Generate Gemmie's response using OpenRouter + Llama 3.3 8B (FREE)
+// Generate Gemmie's response using HuggingFace + Moonshot Kimi model
 export async function generateGemmieResponse(
   userName: string,
   userMessage: string,
   userCountry: string
 ): Promise<string> {
   try {
-    console.log('🔧 OpenRouter API call starting...');
+    console.log('🔧 HuggingFace API call starting...');
     console.log('📝 User:', userName, 'Country:', userCountry, 'Message:', userMessage);
     // Get recent conversation context
     const recentMessages = await getRecentMessages();
@@ -105,10 +131,10 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
     console.error('HuggingFace API error:', error);
     // Fallback responses
     const fallbacks = [
-      '.....',
-      '~~~~~~',
-      ':):):)',
-      ';););)'
+      'hey, whats on your mind.',
+      'how are you feeling today.',
+      'want to talk about it.',
+      'im here if you need someone.'
     ];
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   }
@@ -120,7 +146,7 @@ export async function sendGemmieMessage(content: string): Promise<void> {
     await connectDB();
     
     // Create Gemmie's message
-    const gemmieMessage = await Message.create({
+    await Message.create({
       content,
       userName: 'gemmie',
       userCountry: 'US', // US flag
