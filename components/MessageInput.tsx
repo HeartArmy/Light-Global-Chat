@@ -14,11 +14,22 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
   const [content, setContent] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
+  const [showPasteHint, setShowPasteHint] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { startUpload: startImageUpload } = useUploadThing('imageUploader');
-  const { startUpload: startFileUpload } = useUploadThing('fileUploader');
+  const { startUpload: startImageUpload } = useUploadThing('imageUploader', {
+    onUploadProgress: (progress) => {
+      console.log('Image upload progress:', progress);
+    },
+  });
+  const { startUpload: startFileUpload } = useUploadThing('fileUploader', {
+    onUploadProgress: (progress) => {
+      console.log('File upload progress:', progress);
+    },
+  });
 
   // Auto-resize textarea
   useEffect(() => {
@@ -27,6 +38,85 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [content]);
+
+  // Handle paste events for images
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      // Only handle paste if the textarea is focused or if we're in the message input area
+      const activeElement = document.activeElement;
+      const isInMessageInput = textareaRef.current?.contains(activeElement) || 
+                              activeElement === textareaRef.current;
+      
+      if (!isInMessageInput) return;
+
+      const clipboardData = e.clipboardData;
+      if (!clipboardData) return;
+
+      const items = Array.from(clipboardData.items);
+      const imageItems = items.filter(item => item.type.startsWith('image/'));
+      
+      if (imageItems.length === 0) return;
+
+      // Prevent default paste behavior for images
+      e.preventDefault();
+
+      // Check if adding these files would exceed the limit
+      if (attachments.length + imageItems.length > 8) {
+        alert(`Cannot paste ${imageItems.length} images. Maximum 8 attachments total (currently have ${attachments.length}).`);
+        return;
+      }
+
+      if (isUploading) {
+        alert('Please wait for current upload to finish before pasting more files.');
+        return;
+      }
+
+      // Convert clipboard items to files
+      const files: File[] = [];
+      for (const item of imageItems) {
+        const file = item.getAsFile();
+        if (file) {
+          files.push(file);
+        }
+      }
+
+      if (files.length > 0) {
+        // Show brief paste confirmation
+        setShowPasteHint(true);
+        setTimeout(() => setShowPasteHint(false), 2000);
+        
+        await handleFilesUpload(files);
+      }
+    };
+
+    // Add event listener to document
+    document.addEventListener('paste', handlePaste);
+    
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, [attachments.length, isUploading]);
+
+  // Handle drag and drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      await handleFilesUpload(files);
+    }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -46,12 +136,16 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
     setAttachments([]);
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Reusable function to handle file uploads
+  const handleFilesUpload = async (fileArray: File[]) => {
+    // Check if adding these files would exceed the limit
+    if (attachments.length + fileArray.length > 8) {
+      alert(`Cannot add ${fileArray.length} files. Maximum 8 attachments total (currently have ${attachments.length}).`);
+      return;
+    }
 
-    const fileArray = Array.from(files);
     setIsUploading(true);
+    setUploadProgress({ current: 0, total: fileArray.length });
 
     try {
       // Separate images and other files
@@ -67,9 +161,11 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
       );
 
       const newAttachments: Attachment[] = [];
+      let completed = 0;
 
-      // Upload images
+      // Upload images in batches if needed
       if (imageFiles.length > 0) {
+        setUploadProgress({ current: completed, total: fileArray.length });
         const imageResults = await startImageUpload(imageFiles);
         if (imageResults) {
           imageResults.forEach((result, index) => {
@@ -80,6 +176,8 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
                 name: imageFiles[index].name,
                 size: imageFiles[index].size,
               });
+              completed++;
+              setUploadProgress({ current: completed, total: fileArray.length });
             }
           });
         }
@@ -97,6 +195,8 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
                 name: otherFiles[index].name,
                 size: otherFiles[index].size,
               });
+              completed++;
+              setUploadProgress({ current: completed, total: fileArray.length });
             }
           });
         }
@@ -105,13 +205,22 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
       setAttachments([...attachments, ...newAttachments]);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload files');
+      alert(`Failed to upload files: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsUploading(false);
+      setUploadProgress({ current: 0, total: 0 });
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const fileArray = Array.from(files);
+    await handleFilesUpload(fileArray);
   };
 
   const removeAttachment = (index: number) => {
@@ -123,11 +232,14 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
 
   return (
     <div 
-      className="border-t p-3 md:p-4"
+      className={`border-t p-3 md:p-4 transition-all duration-200 relative ${isDragOver ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
       style={{
         background: 'var(--surface)',
         borderColor: 'var(--border)',
       }}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       {/* Reply Context */}
       {replyingTo && (
@@ -156,6 +268,32 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
         </div>
       )}
 
+      {/* Upload Progress Bar */}
+      {isUploading && uploadProgress.total > 0 && (
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-small" style={{ color: 'var(--text-secondary)' }}>
+              Uploading {uploadProgress.current}/{uploadProgress.total} files...
+            </span>
+            <span className="text-small" style={{ color: 'var(--text-secondary)' }}>
+              {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
+            </span>
+          </div>
+          <div 
+            className="w-full h-2 rounded-full overflow-hidden"
+            style={{ background: 'var(--background)' }}
+          >
+            <div 
+              className="h-full transition-all duration-300 rounded-full"
+              style={{ 
+                background: 'var(--accent)',
+                width: `${(uploadProgress.current / uploadProgress.total) * 100}%`
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Attachments Preview */}
       {attachments.length > 0 && (
         <div className="mb-2">
@@ -167,6 +305,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
               onClick={() => setAttachments([])}
               className="text-small px-2 py-1 rounded transition-all duration-fast hover:opacity-70"
               style={{ color: 'var(--error)' }}
+              disabled={isUploading}
             >
               Clear all
             </button>
@@ -224,6 +363,20 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
         </div>
       )}
 
+      {/* Drag Overlay */}
+      {isDragOver && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center rounded-lg border-2 border-dashed border-blue-500 z-10 bg-blue-50 bg-opacity-90"
+        >
+          <div className="text-center">
+            <div className="text-2xl mb-2">📁</div>
+            <p className="text-small font-semibold text-blue-600">
+              Drop files here to upload
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Input Area */}
       <div className="flex items-end gap-2">
         <input
@@ -235,19 +388,49 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
           className="hidden"
         />
         
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading || attachments.length >= 8}
-          className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
-          style={{
-            background: 'var(--background)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-primary)',
-          }}
-          title={`Attach files (${attachments.length}/8 used) - Supports images (including AVIF), PDFs, docs`}
-        >
-          {isUploading ? '⏳' : attachments.length > 0 ? `📎${attachments.length}` : '📎'}
-        </button>
+        <div className="flex-shrink-0 relative">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || attachments.length >= 8}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
+            style={{
+              background: 'var(--background)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-primary)',
+            }}
+            title={`Attach files (${attachments.length}/8 used) - Supports images (including AVIF), PDFs, docs`}
+          >
+            {isUploading ? '⏳' : attachments.length > 0 ? `📎${attachments.length}` : '📎'}
+          </button>
+          
+          {/* Upload Progress */}
+          {isUploading && uploadProgress.total > 0 && (
+            <div 
+              className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 rounded text-xs whitespace-nowrap"
+              style={{
+                background: 'var(--surface-elevated)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              {uploadProgress.current}/{uploadProgress.total}
+            </div>
+          )}
+          
+          {/* Paste Hint */}
+          {showPasteHint && (
+            <div 
+              className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 rounded text-xs whitespace-nowrap"
+              style={{
+                background: 'var(--success)',
+                color: '#ffffff',
+                border: '1px solid var(--border)',
+              }}
+            >
+              📋 Pasted!
+            </div>
+          )}
+        </div>
 
         <div className="flex-1 relative">
           <textarea
@@ -255,7 +438,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
+            placeholder="Type a message... (Cmd+V to paste images)"
             rows={1}
             maxLength={5000}
             className="w-full px-4 py-2.5 rounded-full resize-none transition-all duration-fast"
