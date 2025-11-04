@@ -4,6 +4,23 @@ import { useState, useRef, useEffect } from 'react';
 import { Message, Attachment } from '@/types';
 import { useUploadThing } from '@/lib/uploadthing';
 
+// Hook to detect mobile device
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  return isMobile;
+};
+
 interface MessageInputProps {
   onSend: (content: string, attachments: Attachment[], replyTo?: string) => void;
   replyingTo: Message | null;
@@ -19,6 +36,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
   const [isDragOver, setIsDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
 
   const { startUpload: startImageUpload } = useUploadThing('imageUploader', {
     onUploadProgress: (progress) => {
@@ -438,7 +456,11 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message... (Cmd+V to paste images)"
+            placeholder={
+              isMobile 
+                ? "Type a message... (tap 📎 to add files)" 
+                : "Type a message... (Cmd+V to paste images)"
+            }
             rows={1}
             maxLength={5000}
             className="w-full px-4 py-2.5 rounded-full resize-none transition-all duration-fast"
