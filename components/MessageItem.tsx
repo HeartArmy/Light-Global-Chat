@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Message, Reaction } from '@/types';
 import MessageActions from './MessageActions';
+import ImageViewer from './ImageViewer';
 import { formatTimestamp, linkifyText, formatFileSize, getCountryFlag } from '@/lib/utils';
 import { useSwipe } from '@/lib/gestures';
 
@@ -31,6 +32,7 @@ export default function MessageItem({
   const [editContent, setEditContent] = useState(message.content);
   const [showActions, setShowActions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [imageViewer, setImageViewer] = useState<{ url: string; name: string } | null>(null);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -59,6 +61,14 @@ export default function MessageItem({
 
   const handleReactionClick = (emoji: string) => {
     onReact(emoji);
+  };
+
+  const handleImageClick = (url: string, name: string) => {
+    setImageViewer({ url, name });
+  };
+
+  const closeImageViewer = () => {
+    setImageViewer(null);
   };
 
   // Group reactions by emoji
@@ -224,8 +234,10 @@ export default function MessageItem({
                             <img
                               src={attachment.url}
                               alt={attachment.name}
-                              className="rounded-lg max-w-full"
+                              className="rounded-lg max-w-full cursor-pointer hover:opacity-90 transition-opacity duration-200"
                               style={{ maxHeight: '300px', objectFit: 'cover' }}
+                              onClick={() => handleImageClick(attachment.url, attachment.name)}
+                              title="Click to view full size"
                             />
                           ) : (
                             <a
@@ -350,6 +362,16 @@ export default function MessageItem({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {imageViewer && (
+        <ImageViewer
+          isOpen={true}
+          imageUrl={imageViewer.url}
+          imageName={imageViewer.name}
+          onClose={closeImageViewer}
+        />
       )}
     </div>
   );
