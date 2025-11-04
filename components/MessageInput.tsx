@@ -50,27 +50,62 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const file = files[0];
+    const fileArray = Array.from(files);
     setIsUploading(true);
 
     try {
-      const isImage = file.type.startsWith('image/');
-      const uploadFn = isImage ? startImageUpload : startFileUpload;
-      
-      const result = await uploadFn([file]);
-      
-      if (result && result[0]) {
-        const attachment: Attachment = {
-          type: isImage ? 'image' : 'file',
-          url: result[0].url,
-          name: file.name,
-          size: file.size,
-        };
-        setAttachments([...attachments, attachment]);
+      // Separate images and other files
+      const imageFiles = fileArray.filter(file => 
+        file.type.startsWith('image/') || 
+        file.type === 'image/avif' || 
+        file.type === 'image/webp'
+      );
+      const otherFiles = fileArray.filter(file => 
+        !file.type.startsWith('image/') && 
+        file.type !== 'image/avif' && 
+        file.type !== 'image/webp'
+      );
+
+      const newAttachments: Attachment[] = [];
+
+      // Upload images
+      if (imageFiles.length > 0) {
+        const imageResults = await startImageUpload(imageFiles);
+        if (imageResults) {
+          imageResults.forEach((result, index) => {
+            if (result) {
+              newAttachments.push({
+                type: 'image',
+                url: result.url,
+                name: imageFiles[index].name,
+                size: imageFiles[index].size,
+              });
+            }
+          });
+        }
       }
+
+      // Upload other files
+      if (otherFiles.length > 0) {
+        const fileResults = await startFileUpload(otherFiles);
+        if (fileResults) {
+          fileResults.forEach((result, index) => {
+            if (result) {
+              newAttachments.push({
+                type: 'file',
+                url: result.url,
+                name: otherFiles[index].name,
+                size: otherFiles[index].size,
+              });
+            }
+          });
+        }
+      }
+
+      setAttachments([...attachments, ...newAttachments]);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload file');
+      alert('Failed to upload files');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -123,54 +158,69 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
 
       {/* Attachments Preview */}
       {attachments.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {attachments.map((attachment, index) => (
-            <div
-              key={index}
-              className="relative rounded-lg overflow-hidden"
-              style={{
-                background: 'var(--background)',
-                border: '1px solid var(--border)',
-              }}
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-small" style={{ color: 'var(--text-secondary)' }}>
+              {attachments.length} file{attachments.length > 1 ? 's' : ''} attached
+            </span>
+            <button
+              onClick={() => setAttachments([])}
+              className="text-small px-2 py-1 rounded transition-all duration-fast hover:opacity-70"
+              style={{ color: 'var(--error)' }}
             >
-              {attachment.type === 'image' ? (
-                <div className="relative">
-                  <img
-                    src={attachment.url}
-                    alt={attachment.name}
-                    className="w-20 h-20 object-cover"
-                  />
-                  <button
-                    onClick={() => removeAttachment(index)}
-                    className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-small transition-all duration-fast hover:scale-110"
-                    style={{ 
-                      background: 'var(--error)',
-                      color: '#ffffff',
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 p-2 pr-8">
-                  <span className="text-xl">📄</span>
-                  <span className="text-small truncate max-w-[100px]" style={{ color: 'var(--text-primary)' }}>
-                    {attachment.name}
-                  </span>
-                  <button
-                    onClick={() => removeAttachment(index)}
-                    className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center text-small transition-all duration-fast hover:scale-110"
-                    style={{ 
-                      background: 'var(--error)',
-                      color: '#ffffff',
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+              Clear all
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+            {attachments.map((attachment, index) => (
+              <div
+                key={index}
+                className="relative rounded-lg overflow-hidden flex-shrink-0"
+                style={{
+                  background: 'var(--background)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                {attachment.type === 'image' ? (
+                  <div className="relative">
+                    <img
+                      src={attachment.url}
+                      alt={attachment.name}
+                      className="w-16 h-16 object-cover"
+                      title={attachment.name}
+                    />
+                    <button
+                      onClick={() => removeAttachment(index)}
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all duration-fast hover:scale-110"
+                      style={{ 
+                        background: 'var(--error)',
+                        color: '#ffffff',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-2 pr-6 min-w-0">
+                    <span className="text-lg">📄</span>
+                    <span className="text-small truncate max-w-[80px]" style={{ color: 'var(--text-primary)' }} title={attachment.name}>
+                      {attachment.name}
+                    </span>
+                    <button
+                      onClick={() => removeAttachment(index)}
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all duration-fast hover:scale-110"
+                      style={{ 
+                        background: 'var(--error)',
+                        color: '#ffffff',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -180,22 +230,23 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
           ref={fileInputRef}
           type="file"
           onChange={handleFileSelect}
-          accept="image/*,.pdf,.doc,.docx,.txt"
+          accept="image/*,.avif,.webp,.pdf,.doc,.docx,.txt"
+          multiple
           className="hidden"
         />
         
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
+          disabled={isUploading || attachments.length >= 8}
           className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
           style={{
             background: 'var(--background)',
             border: '1px solid var(--border)',
             color: 'var(--text-primary)',
           }}
-          title="Attach file"
+          title={`Attach files (${attachments.length}/8 used) - Supports images (including AVIF), PDFs, docs`}
         >
-          {isUploading ? '⏳' : '📎'}
+          {isUploading ? '⏳' : attachments.length > 0 ? `📎${attachments.length}` : '📎'}
         </button>
 
         <div className="flex-1 relative">

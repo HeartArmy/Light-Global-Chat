@@ -63,6 +63,14 @@ export async function POST(request: NextRequest) {
 
     // Validate attachments
     if (attachments.length > 0) {
+      // Limit total number of attachments
+      if (attachments.length > 8) {
+        return NextResponse.json(
+          { error: 'Too many attachments (max 8)', code: 'INVALID_INPUT' },
+          { status: 400 }
+        );
+      }
+
       for (const attachment of attachments) {
         if (!attachment.url || !attachment.name || !attachment.size || !attachment.type) {
           return NextResponse.json(
