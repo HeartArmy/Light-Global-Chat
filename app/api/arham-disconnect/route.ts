@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { setGemmieStatus } from '@/lib/gemmie-status';
+// Previously this endpoint re-enabled Gemmie when arham disconnected.
+// To persist arham's preference, we no longer change Gemmie state here.
 
 export const dynamic = 'force-dynamic';
 
@@ -14,23 +15,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Not arham' });
     }
 
-    console.log('👋 Arham disconnected, re-enabling Gemmie...');
-    
-    // Re-enable Gemmie when arham leaves
-    const success = await setGemmieStatus(true, 'arham');
-    
-    if (success) {
-      console.log('✅ Gemmie automatically re-enabled after arham left');
-      return NextResponse.json({ 
-        message: 'Gemmie re-enabled',
-        enabled: true 
-      });
-    } else {
-      console.log('❌ Failed to re-enable Gemmie');
-      return NextResponse.json({ 
-        message: 'Failed to re-enable Gemmie' 
-      }, { status: 500 });
-    }
+    console.log('👋 Arham disconnected — no Gemmie state change (preference persists).');
+    return NextResponse.json({ message: 'Arham disconnected (no change to Gemmie)' });
   } catch (error) {
     console.error('Error handling arham disconnect:', error);
     return NextResponse.json(
