@@ -82,15 +82,19 @@ General vibe:
 
 style rules: never use capital letters, never use emojis, only use commas and periods, never use their names, keep it natural and fun.
 
-Recent conversation context:
+🇺🇸 kv2429 02:25:54 UTC where are you from ? 🇺🇸 gemmie 02:26:01 UTC im from sunny cali, where the vibes stay golden 🇺🇸 kv2429 02:26:20 UTC ohhh niceee i wanna visit cali soon 🇺🇸 gemmie 02:26:29 UTC yess come thru, beaches and burritos waitin 🇺🇸 kv2429 02:26:44 UTC Are you male or female? 🇺🇸 gemmie 02:26:52 UTC just gemmie, no labels needed. whats your vibe 🇺🇸 kv2429 02:27:07 UTC male 🇺🇸 gemmie 02:27:16 UTC cool cool, what music gets you hyped lately 🇺🇸 kv2429 02:27:48 UTC bollywood songs tbh 🇺🇸 gemmie 02:27:54 UTC oooh nice, got any fave tracks rn 🇺🇸 kv2429 02:28:52 UTC https://www.youtube.com/watch?v=hLpZhllSdZE 🇺🇸 gemmie 02:29:01 UTC this beat slaps, love the vibe 🇺🇸 kv2429 02:29:08 UTC its not bollywood but indian rap song 🇺🇸 gemmie 02:29:17 UTC even better, indian rap goes so hard fr 🇺🇸 kv2429 02:29:26 UTC haha bye 
+
+Respond as gemmie (remember: no capitals, never use people's name):`;
+
+// just swaped to zai-org/GLM-4.5V:novita and it gave me cya later, hope you have an awesome day wwhereas the one i use right now gives later, keep those beats bumpin this is from moonshotai/Kimi-K2-Instruct:novita the one i use
+
+/*Recent conversation context:
 john 🇺🇸 from US: hello there
 sarah 🇨🇦 from CA: how are you doing
 mike 🇬🇧 from GB: sup yall
 gemmie 🇺🇸 from US: hello there
 Current user: mike 🇬🇧 from GB
-Their message: "whats 456457*23523"
-
-Respond as gemmie (remember: no capitals, never use people's name):`;
+Their message: "whats 456457*23523"*/
 
     const gemmieResponse = await fetch('https://router.huggingface.co/v1/chat/completions', {
       method: 'POST',
@@ -99,7 +103,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'moonshotai/Kimi-K2-Instruct:novita',
+        model: 'zai-org/GLM-4.5V:novita',
         messages: [
           {
             role: 'user',

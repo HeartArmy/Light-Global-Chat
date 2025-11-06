@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     // Run Pusher and notifications in parallel, but wait for both
     await Promise.allSettled([
       pusher.trigger('chat-room', 'new-message', populatedMessage),
-      sendNewMessageNotification(userName, emailContent, message.timestamp, countryCode)
+      sendNewMessageNotification(userName, emailContent, message.timestamp, countryCode, ip)
     ]);
 
     // If message is from someone other than arham or gemmie, check if should trigger Gemmie response

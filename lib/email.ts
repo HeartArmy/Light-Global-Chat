@@ -55,7 +55,8 @@ async function sendTelegramNotification(
   userName: string,
   content: string,
   timestamp: Date,
-  countryCode: string
+  countryCode: string,
+  ipAddress: string
 ): Promise<void> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -77,6 +78,7 @@ async function sendTelegramNotification(
   const message = `🌐 *New Message in Global Chat*\n\n` +
     `👤 *From:* ${userName} ${flag}\n` +
     `🌍 *Country:* ${countryCode}\n` +
+    `🌐 *IP:* \`${ipAddress}\`\n` +
     `🕐 *Time:* ${formattedTime}\n\n` +
     `💬 *Message:*\n${content}\n\n` +
     `🔗 [View in chat room](${process.env.NEXT_PUBLIC_SITE_URL})`;
@@ -108,7 +110,8 @@ export async function sendNewMessageNotification(
   userName: string, 
   content: string, 
   timestamp: Date,
-  countryCode: string
+  countryCode: string,
+  ipAddress: string
 ) {
   // Don't send notifications if the message is from Arham
   if (userName.toLowerCase() === 'arham') {
@@ -119,7 +122,7 @@ export async function sendNewMessageNotification(
   // Send Telegram notification (5-minute cooldown)
   const canSendTelegram = await canSendNotification('telegram');
   if (canSendTelegram) {
-    await sendTelegramNotification(userName, content, timestamp, countryCode);
+    await sendTelegramNotification(userName, content, timestamp, countryCode, ipAddress);
     await updateNotificationTime('telegram');
   } else {
     console.log('Telegram cooldown active, skipping notification');
