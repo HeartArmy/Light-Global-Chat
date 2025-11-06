@@ -28,7 +28,7 @@ async function testHuggingFace() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'moonshotai/Kimi-K2-Instruct:novita',
+        model: 'zai-org/GLM-4.5V:novita',
         messages: [
           {
             role: 'user',
