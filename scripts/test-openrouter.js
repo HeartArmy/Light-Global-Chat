@@ -214,7 +214,7 @@ Their message: "whats 456457*23523"*/
     }
 
     console.log('✅ Gemmie test successful!');
-    console.log('� Gemmie wnould say:', gemmieText);
+    console.log('� Gemmie would say:', gemmieText);
 
     console.log('\n🎉 All tests passed! HuggingFace integration is working correctly.');
     console.log('💡 You can now deploy and Gemmie will respond to messages.');

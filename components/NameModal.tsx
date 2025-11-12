@@ -42,7 +42,7 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
     }
 
     // Check if trying to use protected name "Arham"
-    if (trimmedName.toLowerCase() === 'arham') {
+    if (trimmedName.toLowerCase() === 'arham' || trimmedName.toLowerCase() === 'gemmie') {
       // Check if already verified
       const verified = localStorage.getItem('arham_verified');
       if (verified === 'true') {
