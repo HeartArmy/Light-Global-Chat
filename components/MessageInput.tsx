@@ -250,7 +250,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
 
   return (
     <div 
-      className={`border-t p-3 md:p-4 transition-all duration-200 relative ${isDragOver ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
+      className={`border-t p-2 md:p-3 transition-all duration-200 relative ${isDragOver ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
       style={{
         background: 'var(--surface)',
         borderColor: 'var(--border)',
@@ -262,7 +262,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
       {/* Reply Context */}
       {replyingTo && (
         <div 
-          className="mb-2 p-2 rounded-lg flex items-start justify-between"
+          className="mb-1 p-1 rounded-lg flex items-start justify-between"
           style={{
             background: 'var(--background)',
             border: '1px solid var(--accent)',
@@ -328,7 +328,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
               Clear all
             </button>
           </div>
-          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+          <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto">
             {attachments.map((attachment, index) => (
               <div
                 key={index}
@@ -343,7 +343,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
                     <img
                       src={attachment.url}
                       alt={attachment.name}
-                      className="w-16 h-16 object-cover"
+                      className="w-12 h-12 object-cover"
                       title={attachment.name}
                     />
                     <button
@@ -396,7 +396,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
       )}
 
       {/* Input Area */}
-      <div className="flex items-end gap-2">
+  <div className="flex items-end gap-2">
         <input
           ref={fileInputRef}
           type="file"
@@ -406,11 +406,11 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
           className="hidden"
         />
         
-        <div className="flex-shrink-0 relative">
+          <div className="flex-shrink-0 relative">
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading || attachments.length >= 8}
-            className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
             style={{
               background: 'var(--background)',
               border: '1px solid var(--border)',
@@ -463,12 +463,12 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
             }
             rows={1}
             maxLength={5000}
-            className="w-full px-4 py-2.5 rounded-full resize-none transition-all duration-fast"
+            className="w-full px-3 py-2 rounded-full resize-none transition-all duration-fast"
             style={{
               background: 'var(--background)',
               border: `1px solid ${isOverLimit ? 'var(--error)' : 'var(--border)'}`,
               color: 'var(--text-primary)',
-              maxHeight: '120px',
+              maxHeight: '90px',
               outline: 'none',
             }}
             onFocus={(e) => {
@@ -496,7 +496,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
         <button
           onClick={handleSend}
           disabled={(!content.trim() && attachments.length === 0) || isOverLimit || isUploading}
-          className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
+          className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center font-semibold transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
           style={{
             background: 'var(--accent)',
             color: '#ffffff',

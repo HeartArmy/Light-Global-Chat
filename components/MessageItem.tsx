@@ -103,7 +103,7 @@ export default function MessageItem({
 
   return (
     <div
-      className="group px-4 py-2 transition-all duration-fast"
+      className="group px-3 py-1.5 transition-all duration-fast"
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
       onTouchStart={(e) => {
@@ -132,7 +132,7 @@ export default function MessageItem({
 
         <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[70%]`}>
           {/* User Info */}
-          <div className="flex items-center gap-2 mb-1 px-2">
+          <div className="flex items-center gap-2 mb-1 px-1">
             <span className="text-caption font-semibold" style={{ color: 'var(--text-secondary)' }}>
               {getCountryFlag(message.userCountry)} {message.userName}
             </span>
@@ -169,7 +169,7 @@ export default function MessageItem({
           {/* Message Bubble */}
           <div className="relative">
             <div
-              className="rounded-2xl px-4 py-2 shadow-sm"
+              className="rounded-2xl px-3 py-1.5 shadow-sm"
               style={{
                 background: isOwn ? 'var(--accent)' : 'var(--surface)',
                 color: isOwn ? '#ffffff' : 'var(--text-primary)',
@@ -235,7 +235,7 @@ export default function MessageItem({
                               src={attachment.url}
                               alt={attachment.name}
                               className="rounded-lg max-w-full cursor-pointer hover:opacity-90 transition-opacity duration-200"
-                              style={{ maxHeight: '300px', objectFit: 'cover' }}
+                              style={{ maxHeight: '220px', objectFit: 'cover' }}
                               onClick={() => handleImageClick(attachment.url, attachment.name)}
                               title="Click to view full size"
                             />
@@ -283,14 +283,14 @@ export default function MessageItem({
 
           {/* Reactions */}
           {Object.keys(groupedReactions).length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1 px-2">
+                  <div className="flex flex-wrap gap-1 mt-1 px-1">
               {Object.entries(groupedReactions).map(([emoji, users]) => {
                 const hasReacted = users.includes(currentUserName);
                 return (
                   <button
                     key={emoji}
                     onClick={() => handleReactionClick(emoji)}
-                    className="px-2 py-1 rounded-full text-caption transition-all duration-fast hover:scale-110"
+                    className="px-2 py-0.5 rounded-full text-caption transition-all duration-fast hover:scale-110"
                     style={{
                       background: hasReacted ? 'var(--accent)' : 'var(--surface)',
                       border: `1px solid ${hasReacted ? 'var(--accent)' : 'var(--border)'}`,

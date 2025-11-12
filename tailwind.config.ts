@@ -48,11 +48,12 @@ const config: Config = {
         ],
       },
       fontSize: {
-        display: ['28px', { lineHeight: '1.2', fontWeight: '700' }],
-        heading: ['20px', { lineHeight: '1.3', fontWeight: '600' }],
-        body: ['16px', { lineHeight: '1.5', fontWeight: '400' }],
-        caption: ['14px', { lineHeight: '1.4', fontWeight: '400' }],
-        small: ['12px', { lineHeight: '1.3', fontWeight: '400' }],
+        // Slightly reduced sizes so the UI is denser and shows more messages
+        display: ['24px', { lineHeight: '1.2', fontWeight: '700' }],
+        heading: ['18px', { lineHeight: '1.3', fontWeight: '600' }],
+        body: ['14px', { lineHeight: '1.45', fontWeight: '400' }],
+        caption: ['12px', { lineHeight: '1.35', fontWeight: '400' }],
+        small: ['11px', { lineHeight: '1.25', fontWeight: '400' }],
       },
       spacing: {
         xs: '4px',
