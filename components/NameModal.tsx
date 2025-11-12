@@ -89,7 +89,7 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
               🔒 Protected Name
             </h2>
             <p className="mb-6 text-body" style={{ color: 'var(--text-secondary)' }}>
-              The name "Arham" is protected. Please enter the keyword to continue.
+              This name is protected. Please enter the keyword to continue.
             </p>
 
             <form onSubmit={handleKeywordSubmit}>
