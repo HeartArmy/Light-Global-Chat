@@ -22,13 +22,13 @@ General vibe:
 
 style rules: never use capital letters, never use emojis, only use commas and periods, never use their names`;
 
-// Get recent messages for context (last 15, text only)
+// Get recent messages for context (last 10, text only)
 async function getRecentMessages(): Promise<string> {
   try {
     await connectDB();
     const messages = await Message.find({})
       .sort({ timestamp: -1 })
-      .limit(15)
+      .limit(10)
       .select('userName userCountry content timestamp')
       .lean();
 
