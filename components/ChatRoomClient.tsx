@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Pusher from 'pusher-js';
-import { Message, Attachment, QueuedMessage } from '@/types';
+import { Message, Attachment } from '@/types';
 import { useTheme } from '@/components/ThemeProvider';
 import NameModal from '@/components/NameModal';
 import MessageList from '@/components/MessageList';
@@ -23,88 +23,6 @@ export default function ChatRoomClient() {
   const [isTabVisible, setIsTabVisible] = useState(true);
   const [onlineCount, setOnlineCount] = useState(0);
   const [gemmieEnabled, setGemmieEnabled] = useState(true);
-  
-  // Optimistic UI states
-  const [messageQueue, setMessageQueue] = useState<QueuedMessage[]>([]);
-  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const INACTIVITY_DELAY = 8000; // 8 seconds
-
-  // Constants for localStorage
-  const STORAGE_KEY = "gemmie_pending_messages";
-
-  const saveToLocalStorage = (message: QueuedMessage) => {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    // Convert QueuedMessage to a storable format (remove actualFiles if needed, or use a reviver)
-    const storableMessage = { ...message, actualFiles: undefined }; 
-    stored.push(storableMessage);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
-  };
-
-  const loadPendingMessages = (): QueuedMessage[] => {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    // Convert stored messages back to QueuedMessage format
-    // This is a simplified conversion; you might need a more robust one
-    return stored.map((msg: any) => ({
-      ...msg,
-      timestamp: new Date(msg.timestamp),
-      actualFiles: [] // Placeholder, actual files are not stored
-    }));
-  };
-
-  const clearFromLocalStorage = (messageIds: string[]) => {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    const filtered = stored.filter((m: any) => !messageIds.includes(m.id));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-  };
-
-  const resetInactivityTimer = () => {
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-    }
-    
-    inactivityTimerRef.current = setTimeout(() => {
-      processMessageQueue();
-    }, INACTIVITY_DELAY);
-  };
-
-  const processMessageQueue = async () => {
-    if (messageQueue.length === 0) return;
-
-    const messagesToSend = [...messageQueue];
-    setMessageQueue([]); // Clear queue immediately
-
-    try {
-      // Simulate sending - replace with actual API call
-      const response = await fetch('/api/messages/batch', { // Assuming a new batch endpoint
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: messagesToSend.map(m => ({
-            content: m.content,
-            attachments: m.attachments, // These should be pre-uploaded URLs
-            userName: m.sender,
-            timestamp: m.timestamp,
-            replyTo: m.replyTo // if applicable
-          }))
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send batched messages');
-      }
-
-      // If successful, remove from localStorage
-      clearFromLocalStorage(messagesToSend.map(m => m.id));
-      console.log('Batched messages sent successfully.');
-
-    } catch (error) {
-      console.error('Failed to process message queue:', error);
-      // Optionally, re-add failed messages to the queue or handle error
-      setMessageQueue(prev => [...prev, ...messagesToSend]);
-      // You might want to implement retry logic or notify the user
-    }
-  };
-
 
   // Initialize user session
   useEffect(() => {
@@ -132,44 +50,6 @@ export default function ChatRoomClient() {
 
     return () => clearInterval(timer);
   }, []);
-
-  // Load pending messages from localStorage on mount
-  useEffect(() => {
-    if (!userName) return;
-
-    const pending = loadPendingMessages();
-    if (pending.length > 0) {
-      // Add to UI (optimistic)
-      setMessages(prev => [...prev, ...pending.map(qm => ({
-        _id: qm.id,
-        content: qm.content,
-        userName: qm.sender,
-        userCountry: userCountry, // or try to get stored country if available
-        timestamp: qm.timestamp,
-        attachments: qm.attachments,
-        replyTo: qm.replyTo,
-        reactions: [],
-        edited: false,
-        editedAt: undefined
-      }))]);
-      setMessageQueue(pending);
-      resetInactivityTimer();
-    }
-  }, [userName, userCountry]);
-
-
-  // Listen for online/offline events
-  useEffect(() => {
-    const handleOnline = () => {
-      if (messageQueue.length > 0) {
-        processMessageQueue();
-      }
-    };
-  
-    window.addEventListener("online", handleOnline);
-    return () => window.removeEventListener("online", handleOnline);
-  }, [messageQueue]);
-
 
   // Track tab visibility for notifications
   useEffect(() => {
@@ -238,13 +118,9 @@ export default function ChatRoomClient() {
       setIsConnected(false);
     });
 
-    // Listen for new messages (from other clients or server)
+    // Listen for new messages
     channel.bind('new-message', (message: Message) => {
-      // Avoid re-adding messages that were sent from this client's queue
-      const isFromThisQueue = messageQueue.some(qm => qm.id === message._id);
-      if (!isFromThisQueue) {
-        setMessages((prev) => [...prev, message]);
-      }
+      setMessages((prev) => [...prev, message]);
 
       // Increment unread count if tab is hidden
       if (document.hidden) {
@@ -316,12 +192,8 @@ export default function ChatRoomClient() {
       presenceChannel.unbind_all();
       presenceChannel.unsubscribe();
       pusher.disconnect();
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
     };
-  }, [userName, messageQueue]);
-
+  }, [userName]);
 
   const handleNameSubmit = (name: string) => {
     setUserName(name);
@@ -330,41 +202,35 @@ export default function ChatRoomClient() {
   };
 
   const handleSendMessage = async (content: string, attachments: Attachment[], replyTo?: string) => {
-    const tempMessage: QueuedMessage = {
-      id: `temp-${Date.now()}`,
-      content,
-      attachments: attachments.map(att => ({...att})), // Create a copy
-      timestamp: new Date(),
-      sender: userName || 'unknown', // Ensure sender is defined
-      replyTo // if applicable
-    };
+    try {
+      console.log('Sending message:', { content, attachments, userName, replyTo });
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content,
+          userName,
+          attachments,
+          replyTo,
+        }),
+      });
 
-    // Optimistically add to UI
-    const optimisticMessage: Message = {
-        _id: tempMessage.id,
-        content: tempMessage.content,
-        userName: tempMessage.sender,
-        userCountry: userCountry,
-        timestamp: tempMessage.timestamp,
-        attachments: tempMessage.attachments,
-        replyTo: tempMessage.replyTo, // Ensure this matches Message type
-        reactions: [],
-        edited: false,
-        editedAt: undefined
-    };
-    setMessages(prev => [...prev, optimisticMessage]);
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Server error:', error);
+        alert(`Failed to send message: ${error.error}`);
+        return;
+      }
 
-    // Add to queue
-    setMessageQueue(prev => [...prev, tempMessage]);
-    saveToLocalStorage(tempMessage);
-    resetInactivityTimer();
-    
-    setReplyingTo(null); // Clear reply state
+      setReplyingTo(null);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      alert('Failed to send message');
+    }
   };
 
   const handleEditMessage = async (messageId: string, newContent: string) => {
     try {
-      // This might need adjustment if messageId is from the queue
       await fetch(`/api/messages/${messageId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -381,7 +247,6 @@ export default function ChatRoomClient() {
 
   const handleDeleteMessage = async (messageId: string) => {
     try {
-      // This might need adjustment if messageId is from the queue
       await fetch(`/api/messages/${messageId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
