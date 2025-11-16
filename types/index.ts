@@ -28,3 +28,13 @@ export interface ApiError {
   code: string;
   details?: any;
 }
+
+export interface QueuedMessage {
+  id: string;
+  content: string;
+  attachments: Attachment[];
+  timestamp: Date;
+  actualFiles?: File[]; // For optimistic UI, not sent to API
+  sender: string;
+  replyTo?: string; // Added replyTo property
+}
