@@ -11,6 +11,7 @@ const EmojiPicker = dynamic(() => import('./EmojiPicker'), {
 interface MessageActionsProps {
   message: Message;
   isOwn: boolean;
+  currentUserName: string;
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -22,6 +23,7 @@ const TEN_MINUTES = 10 * 60 * 1000;
 export default function MessageActions({
   message,
   isOwn,
+  currentUserName,
   onReply,
   onEdit,
   onDelete,
@@ -32,8 +34,8 @@ export default function MessageActions({
   const [canEditDelete, setCanEditDelete] = useState(false);
 
   useEffect(() => {
-    // Arham and Gemmie always have edit/delete permissions
-    if (message.userName.toLowerCase() === 'arham' || message.userName.toLowerCase() === 'gemmie') {
+    const isPrivileged = ['arham', 'gemmie'].includes(currentUserName.toLowerCase());
+    if (isPrivileged) {
       setCanEditDelete(true);
       return;
     }
@@ -52,7 +54,7 @@ export default function MessageActions({
     const interval = setInterval(checkTime, 1000);
 
     return () => clearInterval(interval);
-  }, [message.timestamp, isOwn, message.userName]);
+  }, [message.timestamp, isOwn, currentUserName]);
 
   const handleEmojiSelect = (emoji: string) => {
     onReact(emoji);
@@ -132,8 +134,8 @@ export default function MessageActions({
         )}
       </div>
 
-      {/* Edit Button (only for own messages within 10 minutes) */}
-      {isOwn && canEditDelete && (
+      {/* Edit Button (only for own messages within 10 minutes, or for privileged users) */}
+      {canEditDelete && (
         <button
           onClick={onEdit}
           className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
@@ -155,8 +157,8 @@ export default function MessageActions({
         </button>
       )}
 
-      {/* Delete Button (only for own messages within 10 minutes) */}
-      {isOwn && canEditDelete && (
+      {/* Delete Button (only for own messages within 10 minutes, or for privileged users) */}
+      {canEditDelete && (
         <button
           onClick={onDelete}
           className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"

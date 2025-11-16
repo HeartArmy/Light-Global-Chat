@@ -156,6 +156,7 @@ export default function MessageItem({
             <MessageActions
               message={message}
               isOwn={isOwn}
+              currentUserName={currentUserName}
               onReply={onReply}
               onEdit={handleEdit}
               onDelete={handleDelete}
@@ -318,6 +319,7 @@ export default function MessageItem({
               <MessageActions
                 message={message}
                 isOwn={isOwn}
+                currentUserName={currentUserName}
                 onReply={onReply}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
@@ -357,6 +359,7 @@ export default function MessageItem({
             <MessageActions
               message={message}
               isOwn={isOwn}
+              currentUserName={currentUserName}
               onReply={onReply}
               onEdit={handleEdit}
               onDelete={handleDelete}
