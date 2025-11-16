@@ -401,7 +401,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
           ref={fileInputRef}
           type="file"
           onChange={handleFileSelect}
-          accept="image/*,.avif,.webp,.pdf,.doc,.docx,.txt"
+          accept="image/*,.avif,.webp,.pdf,.doc,.docx,.txt,.mp4,.mov,.avi,.mkv"
           multiple
           className="hidden"
         />
@@ -416,7 +416,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
               border: '1px solid var(--border)',
               color: 'var(--text-primary)',
             }}
-            title={`Attach files (${attachments.length}/8 used) - Supports images (including AVIF), PDFs, docs`}
+            title={`Attach files (${attachments.length}/8 used) - Supports images (including AVIF), PDFs, docs, videos`}
           >
             {isUploading ? '⏳' : attachments.length > 0 ? `📎${attachments.length}` : '📎'}
           </button>

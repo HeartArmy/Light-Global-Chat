@@ -19,6 +19,10 @@ export const ourFileRouter = {
       maxFileSize: "16MB", 
       maxFileCount: 8 
     },
+    "video/mp4": { maxFileSize: "16MB", maxFileCount: 2 },
+    "video/quicktime": { maxFileSize: "16MB", maxFileCount: 2 },
+    "video/x-msvideo": { maxFileSize: "16MB", maxFileCount: 2 },
+    "video/x-matroska": { maxFileSize: "16MB", maxFileCount: 2 },
   }).onUploadComplete(async ({ file }) => {
     return { url: file.url };
   }),

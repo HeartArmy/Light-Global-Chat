@@ -239,6 +239,16 @@ export default function MessageItem({
                               onClick={() => handleImageClick(attachment.url, attachment.name)}
                               title="Click to view full size"
                             />
+                          ) : attachment.type === 'video' ? (
+                            <video
+                              src={attachment.url}
+                              controls
+                              className="rounded-lg max-w-full"
+                              style={{ maxHeight: '220px' }}
+                              title={attachment.name}
+                            >
+                              Your browser does not support the video tag.
+                            </video>
                           ) : (
                             <a
                               href={attachment.url}
