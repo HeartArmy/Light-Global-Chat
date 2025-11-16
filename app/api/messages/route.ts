@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       const isGemmieEnabled = await getGemmieStatus();
       
       if (isGemmieEnabled) {
-        const COOLDOWN_DURATION_MS = 20000; // 15 seconds
+        const COOLDOWN_DURATION_MS = 40000; // 15 seconds
         const userIp = ip; // IP is already fetched earlier for rate limiting
 
         try {
