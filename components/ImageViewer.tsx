@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from 'react';
 
-interface ImageViewerProps {
+interface MediaViewerProps {
   isOpen: boolean;
-  imageUrl: string;
-  imageName: string;
+  mediaUrl: string;
+  mediaName: string;
+  mediaType: 'image' | 'video';
   onClose: () => void;
 }
 
-export default function ImageViewer({ isOpen, imageUrl, imageName, onClose }: ImageViewerProps) {
+export default function MediaViewer({ isOpen, mediaUrl, mediaName, mediaType, onClose }: MediaViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
@@ -43,11 +44,11 @@ export default function ImageViewer({ isOpen, imageUrl, imageName, onClose }: Im
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  const handleImageLoad = () => {
+  const handleMediaLoad = () => {
     setIsLoading(false);
   };
 
-  const handleImageError = () => {
+  const handleMediaError = () => {
     setIsLoading(false);
     setHasError(true);
   };
@@ -60,8 +61,8 @@ export default function ImageViewer({ isOpen, imageUrl, imageName, onClose }: Im
 
   const handleDownload = () => {
     const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = imageName;
+    link.href = mediaUrl;
+    link.download = mediaName;
     link.target = '_blank';
     document.body.appendChild(link);
     link.click();
@@ -88,12 +89,12 @@ export default function ImageViewer({ isOpen, imageUrl, imageName, onClose }: Im
       <button
         onClick={handleDownload}
         className="absolute top-4 right-16 z-10 w-10 h-10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all duration-200"
-        title="Download image"
+        title="Download media"
       >
         ⬇️
       </button>
 
-      {/* Image container */}
+      {/* Media container */}
       <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center">
         {isLoading && (
           <div className="flex items-center justify-center">
@@ -104,24 +105,37 @@ export default function ImageViewer({ isOpen, imageUrl, imageName, onClose }: Im
         {hasError && (
           <div className="flex flex-col items-center justify-center text-white">
             <div className="text-6xl mb-4">❌</div>
-            <div className="text-lg mb-2">Failed to load image</div>
-            <div className="text-sm opacity-70">{imageName}</div>
+            <div className="text-lg mb-2">Failed to load {mediaType}</div>
+            <div className="text-sm opacity-70">{mediaName}</div>
           </div>
         )}
 
-        <img
-          src={imageUrl}
-          alt={imageName}
-          className={`max-w-full max-h-full object-contain rounded-lg shadow-2xl ${isLoading || hasError ? 'hidden' : 'block'}`}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-          onClick={(e) => e.stopPropagation()}
-        />
+        {mediaType === 'image' ? (
+          <img
+            src={mediaUrl}
+            alt={mediaName}
+            className={`max-w-full max-h-full object-contain rounded-lg shadow-2xl ${isLoading || hasError ? 'hidden' : 'block'}`}
+            onLoad={handleMediaLoad}
+            onError={handleMediaError}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <video
+            src={mediaUrl}
+            controls
+            className={`max-w-full max-h-full rounded-lg shadow-2xl ${isLoading || hasError ? 'hidden' : 'block'}`}
+            onLoad={handleMediaLoad}
+            onError={handleMediaError}
+            onClick={(e) => e.stopPropagation()}
+          >
+            Your browser does not support the video tag.
+          </video>
+        )}
 
-        {/* Image info */}
+        {/* Media info */}
         {!isLoading && !hasError && (
           <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-2 rounded-lg backdrop-blur-sm">
-            <div className="text-sm font-medium">{imageName}</div>
+            <div className="text-sm font-medium">{mediaName}</div>
           </div>
         )}
       </div>

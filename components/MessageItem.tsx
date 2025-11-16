@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Message, Reaction } from '@/types';
 import MessageActions from './MessageActions';
-import ImageViewer from './ImageViewer';
+import MediaViewer from './ImageViewer'; // Renamed from ImageViewer
 import { formatTimestamp, linkifyText, formatFileSize, getCountryFlag } from '@/lib/utils';
 import { useSwipe } from '@/lib/gestures';
 
@@ -32,7 +32,7 @@ export default function MessageItem({
   const [editContent, setEditContent] = useState(message.content);
   const [showActions, setShowActions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [imageViewer, setImageViewer] = useState<{ url: string; name: string } | null>(null);
+  const [imageViewer, setImageViewer] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -63,8 +63,8 @@ export default function MessageItem({
     onReact(emoji);
   };
 
-  const handleImageClick = (url: string, name: string) => {
-    setImageViewer({ url, name });
+  const handleMediaClick = (url: string, name: string, type: 'image' | 'video') => {
+    setImageViewer({ url, name, type });
   };
 
   const closeImageViewer = () => {
@@ -236,19 +236,22 @@ export default function MessageItem({
                               alt={attachment.name}
                               className="rounded-lg max-w-full cursor-pointer hover:opacity-90 transition-opacity duration-200"
                               style={{ maxHeight: '220px', objectFit: 'cover' }}
-                              onClick={() => handleImageClick(attachment.url, attachment.name)}
+                              onClick={() => handleMediaClick(attachment.url, attachment.name, 'image')}
                               title="Click to view full size"
                             />
                           ) : attachment.type === 'video' ? (
-                            <video
-                              src={attachment.url}
-                              controls
-                              className="rounded-lg max-w-full"
-                              style={{ maxHeight: '220px' }}
-                              title={attachment.name}
-                            >
-                              Your browser does not support the video tag.
-                            </video>
+                            <>
+                              <video
+                                src={attachment.url}
+                                controls
+                                className="rounded-lg max-w-full cursor-pointer"
+                                style={{ maxHeight: '220px' }}
+                                onClick={() => handleMediaClick(attachment.url, attachment.name, 'video')}
+                                title="Click to view full size"
+                              >
+                                Your browser does not support the video tag.
+                              </video>
+                            </>
                           ) : (
                             <a
                               href={attachment.url}
@@ -374,12 +377,13 @@ export default function MessageItem({
         </div>
       )}
 
-      {/* Image Viewer Modal */}
+      {/* Media Viewer Modal */}
       {imageViewer && (
-        <ImageViewer
+        <MediaViewer
           isOpen={true}
-          imageUrl={imageViewer.url}
-          imageName={imageViewer.name}
+          mediaUrl={imageViewer.url}
+          mediaName={imageViewer.name}
+          mediaType={imageViewer.type}
           onClose={closeImageViewer}
         />
       )}

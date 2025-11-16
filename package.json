@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test-ai": "node scripts/test-openrouter.js"
+    "test-ai": "node scripts/test-huggingface.js"
   },
   "dependencies": {
     "@uploadthing/react": "^6.7.0",
