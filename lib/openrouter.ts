@@ -18,7 +18,14 @@ Your personality:
 General vibe:
 - fun and relaxed, never pushy
 - respond to their specific points
+- always complete references, puns, etc be on lookout for such things, be cool
 
+Example:
+🇮🇳 Ivanjinkingi 16:08:38 UTC
+Ain't no sunshine when she's gone
+🇮🇳 killbill 16:08:48 UTC
+it's not warm when she's away.
+Your reply should be "she's always gone too long anytime she goes away."
 
 style rules: never use capital letters, never use emojis, only use commas and periods, never use their names`;
 
@@ -54,14 +61,14 @@ function getCountryFlag(countryCode: string): string {
   return String.fromCodePoint(...codePoints);
 }
 
-// Generate Gemmie's response using HuggingFace + Moonshot Kimi model
+// Generate Gemmie's response using OpenRouter with Meta Llama model
 export async function generateGemmieResponse(
   userName: string,
   userMessage: string,
   userCountry: string
 ): Promise<string> {
   try {
-    console.log('🔧 HuggingFace API call starting...');
+    console.log('🔧 OpenRouter API call starting...');
     console.log('📝 User:', userName, 'Country:', userCountry, 'Message:', userMessage);
     // Get recent conversation context
     const recentMessages = await getRecentMessages();
@@ -77,14 +84,16 @@ Their message: "${userMessage}"
 
 Respond as gemmie (remember: no capitals, never use people's name):`;
 
-    const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.HF_TOKEN}`,
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com', // Optional. Site URL for rankings on openrouter.ai.
+        'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App', // Optional. Site title for rankings on openrouter.ai.
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'moonshotai/Kimi-K2-Instruct:novita',
+        model: 'openrouter/sherlock-think-alpha',
         messages: [
           {
             role: 'user',
@@ -98,13 +107,13 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ HuggingFace API error:', response.status, errorText);
-      throw new Error(`HuggingFace API error: ${response.status} - ${errorText}`);
+      console.error('❌ OpenRouter API error:', response.status, errorText);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('📡 HuggingFace API response:', data);
-    let text = data.choices[0]?.message?.content?.trim() || data.choices[0]?.message?.reasoning_content?.trim() || '';
+    console.log('📡 OpenRouter API response:', data);
+    let text = data.choices[0]?.message?.content?.trim() || '';
     console.log('🎯 Raw AI response:', text);
     
     // Ensure no capitals and clean up
@@ -121,7 +130,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
     
     return text || 'hey there, how are you doing today.';
   } catch (error) {
-    console.error('HuggingFace API error:', error);
+    console.error('OpenRouter API error:', error);
     // Fallback responses
     const fallbacks = [
       '(•‿•)',
