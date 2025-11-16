@@ -7,6 +7,8 @@ import { checkRateLimit } from '@/lib/security';
 import { sendNewMessageNotification } from '@/lib/email';
 import { generateGemmieResponse, sendGemmieMessage } from '@/lib/openrouter';
 import { Attachment } from '@/types';
+import GemmieCooldown from '@/models/GemmieCooldown'; // Added import
+import mongoose from 'mongoose'; // Added mongoose import
 
 export const dynamic = 'force-dynamic';
 
@@ -159,11 +161,47 @@ export async function POST(request: NextRequest) {
       const isGemmieEnabled = await getGemmieStatus();
       
       if (isGemmieEnabled) {
-        console.log('✅ Triggering Gemmie response for:', userName);
-        // Wait for Gemmie response to complete (prevents serverless function from dying)
-        await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
-          console.error('❌ Gemmie response failed:', err)
-        );
+        const COOLDOWN_DURATION_MS = 15000; // 15 seconds
+        const userIp = ip; // IP is already fetched earlier for rate limiting
+
+        try {
+          // Ensure DB connection is active (it should be from earlier, but good to be sure)
+          if (mongoose.connection.readyState !== 1) { // 1 means connected
+            console.log('Reconnecting to database for cooldown check...');
+            await connectDB();
+          }
+
+          // Check if a cooldown exists for this IP
+          const cooldown = await GemmieCooldown.findOne({ ip: userIp });
+          const now = Date.now();
+
+          if (cooldown && (now - cooldown.lastConsideredAt.getTime()) < COOLDOWN_DURATION_MS) {
+            console.log(`🚫 Gemmie response skipped for ${userIp} due to cooldown.`);
+            // Do not trigger response, cooldown is active
+          } else {
+            console.log('✅ Triggering Gemmie response for:', userName);
+            
+            // Update or create cooldown record first
+            await GemmieCooldown.findOneAndUpdate(
+              { ip: userIp },
+              { lastConsideredAt: new Date() },
+              { upsert: true, new: true } // Create if not exists, return new doc
+            );
+            console.log(`📍 Cooldown record set/updated for IP: ${userIp}`);
+
+            // Wait for Gemmie response to complete (prevents serverless function from dying)
+            await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
+              console.error('❌ Gemmie response failed:', err)
+            );
+          }
+        } catch (dbError) {
+          console.error('❌ Error during Gemmie cooldown check/DB operation:', dbError);
+          // Fallback: if DB fails, trigger response to avoid silent failures
+          console.log('⚠️ Fallback: Triggering Gemmie response due to cooldown DB error.');
+          await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
+            console.error('❌ Fallback Gemmie response failed:', err)
+          );
+        }
       } else {
         console.log('🔇 Gemmie is disabled, skipping response');
       }
