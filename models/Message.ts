@@ -4,7 +4,7 @@ import { Message as MessageType } from '@/types';
 const AttachmentSchema = new Schema({
   type: {
     type: String,
-    enum: ['image', 'file'],
+    enum: ['image', 'file', 'video'],
     required: true,
   },
   url: {

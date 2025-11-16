@@ -6,11 +6,17 @@ import { getCountryFromIP, getClientIP } from '@/lib/country';
 import { checkRateLimit } from '@/lib/security';
 import { sendNewMessageNotification } from '@/lib/email';
 import { generateGemmieResponse, sendGemmieMessage } from '@/lib/openrouter';
+import { Attachment } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
 // POST - Create new message
 export async function POST(request: NextRequest) {
+  let content: string | undefined;
+  let userName: string | undefined;
+  let attachments: Attachment[] = [];
+  let replyTo: string | undefined;
+  
   try {
     // Rate limiting
     const ip = getClientIP(request);
@@ -22,9 +28,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { content, userName, attachments = [], replyTo } = body;
+    ({ content, userName, attachments, replyTo } = body);
 
-    console.log('Received message request:', { content, contentLength: content?.length, attachmentsCount: attachments?.length, userName });
+    console.log('Received message request:', { 
+      content, 
+      contentLength: content?.length, 
+      attachmentsCount: attachments?.length, 
+      userName,
+      videoAttachments: attachments.filter((a: Attachment) => a.type === 'video').map((a: Attachment) => ({ name: a.name, size: a.size }))
+    });
 
     // Validation - require either content or attachments
     const hasContent = content && typeof content === 'string' && content.trim().length > 0;
@@ -65,6 +77,7 @@ export async function POST(request: NextRequest) {
     if (attachments.length > 0) {
       // Limit total number of attachments
       if (attachments.length > 8) {
+        console.error('Validation failed: Too many attachments', { attachmentsCount: attachments.length });
         return NextResponse.json(
           { error: 'Too many attachments (max 8)', code: 'INVALID_INPUT' },
           { status: 400 }
@@ -72,7 +85,9 @@ export async function POST(request: NextRequest) {
       }
 
       for (const attachment of attachments) {
+        console.log('Validating attachment:', { name: attachment.name, type: attachment.type, size: attachment.size, url: attachment.url });
         if (!attachment.url || !attachment.name || !attachment.size || !attachment.type) {
+          console.error('Validation failed: Invalid attachment format', { attachment });
           return NextResponse.json(
             { error: 'Invalid attachment format', code: 'INVALID_INPUT' },
             { status: 400 }
@@ -81,6 +96,7 @@ export async function POST(request: NextRequest) {
         
         // Validate file sizes
         if (attachment.type === 'image' && attachment.size > 8 * 1024 * 1024) {
+          console.error('Validation failed: Image size too large', { attachment, maxSize: 8 * 1024 * 1024 });
           return NextResponse.json(
             { error: 'Image size exceeds 8MB', code: 'INVALID_INPUT' },
             { status: 400 }
@@ -88,6 +104,7 @@ export async function POST(request: NextRequest) {
         }
         
         if (attachment.type === 'file' && attachment.size > 16 * 1024 * 1024) {
+          console.error('Validation failed: File size too large', { attachment, maxSize: 16 * 1024 * 1024 });
           return NextResponse.json(
             { error: 'File size exceeds 16MB', code: 'INVALID_INPUT' },
             { status: 400 }
@@ -97,12 +114,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user country from IP (reuse ip from rate limiting)
+    console.log('Getting country from IP:', ip);
     const { countryCode } = await getCountryFromIP(ip);
+    console.log('User country:', countryCode);
 
     // Connect to database
+    console.log('Connecting to database...');
     await connectDB();
+    console.log('Database connected successfully');
 
     // Create message
+    console.log('Creating message in database...');
     const message = await Message.create({
       content: content || '',
       userName,
@@ -111,11 +133,15 @@ export async function POST(request: NextRequest) {
       replyTo: replyTo || null,
       timestamp: new Date(),
     });
+    console.log('Message created successfully:', { _id: message._id });
 
     // Populate replyTo if it exists
+    console.log('Populating replyTo...');
     const populatedMessage = await Message.findById(message._id).populate('replyTo').lean();
+    console.log('ReplyTo populated successfully');
 
     // Trigger Pusher event and send notifications in parallel
+    console.log('Triggering Pusher event and sending notifications...');
     const pusher = getPusherInstance();
     const emailContent = content || `[Attachment: ${attachments.map((a: any) => a.name).join(', ')}]`;
     
@@ -124,6 +150,7 @@ export async function POST(request: NextRequest) {
       pusher.trigger('chat-room', 'new-message', populatedMessage),
       sendNewMessageNotification(userName, emailContent, message.timestamp, countryCode, ip)
     ]);
+    console.log('Pusher event and notifications completed');
 
     // If message is from someone other than arham or gemmie, check if should trigger Gemmie response
     console.log('🤖 Checking if should trigger Gemmie for user:', userName);
@@ -144,9 +171,17 @@ export async function POST(request: NextRequest) {
       console.log('⏭️ Skipping Gemmie response (user is arham or gemmie)');
     }
 
+    console.log('Message creation completed successfully');
     return NextResponse.json({ message: populatedMessage });
   } catch (error) {
     console.error('Error creating message:', error);
+    console.error('Error details:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      attachments: attachments.map((a: Attachment) => ({ type: a.type, name: a.name, size: a.size })),
+      userName,
+      contentLength: content?.length
+    });
     return NextResponse.json(
       { error: 'Failed to create message', code: 'SERVER_ERROR' },
       { status: 500 }
