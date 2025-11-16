@@ -166,22 +166,21 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
     setUploadProgress({ current: 0, total: fileArray.length });
 
     try {
-      // Separate images and other files
+      // Separate images, videos, and other files
       const imageFiles = fileArray.filter(file => 
         file.type.startsWith('image/') || 
         file.type === 'image/avif' || 
         file.type === 'image/webp'
       );
+      const videoFiles = fileArray.filter(file => file.type.startsWith('video/'));
       const otherFiles = fileArray.filter(file => 
-        !file.type.startsWith('image/') && 
-        file.type !== 'image/avif' && 
-        file.type !== 'image/webp'
+        !imageFiles.includes(file) && !videoFiles.includes(file)
       );
 
       const newAttachments: Attachment[] = [];
       let completed = 0;
 
-      // Upload images in batches if needed
+      // Upload images
       if (imageFiles.length > 0) {
         setUploadProgress({ current: completed, total: fileArray.length });
         const imageResults = await startImageUpload(imageFiles);
@@ -201,17 +200,20 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
         }
       }
 
-      // Upload other files
-      if (otherFiles.length > 0) {
-        const fileResults = await startFileUpload(otherFiles);
+      // Upload videos and other files together using fileUploader
+      const filesToUpload = [...videoFiles, ...otherFiles];
+      if (filesToUpload.length > 0) {
+        const fileResults = await startFileUpload(filesToUpload);
         if (fileResults) {
           fileResults.forEach((result, index) => {
             if (result) {
+              const originalFile = filesToUpload[index];
+              const fileType = originalFile.type.startsWith('video/') ? 'video' : 'file';
               newAttachments.push({
-                type: 'file',
+                type: fileType,
                 url: result.url,
-                name: otherFiles[index].name,
-                size: otherFiles[index].size,
+                name: originalFile.name,
+                size: originalFile.size,
               });
               completed++;
               setUploadProgress({ current: completed, total: fileArray.length });
