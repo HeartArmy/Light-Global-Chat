@@ -37,24 +37,7 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => htmlEscapes[char]);
 }
 
-// Detect and linkify URLs in text (with XSS protection)
-export function linkifyText(text: string, isOwnMessage: boolean = false): string {
-  // First, escape all HTML to prevent XSS
-  const escapedText = escapeHtml(text);
-  
-  // Then linkify URLs (only http:// and https://)
-  const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
-  return escapedText.replace(urlRegex, (url) => {
-    // Sanitize the URL to prevent javascript: or data: URLs
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      return url; // Don't linkify if not http/https
-    }
-    
-    // Use white color for own messages (blue bubble), accent color for others
-    const linkColor = isOwnMessage ? '#ffffff' : 'var(--accent)';
-    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: ${linkColor}; text-decoration: underline; font-weight: 600;">${url}</a>`;
-  });
-}
+
 
 // Format file size
 export function formatFileSize(bytes: number): string {
@@ -90,21 +73,20 @@ export function renderMessageContent(text: string, isOwn: boolean = false): stri
     if (!videoId) return match; // Should not happen, but as a safeguard
 
     const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-    const linkColor = isOwn ? '#ffffff' : 'var(--accent)';
     
-    // The original URL is replaced by this facade.
+    // The original URL is replaced by this clickable facade.
     return `
-      <div class="youtube-preview-container" style="display: block; margin: 0; width: 100%;">
-        <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block; color: ${linkColor}; text-decoration: underline; font-size: 12px; margin-bottom: 0;">${url}</a>
-        <div class="youtube-facade" data-video-id="${videoId}" style="position: relative; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 12px; overflow: hidden; cursor: pointer; background-image: url(${thumbnailUrl}); background-size: cover; background-position: center;">
-          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 68px; height: 48px; background-color: rgba(0, 0, 0, 0.8); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+      <a href="${url}" target="_blank" rel="noopener noreferrer" class="youtube-preview-container" style="display: block; margin: 8px 0; width: 100%; text-decoration: none;">
+        <div style="position: relative; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 12px; overflow: hidden; cursor: pointer; background-image: url(${thumbnailUrl}); background-size: cover; background-position: center;">
+          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 68px; height: 48px; background-color: rgba(0, 0, 0, 0.8); border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s ease;">
             <svg width="100%" height="100%" viewBox="0 0 68 48">
               <path d="M66.52,7.74c-0.78-2.93-2.49-5.41-5.42-6.19C55.79,.13,34,0,34,0S12.21,.13,6.9,1.55C3.97,2.33,2.27,4.81,1.48,7.74,0.09,13.25,0,24,0,24s0.09,10.75,1.48,16.26c0.78,2.93,2.49,5.41,5.42,6.19C12.21,47.87,34,48,34,48s21.79-0.13,27.1-1.55c2.93-0.78,4.64-3.26,5.42-6.19C67.91,34.75,68,24,68,24S67.91,13.25,66.52,7.74z" fill="#f00"></path>
               <path d="M 45,24 27,14 27,34" fill="#fff"></path>
             </svg>
           </div>
         </div>
-      </div>
+        <span style="display: block; color: var(--accent); text-decoration: underline; font-size: 12px; margin-top: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${url}</span>
+      </a>
     `;
   });
 

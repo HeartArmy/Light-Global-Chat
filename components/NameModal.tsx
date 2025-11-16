@@ -75,9 +75,9 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 bg-black/50 backdrop-blur-sm">
       <div 
-        className="w-full max-w-md p-8 rounded-lg shadow-2xl"
+        className="w-full max-w-sm p-7 rounded-lg shadow-2xl"
         style={{
           background: 'var(--surface-elevated)',
           border: '1px solid var(--border)',
@@ -85,10 +85,10 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
       >
         {showKeywordPrompt ? (
           <>
-            <h2 className="mb-2 text-display" style={{ color: 'var(--text-primary)' }}>
+            <h2 className="mb-1.5 text-3xl" style={{ color: 'var(--text-primary)' }}>
               🔒 Protected Name
             </h2>
-            <p className="mb-6 text-body" style={{ color: 'var(--text-secondary)' }}>
+            <p className="mb-5 text-sm" style={{ color: 'var(--text-secondary)' }}>
               This name is protected. Please enter the keyword to continue.
             </p>
 
@@ -102,7 +102,7 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
                 }}
                 placeholder="Enter keyword"
                 autoFocus
-                className="w-full px-4 py-3 mb-2 text-body rounded-sm transition-all duration-fast"
+                className="w-full px-3.5 py-2.5 mb-1.5 text-sm rounded-sm transition-all duration-fast"
                 style={{
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
@@ -112,12 +112,12 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
               />
               
               {error && (
-                <p className="mb-4 text-caption" style={{ color: 'var(--error)' }}>
+                <p className="mb-3.5 text-xs" style={{ color: 'var(--error)' }}>
                   {error}
                 </p>
               )}
 
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex justify-end gap-2.5 mt-5">
                 <button
                   type="button"
                   onClick={() => {
@@ -126,7 +126,7 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
                     setError('');
                     setName('');
                   }}
-                  className="px-6 py-3 text-body rounded-sm transition-all duration-fast"
+                  className="px-5 py-2.5 text-sm rounded-sm transition-all duration-fast"
                   style={{
                     background: 'var(--surface)',
                     color: 'var(--text-primary)',
@@ -138,7 +138,7 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
                 <button
                   type="submit"
                   disabled={!keyword.trim()}
-                  className="px-6 py-3 text-body font-semibold rounded-sm transition-all duration-fast disabled:opacity-50"
+                  className="px-5 py-2.5 text-sm font-semibold rounded-sm transition-all duration-fast disabled:opacity-50"
                   style={{
                     background: 'var(--accent)',
                     color: '#ffffff',
@@ -151,10 +151,10 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
           </>
         ) : (
           <>
-            <h2 className="mb-2 text-display" style={{ color: 'var(--text-primary)' }}>
+            <h2 className="mb-1.5 text-3xl" style={{ color: 'var(--text-primary)' }}>
               {currentName ? 'Change Your Name' : 'Welcome to Global Live Chat Room'}
             </h2>
-            <p className="mb-6 text-body" style={{ color: 'var(--text-secondary)' }}>
+            <p className="mb-5 text-sm" style={{ color: 'var(--text-secondary)' }}>
               {currentName ? 'Enter a new display name' : 'Choose a display name to get started'}
             </p>
 
@@ -169,7 +169,7 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
             placeholder="Enter your name"
             maxLength={30}
             autoFocus
-            className="w-full px-4 py-3 mb-2 text-body rounded-sm transition-all duration-fast"
+            className="w-full px-3.5 py-2.5 mb-1.5 text-sm rounded-sm transition-all duration-fast"
             style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',
@@ -185,17 +185,17 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
           />
           
           {error && (
-            <p className="mb-4 text-caption" style={{ color: 'var(--error)' }}>
+            <p className="mb-3.5 text-xs" style={{ color: 'var(--error)' }}>
               {error}
             </p>
           )}
 
-          <div className="flex justify-end gap-3 mt-6">
+          <div className="flex justify-end gap-2.5 mt-5">
             {currentName && (
               <button
                 type="button"
                 onClick={() => onSubmit(currentName)}
-                className="px-6 py-3 text-body rounded-sm transition-all duration-fast"
+                className="px-5 py-2.5 text-sm rounded-sm transition-all duration-fast"
                 style={{
                   background: 'var(--surface)',
                   color: 'var(--text-primary)',
@@ -214,7 +214,7 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
             <button
               type="submit"
               disabled={!name.trim()}
-              className="px-6 py-3 text-body font-semibold rounded-sm transition-all duration-fast disabled:opacity-50"
+              className="px-5 py-2.5 text-sm font-semibold rounded-sm transition-all duration-fast disabled:opacity-50"
               style={{
                 background: 'var(--accent)',
                 color: '#ffffff',

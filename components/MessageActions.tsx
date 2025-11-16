@@ -63,11 +63,11 @@ export default function MessageActions({
   };
 
   return (
-    <div className="flex items-center gap-1 bg-opacity-90 backdrop-blur-sm rounded-full px-2 py-1 shadow-lg" style={{ background: 'var(--surface-elevated)' }}>
+    <div className="flex items-center gap-0.5 bg-opacity-90 backdrop-blur-sm rounded-full px-1.5 py-0.5 shadow-lg" style={{ background: 'var(--surface-elevated)' }}>
       {/* Reply Button */}
       <button
         onClick={onReply}
-        className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
+        className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
         style={{
           background: 'transparent',
           color: 'var(--text-secondary)',
@@ -89,7 +89,7 @@ export default function MessageActions({
       <div className="relative">
         <button
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
+          className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
           style={{
             background: showEmojiPicker ? 'var(--surface)' : 'transparent',
             color: 'var(--text-secondary)',
@@ -112,12 +112,12 @@ export default function MessageActions({
         </button>
 
         {showEmojiPicker && (
-          <div className={`absolute bottom-full mb-2 z-50 ${isOwn ? 'right-0' : 'left-0'}`}>
-            <div className="flex flex-col gap-2 shadow-2xl">
+          <div className={`absolute bottom-full mb-1.5 z-50 ${isOwn ? 'right-0' : 'left-0'}`}>
+            <div className="flex flex-col gap-1.5 shadow-2xl">
               <EmojiPicker mode="quick" onSelect={handleEmojiSelect} />
               <button
                 onClick={() => setShowExtendedPicker(!showExtendedPicker)}
-                className="px-3 py-2 text-caption rounded-lg transition-all duration-fast"
+                className="px-2.5 py-1.5 text-xs rounded-lg transition-all duration-fast"
                 style={{
                   background: 'var(--surface-elevated)',
                   border: '1px solid var(--border)',
@@ -138,7 +138,7 @@ export default function MessageActions({
       {canEditOrDelete && (
         <button
           onClick={onEdit}
-          className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
+          className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
           style={{
             background: 'transparent',
             color: 'var(--text-secondary)',
@@ -161,7 +161,7 @@ export default function MessageActions({
       {canEditOrDelete && (
         <button
           onClick={onDelete}
-          className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
+          className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
           style={{
             background: 'transparent',
             color: 'var(--text-secondary)',

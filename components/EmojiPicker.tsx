@@ -22,7 +22,7 @@ export default function EmojiPicker({ onSelect, mode }: EmojiPickerProps) {
   if (mode === 'quick') {
     return (
       <div 
-        className="flex gap-1 p-2 rounded-lg shadow-2xl"
+        className="flex gap-0.5 p-1.5 rounded-lg shadow-2xl"
         style={{
           background: 'var(--surface-elevated)',
           border: '1px solid var(--border)',
@@ -32,7 +32,7 @@ export default function EmojiPicker({ onSelect, mode }: EmojiPickerProps) {
           <button
             key={emoji}
             onClick={() => onSelect(emoji)}
-            className="w-8 h-8 flex items-center justify-center text-lg rounded-md transition-all duration-fast hover:scale-125 active:scale-95"
+            className="w-7 h-7 flex items-center justify-center text-base rounded-md transition-all duration-fast hover:scale-125 active:scale-95"
             style={{
               background: 'var(--surface)',
             }}
@@ -52,7 +52,7 @@ export default function EmojiPicker({ onSelect, mode }: EmojiPickerProps) {
 
   return (
     <div 
-      className="w-[85vw] max-w-xs rounded-lg overflow-hidden shadow-2xl"
+      className="w-[76.5vw] max-w-[288px] rounded-lg overflow-hidden shadow-2xl"
       style={{
         background: 'var(--surface-elevated)',
         border: '1px solid var(--border)',
@@ -67,7 +67,7 @@ export default function EmojiPicker({ onSelect, mode }: EmojiPickerProps) {
           <button
             key={category}
             onClick={() => setActiveCategory(category as keyof typeof EXTENDED_EMOJIS)}
-            className="flex-1 py-2 text-small capitalize transition-all duration-fast"
+            className="flex-1 py-1.5 text-xs capitalize transition-all duration-fast"
             style={{
               background: activeCategory === category ? 'var(--surface)' : 'transparent',
               color: activeCategory === category ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -80,12 +80,12 @@ export default function EmojiPicker({ onSelect, mode }: EmojiPickerProps) {
       </div>
 
       {/* Emoji Grid */}
-      <div className="p-2 grid grid-cols-6 gap-1 max-h-48 overflow-y-auto">
+      <div className="p-1.5 grid grid-cols-6 gap-0.5 max-h-44 overflow-y-auto">
         {EXTENDED_EMOJIS[activeCategory].map((emoji, index) => (
           <button
             key={index}
             onClick={() => onSelect(emoji)}
-            className="w-8 h-8 flex items-center justify-center text-base rounded-md transition-all duration-fast hover:scale-125 active:scale-95"
+            className="w-7 h-7 flex items-center justify-center text-sm rounded-md transition-all duration-fast hover:scale-125 active:scale-95"
             style={{
               background: 'var(--surface)',
             }}

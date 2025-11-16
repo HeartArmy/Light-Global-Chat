@@ -79,8 +79,8 @@ export default function MessageList({
     >
       {/* Loading indicator for pagination */}
       {isLoading && hasMore && (
-        <div className="flex justify-center py-4">
-          <div className="text-caption" style={{ color: 'var(--text-secondary)' }}>
+        <div className="flex justify-center py-3.5">
+          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
             Loading more messages...
           </div>
         </div>
@@ -89,11 +89,11 @@ export default function MessageList({
       {/* Messages */}
       {messages.length === 0 && !isLoading ? (
         <div className="flex items-center justify-center h-full">
-          <div className="text-center p-8">
-            <p className="text-heading mb-2" style={{ color: 'var(--text-primary)' }}>
+          <div className="text-center p-7">
+            <p className="text-xl mb-1.5" style={{ color: 'var(--text-primary)' }}>
               No messages yet
             </p>
-            <p className="text-body" style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               Be the first to say hello! 👋
             </p>
           </div>
