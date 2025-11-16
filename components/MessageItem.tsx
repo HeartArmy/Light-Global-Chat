@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Message, Reaction } from '@/types';
 import MessageActions from './MessageActions';
 import MediaViewer from './ImageViewer'; // Renamed from ImageViewer
@@ -33,6 +33,40 @@ export default function MessageItem({
   const [showActions, setShowActions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [imageViewer, setImageViewer] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleFacadeClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const facade = target.closest('.youtube-facade');
+
+      if (!facade) return;
+
+      const videoId = facade.getAttribute('data-video-id');
+      if (!videoId) return;
+
+      const iframe = document.createElement('iframe');
+      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`;
+      iframe.style.width = '100%';
+      iframe.style.height = '100%';
+      iframe.setAttribute('frameborder', '0');
+      iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+      iframe.setAttribute('allowfullscreen', 'true');
+
+      facade.replaceWith(iframe);
+    };
+
+    const contentEl = contentRef.current;
+    if (contentEl) {
+      contentEl.addEventListener('click', handleFacadeClick);
+    }
+
+    return () => {
+      if (contentEl) {
+        contentEl.removeEventListener('click', handleFacadeClick);
+      }
+    };
+  }, [message.content]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -130,7 +164,7 @@ export default function MessageItem({
           </div>
         )}
 
-        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[70%]`}>
+        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[80%] md:max-w-[70%]`}>
           {/* User Info */}
           <div className="flex items-center gap-2 mb-1 px-1">
             <span className="text-caption font-semibold" style={{ color: 'var(--text-secondary)' }}>
@@ -220,6 +254,7 @@ export default function MessageItem({
                 <>
                   {message.content && (
                     <div
+                      ref={contentRef}
                       className="text-body break-words whitespace-pre-wrap"
                       dangerouslySetInnerHTML={{ __html: renderMessageContent(message.content) }}
                     />

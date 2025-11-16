@@ -32,6 +32,12 @@ export default function MessageActions({
   const [canEditDelete, setCanEditDelete] = useState(false);
 
   useEffect(() => {
+    // Arham and Gemmie always have edit/delete permissions
+    if (message.userName.toLowerCase() === 'arham' || message.userName.toLowerCase() === 'gemmie') {
+      setCanEditDelete(true);
+      return;
+    }
+
     if (!isOwn) {
       setCanEditDelete(false);
       return;
@@ -46,7 +52,7 @@ export default function MessageActions({
     const interval = setInterval(checkTime, 1000);
 
     return () => clearInterval(interval);
-  }, [message.timestamp, isOwn]);
+  }, [message.timestamp, isOwn, message.userName]);
 
   const handleEmojiSelect = (emoji: string) => {
     onReact(emoji);
