@@ -28,10 +28,10 @@ export function formatTimestamp(date: Date): string {
 // Escape HTML to prevent XSS attacks
 function escapeHtml(text: string): string {
   const htmlEscapes: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
+    '&': '&',
+    '<': '<',
+    '>': '>',
+    '"': '"',
     "'": '&#x27;'
   };
   return text.replace(/[&<>"']/g, (char) => htmlEscapes[char]);
@@ -75,4 +75,28 @@ export function getCountryFlag(countryCode: string): string {
     .map(char => 127397 + char.charCodeAt(0));
   
   return String.fromCodePoint(...codePoints);
+}
+
+// Sanitize and render message content, allowing iframes
+export function renderMessageContent(text: string): string {
+  // First, escape all HTML to prevent XSS
+  const escapedText = escapeHtml(text);
+  
+  // Then, find and allow iframes (specifically for YouTube)
+  const iframeRegex = /<iframe[^&]*?src="https:\/\/www\.youtube-nocookie\.com\/embed\/[^"]*?"[^&]*?><\/iframe>/g;
+  
+  return escapedText.replace(iframeRegex, (match) => {
+    // Unescape the iframe tag
+    let unescapedIframe = match
+      .replace(/</g, '<')
+      .replace(/>/g, '>')
+      .replace(/"/g, '"');
+      
+    // Add sandbox attribute for security
+    if (!unescapedIframe.includes('sandbox')) {
+      unescapedIframe = unescapedIframe.replace('<iframe', '<iframe sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"');
+    }
+    
+    return unescapedIframe;
+  });
 }

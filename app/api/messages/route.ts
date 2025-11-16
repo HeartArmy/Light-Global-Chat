@@ -190,6 +190,114 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// PUT - Edit message
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { messageId, newContent, userName } = body;
+
+    if (!messageId || !newContent || !userName) {
+      return NextResponse.json(
+        { error: 'Message ID, new content, and username are required', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return NextResponse.json(
+        { error: 'Message not found', code: 'NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+
+    // Allow editing if user is arham or gemmie, or if message is from the user and within 10 minutes
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const isAuthorizedUser = ['arham', 'gemmie'].includes(userName.toLowerCase()) || 
+                             (message.userName === userName && message.timestamp > tenMinutesAgo);
+
+    if (!isAuthorizedUser) {
+      return NextResponse.json(
+        { error: 'Not authorized to edit this message', code: 'UNAUTHORIZED' },
+        { status: 403 }
+      );
+    }
+
+    message.content = newContent;
+    message.edited = true;
+    message.editedAt = new Date();
+    await message.save();
+
+    const updatedMessage = await Message.findById(messageId).populate('replyTo').lean();
+
+    // Trigger Pusher event for real-time update
+    const pusher = getPusherInstance();
+    await pusher.trigger('chat-room', 'message-edited', updatedMessage);
+
+    return NextResponse.json({ message: updatedMessage });
+  } catch (error) {
+    console.error('Error editing message:', error);
+    return NextResponse.json(
+      { error: 'Failed to edit message', code: 'SERVER_ERROR' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Delete message
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const messageId = searchParams.get('messageId');
+    const userName = searchParams.get('userName');
+
+    if (!messageId || !userName) {
+      return NextResponse.json(
+        { error: 'Message ID and username are required', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return NextResponse.json(
+        { error: 'Message not found', code: 'NOT_FOUND' },
+        { status: 404 }
+      );
+    }
+
+    // Allow deleting if user is arham or gemmie, or if message is from the user and within 10 minutes
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const isAuthorizedUser = ['arham', 'gemmie'].includes(userName.toLowerCase()) || 
+                             (message.userName === userName && message.timestamp > tenMinutesAgo);
+
+    if (!isAuthorizedUser) {
+      return NextResponse.json(
+        { error: 'Not authorized to delete this message', code: 'UNAUTHORIZED' },
+        { status: 403 }
+      );
+    }
+
+    await Message.findByIdAndDelete(messageId);
+
+    // Trigger Pusher event for real-time update
+    const pusher = getPusherInstance();
+    await pusher.trigger('chat-room', 'message-deleted', { messageId });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete message', code: 'SERVER_ERROR' },
+      { status: 500 }
+    );
+  }
+}
+
 // Trigger Gemmie's AI response
 async function triggerGemmieResponse(userName: string, userMessage: string, userCountry: string): Promise<void> {
   try {

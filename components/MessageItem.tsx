@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Message, Reaction } from '@/types';
 import MessageActions from './MessageActions';
 import MediaViewer from './ImageViewer'; // Renamed from ImageViewer
-import { formatTimestamp, linkifyText, formatFileSize, getCountryFlag } from '@/lib/utils';
+import { formatTimestamp, linkifyText, formatFileSize, getCountryFlag, renderMessageContent } from '@/lib/utils';
 import { useSwipe } from '@/lib/gestures';
 
 interface MessageItemProps {
@@ -221,7 +221,7 @@ export default function MessageItem({
                   {message.content && (
                     <div
                       className="text-body break-words whitespace-pre-wrap"
-                      dangerouslySetInnerHTML={{ __html: linkifyText(message.content, isOwn) }}
+                      dangerouslySetInnerHTML={{ __html: renderMessageContent(message.content) }}
                     />
                   )}
 
@@ -240,18 +240,15 @@ export default function MessageItem({
                               title="Click to view full size"
                             />
                           ) : attachment.type === 'video' ? (
-                            <>
-                              <video
-                                src={attachment.url}
-                                controls
-                                className="rounded-lg max-w-full cursor-pointer"
-                                style={{ maxHeight: '220px' }}
-                                onClick={() => handleMediaClick(attachment.url, attachment.name, 'video')}
-                                title="Click to view full size"
-                              >
-                                Your browser does not support the video tag.
-                              </video>
-                            </>
+                            <video
+                              src={attachment.url}
+                              controls
+                              className="rounded-lg max-w-full"
+                              style={{ maxHeight: '220px' }}
+                              title={attachment.name}
+                            >
+                              Your browser does not support the video tag.
+                            </video>
                           ) : (
                             <a
                               href={attachment.url}
