@@ -51,17 +51,19 @@ export async function PATCH(
       );
     }
 
-    // Verify ownership
-    if (message.userName !== userName) {
+    const isPrivileged = ['arham', 'gemmie'].includes(userName.toLowerCase());
+
+    // Verify ownership or privileged
+    if (message.userName !== userName && !isPrivileged) {
       return NextResponse.json(
         { error: 'Unauthorized to edit this message', code: 'UNAUTHORIZED' },
         { status: 403 }
       );
     }
 
-    // Check if within 10 minutes
+    // Check time limit only for non-privileged owners
     const messageAge = Date.now() - new Date(message.timestamp).getTime();
-    if (messageAge > TEN_MINUTES) {
+    if (!isPrivileged && message.userName === userName && messageAge > TEN_MINUTES) {
       return NextResponse.json(
         { error: 'Edit window expired (10 minutes)', code: 'EDIT_EXPIRED' },
         { status: 403 }
@@ -124,17 +126,19 @@ export async function DELETE(
       );
     }
 
-    // Verify ownership
-    if (message.userName !== userName) {
+    const isPrivileged = ['arham', 'gemmie'].includes(userName.toLowerCase());
+
+    // Verify ownership or privileged
+    if (message.userName !== userName && !isPrivileged) {
       return NextResponse.json(
         { error: 'Unauthorized to delete this message', code: 'UNAUTHORIZED' },
         { status: 403 }
       );
     }
 
-    // Check if within 10 minutes
+    // Check time limit only for non-privileged owners
     const messageAge = Date.now() - new Date(message.timestamp).getTime();
-    if (messageAge > TEN_MINUTES) {
+    if (!isPrivileged && message.userName === userName && messageAge > TEN_MINUTES) {
       return NextResponse.json(
         { error: 'Delete window expired (10 minutes)', code: 'EDIT_EXPIRED' },
         { status: 403 }

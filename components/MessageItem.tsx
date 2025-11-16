@@ -257,7 +257,7 @@ export default function MessageItem({
                     <div
                       ref={contentRef}
                       className="text-body break-words whitespace-pre-wrap"
-                      dangerouslySetInnerHTML={{ __html: renderMessageContent(message.content) }}
+                      dangerouslySetInnerHTML={{ __html: renderMessageContent(message.content, isOwn) }}
                     />
                   )}
 

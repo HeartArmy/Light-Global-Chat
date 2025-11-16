@@ -78,23 +78,24 @@ export function getCountryFlag(countryCode: string): string {
 }
 
 // Sanitize and render message content, creating YouTube previews and linkifying URLs
-export function renderMessageContent(text: string): string {
+export function renderMessageContent(text: string, isOwn: boolean = false): string {
   // First, escape all HTML to prevent XSS from user input
   let processedText = escapeHtml(text);
 
   // 1. Find YouTube URLs and replace them with a facade
-  const youtubeUrlRegex = /(https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)|https?:\/\/youtu\.be\/([a-zA-Z0-9_-]+))/g;
+  const youtubeUrlRegex = /\s*(https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)|https?:\/\/youtu\.be\/([a-zA-Z0-9_-]+))\s*/g;
   
   processedText = processedText.replace(youtubeUrlRegex, (match, url, id1, id2) => {
     const videoId = id1 || id2;
     if (!videoId) return match; // Should not happen, but as a safeguard
 
     const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    const linkColor = isOwn ? '#ffffff' : 'var(--accent)';
     
     // The original URL is replaced by this facade.
     return `
-      <div class="youtube-preview-container" style="margin-top: 8px;">
-        <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block; color: var(--accent); text-decoration: underline; font-size: 12px; margin-bottom: 4px;">${url}</a>
+      <div class="youtube-preview-container" style="display: block; margin: 0; width: 100%;">
+        <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block; color: ${linkColor}; text-decoration: underline; font-size: 12px; margin-bottom: 0;">${url}</a>
         <div class="youtube-facade" data-video-id="${videoId}" style="position: relative; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 12px; overflow: hidden; cursor: pointer; background-image: url(${thumbnailUrl}); background-size: cover; background-position: center;">
           <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 68px; height: 48px; background-color: rgba(0, 0, 0, 0.8); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
             <svg width="100%" height="100%" viewBox="0 0 68 48">
@@ -111,7 +112,8 @@ export function renderMessageContent(text: string): string {
   // This regex is designed to not match URLs within HTML attributes (like href or style)
   const urlRegex = /(?<!href="|url\()https?:\/\/[^\s<>"]+/g;
   processedText = processedText.replace(urlRegex, (url) => {
-    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: underline;">${url}</a>`;
+    const linkColor = isOwn ? '#ffffff' : 'var(--accent)';
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: ${linkColor}; text-decoration: underline;">${url}</a>`;
   });
 
   return processedText;

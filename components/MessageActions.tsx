@@ -31,30 +31,30 @@ export default function MessageActions({
 }: MessageActionsProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showExtendedPicker, setShowExtendedPicker] = useState(false);
-  const [canEditDelete, setCanEditDelete] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(TEN_MINUTES);
 
   useEffect(() => {
-    const isPrivileged = ['arham', 'gemmie'].includes(currentUserName.toLowerCase());
-    if (isPrivileged) {
-      setCanEditDelete(true);
+    const messageAge = Date.now() - new Date(message.timestamp).getTime();
+    if (messageAge > TEN_MINUTES) {
+      setTimeRemaining(0);
       return;
     }
 
-    if (!isOwn) {
-      setCanEditDelete(false);
-      return;
-    }
-
-    const checkTime = () => {
-      const messageAge = Date.now() - new Date(message.timestamp).getTime();
-      setCanEditDelete(messageAge < TEN_MINUTES);
-    };
-
-    checkTime();
-    const interval = setInterval(checkTime, 1000);
+    const interval = setInterval(() => {
+      const currentAge = Date.now() - new Date(message.timestamp).getTime();
+      if (currentAge >= TEN_MINUTES) {
+        setTimeRemaining(0);
+        clearInterval(interval);
+      } else {
+        setTimeRemaining(TEN_MINUTES - currentAge);
+      }
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [message.timestamp, isOwn, currentUserName]);
+  }, [message.timestamp]);
+
+  const isPrivileged = ['arham', 'gemmie'].includes(currentUserName.toLowerCase());
+  const canEditOrDelete = (isOwn && timeRemaining > 0) || isPrivileged;
 
   const handleEmojiSelect = (emoji: string) => {
     onReact(emoji);
@@ -135,7 +135,7 @@ export default function MessageActions({
       </div>
 
       {/* Edit Button (only for own messages within 10 minutes, or for privileged users) */}
-      {canEditDelete && (
+      {canEditOrDelete && (
         <button
           onClick={onEdit}
           className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
@@ -158,7 +158,7 @@ export default function MessageActions({
       )}
 
       {/* Delete Button (only for own messages within 10 minutes, or for privileged users) */}
-      {canEditDelete && (
+      {canEditOrDelete && (
         <button
           onClick={onDelete}
           className="p-1.5 rounded-full transition-all duration-fast text-caption hover:scale-110"
