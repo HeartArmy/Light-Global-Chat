@@ -18,8 +18,9 @@ Your personality:
 General vibe:
 - fun and relaxed, never pushy
 - respond to their specific points
+- always complete references, puns, etc be on lookout for such things, be cool
 
-style rules: never use capital letters, never use emojis, only use commas and periods variably as I want your messsage to vary, never use their names`;
+style rules: never use capital letters, never use emojis, only use commas and periods, never use their names`;
 
 // Get recent messages for context (last 10, text only)
 async function getRecentMessages(): Promise<string> {

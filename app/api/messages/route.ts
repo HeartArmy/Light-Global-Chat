@@ -177,20 +177,23 @@ export async function POST(request: NextRequest) {
 
           if (cooldown && (now - cooldown.lastConsideredAt.getTime()) < COOLDOWN_DURATION_MS) {
             console.log(`🚫 Gemmie response skipped for ${userIp} due to cooldown.`);
+            // Do not trigger response, cooldown is active
           } else {
             console.log('✅ Triggering Gemmie response for:', userName);
+            
+            // Update or create cooldown record first
+            await GemmieCooldown.findOneAndUpdate(
+              { ip: userIp },
+              { lastConsideredAt: new Date() },
+              { upsert: true, new: true } // Create if not exists, return new doc
+            );
+            console.log(`📍 Cooldown record set/updated for IP: ${userIp}`);
+
+            // Wait for Gemmie response to complete (prevents serverless function from dying)
             await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
               console.error('❌ Gemmie response failed:', err)
             );
           }
-
-          // Reset cooldown on every message send
-          await GemmieCooldown.findOneAndUpdate(
-            { ip: userIp },
-            { lastConsideredAt: new Date() },
-            { upsert: true, new: true }
-          );
-          console.log(`📍 Cooldown reset for IP: ${userIp}`);
         } catch (dbError) {
           console.error('❌ Error during Gemmie cooldown check/DB operation:', dbError);
           // Fallback: if DB fails, trigger response to avoid silent failures
