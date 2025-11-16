@@ -92,11 +92,22 @@ export function renderMessageContent(text: string): string {
       .replace(/>/g, '>')
       .replace(/"/g, '"');
       
+    // Remove width and height attributes
+    unescapedIframe = unescapedIframe.replace(/width="[^"]*"/g, '').replace(/height="[^"]*"/g, '');
+
     // Add sandbox attribute for security
     if (!unescapedIframe.includes('sandbox')) {
       unescapedIframe = unescapedIframe.replace('<iframe', '<iframe sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"');
     }
+
+    // Add aspect ratio styling to the iframe
+    if (unescapedIframe.includes('style="')) {
+      unescapedIframe = unescapedIframe.replace('style="', 'style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; ');
+    } else {
+      unescapedIframe = unescapedIframe.replace('<iframe', '<iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"');
+    }
     
-    return unescapedIframe;
+    // Wrap in a container with aspect ratio padding
+    return `<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; border-radius: 12px;">${unescapedIframe}</div>`;
   });
 }
