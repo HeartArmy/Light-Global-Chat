@@ -7,7 +7,6 @@ import { checkRateLimit } from '@/lib/security';
 import { sendNewMessageNotification } from '@/lib/email';
 import { generateGemmieResponse, sendGemmieMessage } from '@/lib/openrouter';
 import { Attachment } from '@/types';
-import { redis } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,15 +115,7 @@ export async function POST(request: NextRequest) {
 
     // Get user country from IP (reuse ip from rate limiting)
     console.log('Getting country from IP:', ip);
-    const countryData = await getCountryFromIP(ip);
-    if (countryData.error) {
-      console.error('Country detection error:', countryData.error);
-      return NextResponse.json(
-        { error: 'Failed to determine user country', code: 'COUNTRY_DETECTION_ERROR', details: countryData.error },
-        { status: 500 }
-      );
-    }
-    const { countryCode } = countryData;
+    const { countryCode } = await getCountryFromIP(ip);
     console.log('User country:', countryCode);
 
     // Connect to database
@@ -168,10 +159,11 @@ export async function POST(request: NextRequest) {
       const isGemmieEnabled = await getGemmieStatus();
       
       if (isGemmieEnabled) {
-        console.log('✅ Scheduling Gemmie response for:', userName);
-        const topic = 'gemmie-trigger';
-        const messagePayload = JSON.stringify({ userName, userCountry: countryCode });
-        await redis.publish(topic, messagePayload);
+        console.log('✅ Triggering Gemmie response for:', userName);
+        // Wait for Gemmie response to complete (prevents serverless function from dying)
+        await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
+          console.error('❌ Gemmie response failed:', err)
+        );
       } else {
         console.log('🔇 Gemmie is disabled, skipping response');
       }
@@ -338,5 +330,46 @@ export async function DELETE(request: NextRequest) {
       { error: 'Failed to delete message', code: 'SERVER_ERROR' },
       { status: 500 }
     );
+  }
+}
+
+// Trigger Gemmie's AI response
+async function triggerGemmieResponse(userName: string, userMessage: string, userCountry: string): Promise<void> {
+  try {
+    console.log('🤖 Starting Gemmie response process for:', userName);
+    
+    // Wait a bit to seem more natural (1-4 seconds)
+    const delay = 8000 + Math.random() * 8000;
+    console.log(`⏰ Waiting ${Math.round(delay)}ms before responding...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    // Generate response
+    console.log('🧠 Generating AI response...');
+    const response = await generateGemmieResponse(userName, userMessage, userCountry);
+    console.log('💬 Generated response:', response);
+    
+    // Send to chat
+    console.log('📤 Sending Gemmie message to chat...');
+    await sendGemmieMessage(response);
+    
+    // Trigger Pusher event for real-time update
+    const pusher = getPusherInstance();
+    const gemmieMessage = {
+      _id: new Date().getTime().toString(), // Temporary ID
+      content: response,
+      userName: 'gemmie',
+      userCountry: 'US',
+      timestamp: new Date(),
+      attachments: [],
+      replyTo: null,
+      reactions: [],
+      edited: false,
+      editedAt: null
+    };
+    
+    await pusher.trigger('chat-room', 'new-message', gemmieMessage);
+    console.log('✅ Gemmie response complete!');
+  } catch (error) {
+    console.error('❌ Error in Gemmie response:', error);
   }
 }

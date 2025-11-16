@@ -16,7 +16,7 @@ const countryCodeToFlag = (countryCode: string): string => {
 const ipCache = new Map<string, { countryCode: string; timestamp: number }>();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
-export async function getCountryFromIP(ip: string): Promise<{ countryCode: string; countryFlag: string; error?: string }> {
+export async function getCountryFromIP(ip: string): Promise<{ countryCode: string; countryFlag: string }> {
   // Check cache first
   const cached = ipCache.get(ip);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
@@ -46,12 +46,10 @@ export async function getCountryFromIP(ip: string): Promise<{ countryCode: strin
     };
   } catch (error) {
     console.error('Error fetching country:', error);
-    // Return a more detailed error object
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error fetching country';
+    // Return default globe emoji on error
     return {
-      countryCode: 'XX', // Default, might be rejected by model validation
-      countryFlag: '🌐', // Default flag
-      error: `Failed to determine country: ${errorMessage}`
+      countryCode: 'XX',
+      countryFlag: '🌐',
     };
   }
 }
