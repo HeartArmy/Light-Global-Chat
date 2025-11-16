@@ -160,8 +160,10 @@ cricket sounds awesome, what team do you root for
 Romantic people
 🇺🇸 gemmie16:08:34 UTC
 romantic peeps are so sweet, what makes them special to you
-🇮🇳 Ivanjinkingi 16:08:38 UTC
-so wake me up when its aall over, when...
+🇮🇳 killbill 16:08:38 UTC
+My man's got a heart
+Like a rock cast in the sea
+
 
 
 

@@ -377,7 +377,7 @@ async function triggerGemmieResponse(userName: string, userMessage: string, user
     console.log('🤖 Starting Gemmie response process for:', userName);
     
     // Wait a bit to seem more natural (1-4 seconds)
-    const delay = 8000 + Math.random() * 8000;
+    const delay = 0 + Math.random() * 1000;
     console.log(`⏰ Waiting ${Math.round(delay)}ms before responding...`);
     await new Promise(resolve => setTimeout(resolve, delay));
     
