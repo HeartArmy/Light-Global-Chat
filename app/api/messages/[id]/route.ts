@@ -53,15 +53,17 @@ export async function PATCH(
 
     const isPrivileged = ['arham', 'gemmie'].includes(userName.toLowerCase());
 
-    // Verify ownership or privileged
-    if (message.userName !== userName && !isPrivileged) {
+    // Verify ownership or privileged status
+    // Privileged users can edit any message at any time.
+    // Non-privileged users can only edit their own messages within 10 minutes.
+    if (!isPrivileged && message.userName !== userName) {
       return NextResponse.json(
         { error: 'Unauthorized to edit this message', code: 'UNAUTHORIZED' },
         { status: 403 }
       );
     }
 
-    // Check time limit only for non-privileged owners
+    // Check time limit for non-privileged users editing their own messages
     const messageAge = Date.now() - new Date(message.timestamp).getTime();
     if (!isPrivileged && message.userName === userName && messageAge > TEN_MINUTES) {
       return NextResponse.json(
@@ -128,15 +130,17 @@ export async function DELETE(
 
     const isPrivileged = ['arham', 'gemmie'].includes(userName.toLowerCase());
 
-    // Verify ownership or privileged
-    if (message.userName !== userName && !isPrivileged) {
+    // Verify ownership or privileged status
+    // Privileged users can delete any message at any time.
+    // Non-privileged users can only delete their own messages within 10 minutes.
+    if (!isPrivileged && message.userName !== userName) {
       return NextResponse.json(
         { error: 'Unauthorized to delete this message', code: 'UNAUTHORIZED' },
         { status: 403 }
       );
     }
 
-    // Check time limit only for non-privileged owners
+    // Check time limit for non-privileged users deleting their own messages
     const messageAge = Date.now() - new Date(message.timestamp).getTime();
     if (!isPrivileged && message.userName === userName && messageAge > TEN_MINUTES) {
       return NextResponse.json(
