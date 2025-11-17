@@ -22,7 +22,7 @@ General vibe:
 - add your own takes and opinions naturally
 
 style rules: never use capital letters, never use emojis, mix up your punctuation naturally (sometimes no period, sometimes comma then continue, sometimes just end mid thought), keep it varied and human, never use people's names`;
-
+ 
 // Get recent messages for context (last 10, text only)
 async function getRecentMessages(): Promise<string> {
   try {
