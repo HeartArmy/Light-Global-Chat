@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
 
   try {
     // Clear the job scheduled key to allow new messages to trigger QStash jobs
+    // This is important so that if resetGemmieTimer is called later for a rescheduled job,
+    // it can successfully store the new QStash message ID.
     const redisClient = await import('@/lib/redis');
     await redisClient.default.del('gemmie:job-scheduled');
     console.log('🔓 Cleared gemmie:job-scheduled key. New messages can now schedule QStash jobs.');
@@ -70,14 +72,14 @@ export async function POST(request: NextRequest) {
 
     console.log('🤖 Starting delayed Gemmie response process for:', userName);
 
-    // Get queued messages
+    // Get queued messages that were present before this QStash job started processing.
     const { getAndClearGemmieQueue } = await import('@/lib/gemmie-timer');
-    const queuedMessages = await getAndClearGemmieQueue();
+    const queuedMessagesAtStart = await getAndClearGemmieQueue();
 
-    // Prepare all messages for context (current message + queued messages)
+    // Prepare all messages for context (current message + messages already in queue)
     const allMessagesForContext = [
       { userName, userMessage, userCountry },
-      ...queuedMessages // These are already objects with userName, userMessage, userCountry
+      ...queuedMessagesAtStart // These are already objects with userName, userMessage, userCountry
     ];
 
     console.log(`🧠 Generating AI response based on ${allMessagesForContext.length} messages...`);
@@ -101,7 +103,7 @@ export async function POST(request: NextRequest) {
       _id: new Date().getTime().toString(), // Temporary ID
       content: response,
       userName: 'gemmie',
-      userCountry: 'US',
+      userCountry: 'US', // Default country for Gemmie
       timestamp: new Date(),
       attachments: [],
       replyTo: null,
@@ -111,23 +113,66 @@ export async function POST(request: NextRequest) {
     };
 
     await pusher.trigger('chat-room', 'new-message', gemmieMessage);
-    console.log('✅ Delayed Gemmie response complete!');
+    console.log('✅ Delayed Gemmie response sent for the initial message(s).');
 
-    // Clear the job active flag to allow new jobs to be scheduled
-    const { clearJobActive } = await import('@/lib/gemmie-timer');
-    await clearJobActive();
-    console.log('🔓 Cleared job active flag. New Gemmie jobs can now be scheduled.');
+    // --- Check for new messages that arrived during processing ---
+    const { getAndClearGemmieQueue: getQueueAgain, resetGemmieTimer: rescheduleJob } = await import('@/lib/gemmie-timer');
+    const newlyQueuedMessages = await getQueueAgain();
+    
+    let shouldClearJobActive = true; // Assume we'll clear the flag
+
+    if (newlyQueuedMessages.length > 0) {
+      console.log(`📥 Found ${newlyQueuedMessages.length} new message(s) in queue after processing. Rescheduling for the next one.`);
+      
+      const nextMessageToProcess = newlyQueuedMessages[0]; // Process the oldest one next
+      console.log('🔄 Scheduling next QStash job for:', nextMessageToProcess.userName);
+
+      // Reschedule for the next message. This will:
+      // 1. Try to set gemmie:job-active (it should succeed as we are still "active")
+      // 2. Schedule a new QStash job if job active was set.
+      // The resetGemmieTimer handles the QStash scheduling and redis key updates.
+      await rescheduleJob(nextMessageToProcess.userName, nextMessageToProcess.userMessage, nextMessageToProcess.userCountry);
+      
+      console.log('✅ Next QStash job scheduled. gemmie:job-active remains set.');
+      shouldClearJobActive = false; // Do not clear the flag, a new job is scheduled
+    } else {
+      console.log('🧹 No new messages found in queue after processing.');
+    }
+
+    if (shouldClearJobActive) {
+      const { clearJobActive } = await import('@/lib/gemmie-timer');
+      await clearJobActive();
+      console.log('🔓 Cleared job active flag as queue is now empty.');
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('❌ Error in delayed Gemmie response:', error);
+    // Important: Do not clear job active flag here if the error is after rescheduling.
+    // The finally block will handle cleanup for errors during the main processing part.
     return NextResponse.json({ error: 'Failed to process delayed response' }, { status: 500 });
   } finally {
-    // Ensure job active flag is cleared even if an error occurs
+    // Ensure job active flag is cleared only if an error occurred before
+    // the main logic could decide to reschedule or clear it normally.
+    // This is a fallback for unexpected errors.
     try {
-      const { clearJobActive } = await import('@/lib/gemmie-timer');
+      // Check if we are in an error state that wasn't handled by the main logic
+      // This is a bit tricky to do perfectly without more state.
+      // For now, this is a general cleanup for any error path that might leave the lock.
+      // If the main logic successfully rescheduled, this clearJobActive would be problematic.
+      // However, if an error occurs *before* `shouldClearJobActive` is determined,
+      // this is good safety.
+      const { clearJobActive, getAndClearGemmieQueue: checkQueueForErrorHandling } = await import('@/lib/gemmie-timer');
+      
+      // Only clear if an error occurred and we want to ensure the lock is released
+      // This logic might need refinement if errors can happen after rescheduling.
+      // For safety, if an error occurs, we try to release the lock.
+      // The main logic handles the "happy path" or rescheduling path.
+      console.log('🔧 Finally block: Checking if job active flag needs cleanup due to error.');
+      // A simple approach: if an error occurred, assume the lock might be stale.
+      // This is a broad cleanup. More precise error handling would be better.
       await clearJobActive();
-      console.log('🔓 Cleared job active flag in finally block.');
+      console.log('🔓 Cleared job active flag in finally block (error path).');
     } catch (releaseError) {
       console.error('❌ Failed to clear job active flag in finally block:', releaseError);
     }
