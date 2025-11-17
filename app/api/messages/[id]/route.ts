@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import { getPusherInstance } from '@/lib/pusher';
+import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +43,7 @@ export async function PATCH(
     await connectDB();
 
     // Find message
-    const message = await Message.findById(id);
+    const message = await Message.findById(new mongoose.Types.ObjectId(id));
 
     if (!message) {
       return NextResponse.json(
@@ -78,7 +79,7 @@ export async function PATCH(
     message.editedAt = new Date();
     await message.save();
 
-    const updatedMessage = await Message.findById(id).populate('replyTo').lean();
+    const updatedMessage = await Message.findById(new mongoose.Types.ObjectId(id)).populate('replyTo').lean();
 
     // Trigger Pusher event
     const pusher = getPusherInstance();
@@ -119,7 +120,7 @@ export async function DELETE(
     await connectDB();
 
     // Find message
-    const message = await Message.findById(id);
+    const message = await Message.findById(new mongoose.Types.ObjectId(id));
 
     if (!message) {
       return NextResponse.json(
@@ -150,7 +151,7 @@ export async function DELETE(
     }
 
     // Delete message
-    await Message.findByIdAndDelete(id);
+    await Message.findByIdAndDelete(new mongoose.Types.ObjectId(id));
 
     // Trigger Pusher event
     const pusher = getPusherInstance();
