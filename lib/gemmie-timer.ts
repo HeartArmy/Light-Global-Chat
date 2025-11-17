@@ -6,6 +6,9 @@ const LAST_MESSAGE_KEY = 'gemmie:last-message-timestamp';
 const JOB_SCHEDULED_KEY = 'gemmie:job-scheduled';
 // Key for storing messages that arrive during the cooldown
 const GEMMIE_MESSAGE_QUEUE_KEY = 'gemmie:message-queue';
+// Key for locking to prevent concurrent QStash job scheduling
+const GEMMIE_LOCK_KEY = 'gemmie:lock';
+const LOCK_EXPIRY_SECONDS = 20; // Slightly more than GEMMIE_DELAY
 
 // Time in seconds for the delay before Gemmie responds (15 seconds)
 const GEMMIE_DELAY = 15;
@@ -125,6 +128,40 @@ async function scheduleDelayedResponse(userName: string, userMessage: string, us
     // Ensure we don't leave a stale job scheduled key
     await redis.del(JOB_SCHEDULED_KEY);
     throw qstashError; // Re-throw to be caught by the caller
+  }
+}
+
+/**
+ * Attempts to acquire a lock to schedule a QStash job.
+ * Returns true if lock acquired, false otherwise.
+ */
+export async function acquireGemmieLock(): Promise<boolean> {
+  try {
+    // Use SET with NX and EX options to set the key only if it doesn't exist and set expiry
+    // @ts-ignore: The 'EX' option might not be recognized by the type definition for @upstash/redis
+    const result = await redis.set(GEMMIE_LOCK_KEY, 'locked', { 'EX': LOCK_EXPIRY_SECONDS, 'NX': true });
+    if (result === 'OK') {
+      console.log('🔓 Gemmie lock acquired.');
+      return true;
+    } else {
+      console.log('⏳ Gemmie lock is already held.');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error acquiring Gemmie lock:', error);
+    return false; // Fail safe: assume lock not acquired
+  }
+}
+
+/**
+ * Releases the Gemmie lock.
+ */
+export async function releaseGemmieLock(): Promise<void> {
+  try {
+    await redis.del(GEMMIE_LOCK_KEY);
+    console.log('🔓 Gemmie lock released.');
+  } catch (error) {
+    console.error('❌ Error releasing Gemmie lock:', error);
   }
 }
 

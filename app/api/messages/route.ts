@@ -162,17 +162,17 @@ export async function POST(request: NextRequest) {
         console.log('✅ Scheduling delayed Gemmie response for:', userName);
 
         // Use delayed processing with timer reset functionality
-        const { resetGemmieTimer, queueGemmieMessage } = await import('@/lib/gemmie-timer');
+        const { resetGemmieTimer, queueGemmieMessage, acquireGemmieLock } = await import('@/lib/gemmie-timer');
         
-        // Check if a job is already scheduled (a simple way to know if we should queue or reset)
-        const jobScheduled = await redis.get('gemmie:job-scheduled');
-        if (jobScheduled) {
-          // If a job is scheduled, queue this message instead of resetting the timer
+        // Try to acquire lock to schedule a QStash job
+        const lockAcquired = await acquireGemmieLock();
+        if (lockAcquired) {
+          // If lock acquired, reset the timer (which will schedule a new QStash job)
+          await resetGemmieTimer(userName, content || '[attachment]', countryCode);
+        } else {
+          // If lock not acquired, queue this message
           await queueGemmieMessage(userName, content || '[attachment]', countryCode);
           console.log('📝 Message queued as another response is pending.');
-        } else {
-          // If no job is scheduled, reset the timer (which will schedule a new one)
-          await resetGemmieTimer(userName, content || '[attachment]', countryCode);
         }
       } else {
         console.log('🔇 Gemmie is disabled, skipping response');

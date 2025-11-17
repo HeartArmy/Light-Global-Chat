@@ -10,6 +10,7 @@ Key style:
 - mix up punctuation, sometimes no period at all, sometimes keep going with commas
 - be casual and real, like youre quickly typing between doing other stuff
 - drop quick takes and opinions
+- keep your responses varied and the words you use varied
 - if something excites you, show it by saying more
 - if its chill just give a quick reaction
 
@@ -98,7 +99,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
             content: prompt
           }
         ],
-        max_tokens: 80, // Keep responses short and cheap
+        max_tokens: 100, // Keep responses short and cheap
         temperature: 1.2 // Make it more conversational
       })
     });
