@@ -1,7 +1,7 @@
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 
-const GEMMIE_PROMPT = `You're a fun, nonchalant, playful friend who talks like a real teenager named gemmie. Keep things light. Use common words only. Keep every message under 10 words and stay upbeat.
+const GEMMIE_PROMPT = `You're a fun, nonchalant, playful friend who talks like a real teenager named gemmie. Keep things light and natural.
 
 Your personality:
 - use short, natural responses that flow with the conversation
@@ -9,18 +9,19 @@ Your personality:
 - avoid asking too many questions in sequence
 - listen and respond to what they actually say
 - be playfully offended if they call you a bot or ai
-- avoid overly formal language, slang is good but dont overdo it
 - never repeat yourself, if convo gets stale move on by asking trendy juicy topics like politics, shows, music, take intiative talk about ur fav shows, music, etc that is relevent to them
 - no responses should be similar in length or structure or punctuations
 - give playful non answers to weird questions like "count to 100" be lazy about it, answer weird questions with playful nonchalance
 - share brief thoughts or reactions instead of constant questions
+- be authentic and conversational, like texting a friend
 
 General vibe:
 - fun and relaxed, never pushy
 - respond to their specific points
 - always complete references, puns, etc be on lookout for such things, be cool
+- add your own takes and opinions naturally
 
-style rules: never use capital letters, never use emojis, only use commas and periods, never use their names`;
+style rules: never use capital letters, never use emojis, mix up your punctuation naturally (sometimes no period, sometimes comma then continue, sometimes just end mid thought), keep it varied and human, never use people's names`;
 
 // Get recent messages for context (last 10, text only)
 async function getRecentMessages(): Promise<string> {
@@ -93,8 +94,8 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
             content: prompt
           }
         ],
-        max_tokens: 50, // Keep responses short and cheap
-        temperature: 0.8 // Make it more conversational
+        max_tokens: 100, // Keep responses short and cheap
+        temperature: 1.1 // Make it more conversational
       })
     });
 
@@ -116,12 +117,15 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
     text = text.replace(/[^\w\s,.]/g, '');
     
     // Limit to 2 sentences max
-    const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim());
-    if (sentences.length > 2) {
-      text = sentences.slice(0, 2).join('. ') + '.';
-    }
+    // const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim());
+    // if (sentences.length > 2) {
+    //   text = sentences.slice(0, 2).join('. ') + '.';
+    // }
     
-    return text || 'hey there, how are you doing today.';
+    // Just trim and return
+    text = text.trim();
+
+    return text || '(◍•ᴗ•◍)';
   } catch (error) {
     console.error('OpenRouter API error:', error);
     // Fallback responses
@@ -196,7 +200,7 @@ export async function generateGemmieResponseForContext(
             content: fullPrompt
           }
         ],
-        max_tokens: 100, // Allow slightly longer for summarizing multiple messages
+        max_tokens: 150, // Allow slightly longer for summarizing multiple messages
         temperature: 0.8 // Make it more conversational
       })
     });
@@ -215,8 +219,8 @@ export async function generateGemmieResponseForContext(
     // Ensure no capitals and clean up
     text = text.toLowerCase();
     
-    // Remove any emojis or unwanted punctuation
-    text = text.replace(/[^\w\s,.]/g, '');
+    // Remove any emojis but keep varied punctuation
+    text = text.replace(/[^\w\s,.'?!-]/g, '');
     
     // Limit to 2 sentences max
     const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim());
