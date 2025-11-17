@@ -164,22 +164,29 @@ export async function POST(request: NextRequest) {
         // Use delayed processing with timer reset functionality
         const { resetGemmieTimer, queueGemmieMessage, setJobActive, setSelectedImageUrl } = await import('@/lib/gemmie-timer');
         
-        // Store the first image URL for AI processing if available
-        const firstImage = attachments.find(attachment => attachment.type === 'image');
-        if (firstImage) {
-          console.log('📸 Storing selected image URL for AI processing:', firstImage.url);
-          await setSelectedImageUrl(firstImage.url);
-        }
-        
         // Try to set job active (prevents multiple QStash jobs)
         const jobSet = await setJobActive();
         if (jobSet) {
           // If job set active, reset the timer (which will schedule a new QStash job)
           await resetGemmieTimer(userName, content || '[attachment]', countryCode);
+          
+          // Store the first image URL for AI processing if available (do this AFTER resetGemmieTimer)
+          const firstImage = attachments.find(attachment => attachment.type === 'image');
+          if (firstImage) {
+            console.log('📸 Storing selected image URL for AI processing:', firstImage.url);
+            await setSelectedImageUrl(firstImage.url);
+          }
         } else {
           // If job already active, queue this message
           await queueGemmieMessage(userName, content || '[attachment]', countryCode);
           console.log('📝 Message queued as a Gemmie job is already active.');
+          
+          // Store the first image URL for AI processing if available
+          const firstImage = attachments.find(attachment => attachment.type === 'image');
+          if (firstImage) {
+            console.log('📸 Storing selected image URL for AI processing:', firstImage.url);
+            await setSelectedImageUrl(firstImage.url);
+          }
         }
       } else {
         console.log('🔇 Gemmie is disabled, skipping response');
