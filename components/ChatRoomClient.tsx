@@ -7,6 +7,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import NameModal from '@/components/NameModal';
 import MessageList from '@/components/MessageList';
 import MessageInput from '@/components/MessageInput';
+import { setSelectedImageUrl } from '@/lib/gemmie-timer';
 
 export default function ChatRoomClient() {
   const { theme, toggleTheme } = useTheme();
@@ -204,6 +205,14 @@ export default function ChatRoomClient() {
   const handleSendMessage = async (content: string, attachments: Attachment[], replyTo?: string) => {
     try {
       console.log('Sending message:', { content, attachments, userName, replyTo });
+
+      // Select the first image for AI processing if any
+      const imageAttachment = attachments.find(att => att.type === 'image');
+      if (imageAttachment) {
+        await setSelectedImageUrl(imageAttachment.url);
+        console.log('🖼️ Selected image for AI processing:', imageAttachment.url);
+      }
+
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

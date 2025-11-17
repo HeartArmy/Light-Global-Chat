@@ -1,5 +1,7 @@
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
+import redis from '@/lib/redis';
+import { getAndClearSelectedImageUrl } from '@/lib/gemmie-timer';
 
 const GEMMIE_PROMPT = `You're gemmie, a chill friend who keeps messages natural like real texting. Vary your response length based on what feels right.
 
@@ -184,8 +186,16 @@ export async function generateGemmieResponseForContext(
     // Format database messages for context
     const dbContext = recentMessagesDb ? `\n\nRecent chat context (before current batch):\n${recentMessagesDb}` : '';
 
+    // Get selected image URL for AI processing
+    const selectedImageUrl = await getAndClearSelectedImageUrl();
+    let imageContext = '';
+    if (selectedImageUrl) {
+      imageContext = `\n\nImage provided by user: ${selectedImageUrl}`;
+      console.log('🖼️ Image included in AI prompt:', selectedImageUrl);
+    }
+
     // Construct the full prompt
-    const fullPrompt = `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}\n\nRespond as gemmie (remember: no capitals, never use people's name):`;
+    const fullPrompt = `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}${imageContext}\n\nRespond as gemmie (remember: no capitals, never use people's name):`;
 
     console.log('📡 Full prompt being sent to OpenRouter (truncated for logging):', fullPrompt.substring(0, 500) + '...');
 

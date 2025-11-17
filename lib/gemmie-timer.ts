@@ -8,6 +8,8 @@ const JOB_SCHEDULED_KEY = 'gemmie:job-scheduled';
 const GEMMIE_MESSAGE_QUEUE_KEY = 'gemmie:message-queue';
 // Key for tracking if a Gemmie job is active
 const JOB_ACTIVE_KEY = 'gemmie:job-active';
+// Key for storing the URL of the single image selected for AI processing in the current burst
+const GEMMIE_SELECTED_IMAGE_URL_KEY = 'gemmie:selected-image-url';
 // Time in seconds for the delay before Gemmie responds (15 seconds to match job window)
 const GEMMIE_DELAY = 10;
 
@@ -24,6 +26,10 @@ export async function resetGemmieTimer(userName: string, userMessage: string, us
   // Store the current timestamp
   await redis.set(LAST_MESSAGE_KEY, now);
   
+  // Clear the selected image URL for the new message burst
+  await redis.del(GEMMIE_SELECTED_IMAGE_URL_KEY);
+  console.log('🗑️ Cleared previously selected image URL for new message burst.');
+
   // Check if there's already a scheduled job
   const jobScheduled = await redis.get(JOB_SCHEDULED_KEY);
   
@@ -158,6 +164,41 @@ export async function clearJobActive(): Promise<void> {
     console.log('🔓 Cleared Gemmie job active flag.');
   } catch (error) {
     console.error('❌ Error clearing job active flag:', error);
+  }
+}
+
+/**
+ * Stores the URL of the selected image for AI processing.
+ * This should be called when an image is chosen to be sent to the AI.
+ * @param imageUrl The URL of the selected image.
+ */
+export async function setSelectedImageUrl(imageUrl: string): Promise<void> {
+  try {
+    await redis.set(GEMMIE_SELECTED_IMAGE_URL_KEY, String(imageUrl), { ex: GEMMIE_DELAY + 60 }); // TTL slightly more than processing delay
+    console.log('🖼️ Stored selected image URL for AI processing:', imageUrl);
+  } catch (error) {
+    console.error('❌ Error storing selected image URL:', error);
+  }
+}
+
+/**
+ * Retrieves and clears the URL of the selected image for AI processing.
+ * This should be called after the image has been processed by the AI.
+ * @returns The URL of the selected image, or null if none.
+ */
+export async function getAndClearSelectedImageUrl(): Promise<string | null> {
+  try {
+    const imageUrl = await redis.get(GEMMIE_SELECTED_IMAGE_URL_KEY);
+    if (imageUrl) {
+      await redis.del(GEMMIE_SELECTED_IMAGE_URL_KEY);
+      console.log('🔄 Retrieved and cleared selected image URL:', imageUrl);
+      return String(imageUrl);
+    }
+    console.log('ℹ️ No selected image URL found for AI processing.');
+    return null;
+  } catch (error) {
+    console.error('❌ Error retrieving/clearing selected image URL:', error);
+    return null;
   }
 }
 
