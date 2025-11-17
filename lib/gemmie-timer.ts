@@ -61,12 +61,24 @@ export async function getAndClearGemmieQueue(): Promise<any[]> {
   
   // Use RPOP to get messages in chronological order (oldest first)
   const messagesJson = await redis.lrange(GEMMIE_MESSAGE_QUEUE_KEY, 0, -1);
-  const messages = messagesJson.map(msg => JSON.parse(msg));
+  console.log('🔍 Raw messages from Redis queue:', messagesJson);
+
+  const messages: any[] = [];
+  for (const msg of messagesJson) {
+    try {
+      const parsedMsg = JSON.parse(msg);
+      messages.push(parsedMsg);
+    } catch (parseError: any) {
+      console.error('❌ Failed to parse queued message:', msg, 'Error:', parseError.message);
+      // Optionally, handle the error (e.g., skip, log, or store for later inspection)
+      // For now, we'll skip it.
+    }
+  }
   
   // Clear the queue after retrieving messages
   await redis.del(GEMMIE_MESSAGE_QUEUE_KEY);
   
-  console.log(`🗑️ Cleared ${messages.length} messages from Gemmie queue.`);
+  console.log(`🗑️ Cleared ${messages.length} valid messages from Gemmie queue.`);
   return messages;
 }
 
