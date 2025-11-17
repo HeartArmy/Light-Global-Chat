@@ -208,11 +208,27 @@ export async function generateGemmieResponseForContext(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openrouter/sherlock-think-alpha',
+        model: 'openrouter/sherlock-think-alpha', // Use sherlock-think-alpha which supports vision
         messages: [
           {
             role: 'user',
-            content: fullPrompt
+            content: selectedImageUrl ? [
+              {
+                type: 'text',
+                text: fullPrompt
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: selectedImageUrl
+                }
+              }
+            ] : [
+              {
+                type: 'text', 
+                text: fullPrompt
+              }
+            ]
           }
         ],
         max_tokens: 150, // Allow slightly longer for summarizing multiple messages
