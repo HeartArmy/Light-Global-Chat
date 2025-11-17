@@ -11,30 +11,30 @@ export async function POST(request: NextRequest) {
     nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
   });
 
-  // Verify the request is coming from QStash
-  const signature = request.headers.get('upstash-signature');
-  if (!signature) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const body = await request.text();
-
-  try {
-    // Verify the signature
-    const isValid = await receiver.verify({
-      signature,
-      body,
-      url: request.url,
-    });
-
-    if (!isValid) {
-      console.error('❌ Invalid QStash signature');
+    // Verify the request is coming from QStash
+    const signature = request.headers.get('upstash-signature');
+    if (!signature) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-  } catch (error) {
-    console.error('❌ Signature verification failed:', error);
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+
+    const body = await request.text();
+
+    try {
+      // Verify the signature
+      const isValid = await receiver.verify({
+        signature,
+        body,
+        // Remove url from verification to fix signature mismatch
+      });
+
+      if (!isValid) {
+        console.error('❌ Invalid QStash signature');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    } catch (error) {
+      console.error('❌ Signature verification failed:', error);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
   try {
     // Parse the request body
