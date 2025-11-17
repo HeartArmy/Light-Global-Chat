@@ -4,6 +4,8 @@ import redis from '@/lib/redis';
 const LAST_MESSAGE_KEY = 'gemmie:last-message-timestamp';
 // Key for tracking whether a QStash job is already scheduled
 const JOB_SCHEDULED_KEY = 'gemmie:job-scheduled';
+// Key for storing messages that arrive during the cooldown
+const GEMMIE_MESSAGE_QUEUE_KEY = 'gemmie:message-queue';
 
 // Time in seconds for the delay before Gemmie responds (15 seconds)
 const GEMMIE_DELAY = 15;
@@ -32,6 +34,40 @@ export async function resetGemmieTimer(userName: string, userMessage: string, us
   await scheduleDelayedResponse(userName, userMessage, userCountry);
   
   console.log('✅ Gemmie timer reset and response scheduled');
+}
+
+/**
+ * Adds a message to the Gemmie queue if a response is already scheduled
+ */
+export async function queueGemmieMessage(userName: string, userMessage: string, userCountry: string): Promise<void> {
+  console.log('📝 Adding message to Gemmie queue:', userName);
+  
+  const messageData = {
+    userName,
+    userMessage,
+    userCountry,
+    timestamp: Math.floor(Date.now() / 1000),
+  };
+
+  await redis.lpush(GEMMIE_MESSAGE_QUEUE_KEY, JSON.stringify(messageData));
+  console.log('✅ Message queued for Gemmie response.');
+}
+
+/**
+ * Retrieves all messages from the Gemmie queue and clears it
+ */
+export async function getAndClearGemmieQueue(): Promise<any[]> {
+  console.log('📂 Retrieving and clearing Gemmie message queue...');
+  
+  // Use RPOP to get messages in chronological order (oldest first)
+  const messagesJson = await redis.lrange(GEMMIE_MESSAGE_QUEUE_KEY, 0, -1);
+  const messages = messagesJson.map(msg => JSON.parse(msg));
+  
+  // Clear the queue after retrieving messages
+  await redis.del(GEMMIE_MESSAGE_QUEUE_KEY);
+  
+  console.log(`🗑️ Cleared ${messages.length} messages from Gemmie queue.`);
+  return messages;
 }
 
 /**

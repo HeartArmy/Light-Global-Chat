@@ -42,9 +42,25 @@ export async function POST(request: NextRequest) {
 
     console.log('🤖 Starting delayed Gemmie response process for:', userName);
 
-    // Generate response
-    console.log('🧠 Generating AI response...');
-    const response = await generateGemmieResponse(userName, userMessage, userCountry);
+    // Get queued messages
+    const { getAndClearGemmieQueue } = await import('@/lib/gemmie-timer');
+    const queuedMessages = await getAndClearGemmieQueue();
+
+    // Prepare all messages for context (current message + queued messages)
+    const allMessagesForContext = [
+      { userName, userMessage, userCountry },
+      ...queuedMessages // These are already objects with userName, userMessage, userCountry
+    ];
+
+    console.log(`🧠 Generating AI response based on ${allMessagesForContext.length} messages...`);
+
+    // Generate response using all messages as context
+    const response = await generateGemmieResponseForContext(
+      userName, 
+      allMessagesForContext.map(m => `${m.userName}: ${m.userMessage}`).join('\n---\n'), 
+      userCountry, 
+      allMessagesForContext
+    );
     console.log('💬 Generated response:', response);
 
     // Send to chat

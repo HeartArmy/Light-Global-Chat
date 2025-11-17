@@ -156,3 +156,84 @@ export async function sendGemmieMessage(content: string): Promise<void> {
     console.error('Error sending Gemmie message:', error);
   }
 }
+
+// Generate Gemmie's response using OpenRouter with context for multiple messages
+export async function generateGemmieResponseForContext(
+    primaryUserName: string,
+    allMessagesContext: string,
+    primaryUserCountry: string,
+    allMessagesData: Array<{userName: string, userMessage: string, userCountry: string}>
+): Promise<string> {
+  try {
+    console.log('🔧 OpenRouter API call starting with context...');
+    console.log('📝 Primary User:', primaryUserName, 'Country:', primaryUserCountry);
+    
+    // Get recent messages for additional context (last 10, text only)
+    // This will be combined with the allMessagesContext passed in
+    const recentMessagesDb = await getRecentMessages(); // This is from the original function
+    
+    // Format database messages for context
+    const dbContext = recentMessagesDb ? `\n\nRecent chat context (before current batch):\n${recentMessagesDb}` : '';
+
+    // Construct the full prompt
+    const fullPrompt = `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}\n\nRespond as gemmie (remember: no capitals, never use people's name):`;
+
+    console.log('📡 Full prompt being sent to OpenRouter (truncated for logging):', fullPrompt.substring(0, 500) + '...');
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com', // Optional. Site URL for rankings on openrouter.ai.
+        'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App', // Optional. Site title for rankings on openrouter.ai.
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'openrouter/sherlock-think-alpha',
+        messages: [
+          {
+            role: 'user',
+            content: fullPrompt
+          }
+        ],
+        max_tokens: 100, // Allow slightly longer for summarizing multiple messages
+        temperature: 0.8 // Make it more conversational
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ OpenRouter API error:', response.status, errorText);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('📡 OpenRouter API response:', data);
+    let text = data.choices[0]?.message?.content?.trim() || '';
+    console.log('🎯 Raw AI response:', text);
+    
+    // Ensure no capitals and clean up
+    text = text.toLowerCase();
+    
+    // Remove any emojis or unwanted punctuation
+    text = text.replace(/[^\w\s,.]/g, '');
+    
+    // Limit to 2 sentences max
+    const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim());
+    if (sentences.length > 2) {
+      text = sentences.slice(0, 2).join('. ') + '.';
+    }
+    
+    return text || 'hey there, how are you doing today.';
+  } catch (error) {
+    console.error('OpenRouter API error (with context):', error);
+    // Fallback responses
+    const fallbacks = [
+      '(•‿•)',
+      '(¬_¬)',
+      '(._.)',
+      'o_O',
+    ];
+    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  }
+}
