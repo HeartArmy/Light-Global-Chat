@@ -144,7 +144,7 @@ export async function sendGemmieMessage(content: string): Promise<void> {
     await Message.create({
       content,
       userName: 'gemmie',
-      userCountry: 'US', // US flag
+      userCountry: 'US', // USA flag
       attachments: [],
       replyTo: null,
       timestamp: new Date(),

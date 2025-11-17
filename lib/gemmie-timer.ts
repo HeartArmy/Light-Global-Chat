@@ -76,26 +76,44 @@ export async function getAndClearGemmieQueue(): Promise<any[]> {
 async function scheduleDelayedResponse(userName: string, userMessage: string, userCountry: string): Promise<void> {
   // Import QStash here to avoid circular dependencies
   const qstash = await import('@/lib/qstash');
+  console.log('🚀 Attempting to schedule QStash message for:', userName, 'with delay:', GEMMIE_DELAY, 's');
 
   // Get the absolute URL for the delayed processing endpoint
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const endpoint = `${baseUrl}/api/gemmie/process`;
+  console.log('📬 QStash target endpoint:', endpoint);
 
-  // Send message to QStash with 15 second delay
-  const response = await qstash.default.publishJSON({
-    url: endpoint,
-    body: {
-      userName,
-      userMessage,
-      userCountry
-    },
-    delay: GEMMIE_DELAY, // Delay in seconds
-  });
+  const payload = {
+    userName,
+    userMessage,
+    userCountry
+  };
+  console.log('📦 QStash payload:', JSON.stringify(payload));
 
-  // Store the message ID so we can potentially track/cancel it later if needed
-  await redis.set(JOB_SCHEDULED_KEY, response.messageId);
+  try {
+    // Send message to QStash with 15 second delay
+    const response = await qstash.default.publishJSON({
+      url: endpoint,
+      body: payload,
+      delay: GEMMIE_DELAY, // Delay in seconds
+    });
+    console.log('✅ QStash publish successful. Response:', response);
 
-  console.log('🚀 Scheduled delayed response with message ID:', response.messageId);
+    if (response && response.messageId) {
+      // Store the message ID so we can potentially track/cancel it later if needed
+      await redis.set(JOB_SCHEDULED_KEY, response.messageId);
+      console.log('📍 Stored QStash message ID in Redis:', response.messageId);
+    } else {
+      console.error('❌ QStash response did not contain a messageId:', response);
+      // Optionally, clear the job scheduled key or handle this error
+      await redis.del(JOB_SCHEDULED_KEY);
+    }
+  } catch (qstashError) {
+    console.error('❌ QStash publish failed:', qstashError);
+    // Ensure we don't leave a stale job scheduled key
+    await redis.del(JOB_SCHEDULED_KEY);
+    throw qstashError; // Re-throw to be caught by the caller
+  }
 }
 
 /**
