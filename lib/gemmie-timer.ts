@@ -8,8 +8,8 @@ const JOB_SCHEDULED_KEY = 'gemmie:job-scheduled';
 const GEMMIE_MESSAGE_QUEUE_KEY = 'gemmie:message-queue';
 // Key for tracking if a Gemmie job is active
 const JOB_ACTIVE_KEY = 'gemmie:job-active';
-// Time in seconds for the delay before Gemmie responds (60 seconds to match job window)
-const GEMMIE_DELAY = 60;
+// Time in seconds for the delay before Gemmie responds (15 seconds to match job window)
+const GEMMIE_DELAY = 30;
 
 /**
  * Resets the Gemmie response timer when a user sends a message
