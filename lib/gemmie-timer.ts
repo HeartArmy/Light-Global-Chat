@@ -6,12 +6,10 @@ const LAST_MESSAGE_KEY = 'gemmie:last-message-timestamp';
 const JOB_SCHEDULED_KEY = 'gemmie:job-scheduled';
 // Key for storing messages that arrive during the cooldown
 const GEMMIE_MESSAGE_QUEUE_KEY = 'gemmie:message-queue';
-// Key for locking to prevent concurrent QStash job scheduling
-const GEMMIE_LOCK_KEY = 'gemmie:lock';
-const LOCK_EXPIRY_SECONDS = 60; // Increase to cover worst-case handler execution + buffer
-
-// Time in seconds for the delay before Gemmie responds (15 seconds)
-const GEMMIE_DELAY = 15;
+// Key for tracking if a Gemmie job is active
+const JOB_ACTIVE_KEY = 'gemmie:job-active';
+// Time in seconds for the delay before Gemmie responds (60 seconds to match job window)
+const GEMMIE_DELAY = 60;
 
 /**
  * Resets the Gemmie response timer when a user sends a message
@@ -132,36 +130,34 @@ async function scheduleDelayedResponse(userName: string, userMessage: string, us
 }
 
 /**
- * Attempts to acquire a lock to schedule a QStash job.
- * Returns true if lock acquired, false otherwise.
+ * Sets the Gemmie job as active (prevents multiple jobs)
  */
-export async function acquireGemmieLock(): Promise<boolean> {
+export async function setJobActive(): Promise<boolean> {
   try {
-    // Use SET with NX and EX options to set the key only if it doesn't exist and set expiry
-    // @ts-ignore: The 'EX' option might not be recognized by the type definition for @upstash/redis
-    const result = await redis.set(GEMMIE_LOCK_KEY, 'locked', { 'EX': LOCK_EXPIRY_SECONDS, 'NX': true });
+    // Set the job active key with TTL (should be longer than GEMMIE_DELAY)
+    const result = await redis.set(JOB_ACTIVE_KEY, 'active', { ex: GEMMIE_DELAY + 10, nx: true });
     if (result === 'OK') {
-      console.log('🔓 Gemmie lock acquired.');
+      console.log('🚀 Gemmie job marked as active.');
       return true;
     } else {
-      console.log('⏳ Gemmie lock is already held.');
+      console.log('⏳ Gemmie job is already active.');
       return false;
     }
   } catch (error) {
-    console.error('❌ Error acquiring Gemmie lock:', error);
-    return false; // Fail safe: assume lock not acquired
+    console.error('❌ Error setting job active:', error);
+    return false;
   }
 }
 
 /**
- * Releases the Gemmie lock.
+ * Clears the Gemmie job active flag
  */
-export async function releaseGemmieLock(): Promise<void> {
+export async function clearJobActive(): Promise<void> {
   try {
-    await redis.del(GEMMIE_LOCK_KEY);
-    console.log('🔓 Gemmie lock released.');
+    await redis.del(JOB_ACTIVE_KEY);
+    console.log('🔓 Cleared Gemmie job active flag.');
   } catch (error) {
-    console.error('❌ Error releasing Gemmie lock:', error);
+    console.error('❌ Error clearing job active flag:', error);
   }
 }
 

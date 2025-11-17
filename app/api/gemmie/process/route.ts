@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-  let lockReleased = false;
   try {
     // Clear the job scheduled key to allow new messages to trigger QStash jobs
     const redisClient = await import('@/lib/redis');
@@ -113,21 +112,24 @@ export async function POST(request: NextRequest) {
 
     await pusher.trigger('chat-room', 'new-message', gemmieMessage);
     console.log('✅ Delayed Gemmie response complete!');
+
+    // Clear the job active flag to allow new jobs to be scheduled
+    const { clearJobActive } = await import('@/lib/gemmie-timer');
+    await clearJobActive();
+    console.log('🔓 Cleared job active flag. New Gemmie jobs can now be scheduled.');
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('❌ Error in delayed Gemmie response:', error);
     return NextResponse.json({ error: 'Failed to process delayed response' }, { status: 500 });
   } finally {
-    // Ensure lock is released exactly once, even if an error occurs
-    if (!lockReleased) {
-      try {
-        const { releaseGemmieLock } = await import('@/lib/gemmie-timer');
-        await releaseGemmieLock();
-        lockReleased = true;
-        console.log('🔓 Released lock in finally block.');
-      } catch (releaseError) {
-        console.error('❌ Failed to release lock in finally block:', releaseError);
-      }
+    // Ensure job active flag is cleared even if an error occurs
+    try {
+      const { clearJobActive } = await import('@/lib/gemmie-timer');
+      await clearJobActive();
+      console.log('🔓 Cleared job active flag in finally block.');
+    } catch (releaseError) {
+      console.error('❌ Failed to clear job active flag in finally block:', releaseError);
     }
   }
 }
