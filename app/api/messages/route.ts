@@ -5,9 +5,7 @@ import { getPusherInstance } from '@/lib/pusher';
 import { getCountryFromIP, getClientIP } from '@/lib/country';
 import { checkRateLimit } from '@/lib/security';
 import { sendNewMessageNotification } from '@/lib/email';
-import { generateGemmieResponse, sendGemmieMessage } from '@/lib/openrouter';
 import { Attachment } from '@/types';
-import mongoose from 'mongoose'; // Added mongoose import
 
 export const dynamic = 'force-dynamic';
 
@@ -158,16 +156,15 @@ export async function POST(request: NextRequest) {
     if (userName.toLowerCase() !== 'arham' && userName.toLowerCase() !== 'gemmie') {
       const { getGemmieStatus } = await import('@/lib/gemmie-status');
       const isGemmieEnabled = await getGemmieStatus();
-      
+
       if (isGemmieEnabled) {
+        console.log('✅ Scheduling delayed Gemmie response for:', userName);
 
-
-            console.log('✅ Triggering Gemmie response for:', userName);
-            
-            // Wait for Gemmie response to complete (prevents serverless function from dying)
-            await triggerGemmieResponse(userName, content || '[attachment]', countryCode).catch(err =>
-              console.error('❌ Gemmie response failed:', err)
-            );
+        // Use delayed processing with timer reset functionality
+        const { resetGemmieTimer } = await import('@/lib/gemmie-timer');
+        await resetGemmieTimer(userName, content || '[attachment]', countryCode).catch(err =>
+          console.error('❌ Failed to reset Gemmie timer:', err)
+        );
       } else {
         console.log('🔇 Gemmie is disabled, skipping response');
       }
@@ -337,43 +334,3 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-// Trigger Gemmie's AI response
-async function triggerGemmieResponse(userName: string, userMessage: string, userCountry: string): Promise<void> {
-  try {
-    console.log('🤖 Starting Gemmie response process for:', userName);
-    
-    // Wait a bit to seem more natural (1-4 seconds)
-    const delay = 0 + Math.random() * 1000;
-    console.log(`⏰ Waiting ${Math.round(delay)}ms before responding...`);
-    await new Promise(resolve => setTimeout(resolve, delay));
-    
-    // Generate response
-    console.log('🧠 Generating AI response...');
-    const response = await generateGemmieResponse(userName, userMessage, userCountry);
-    console.log('💬 Generated response:', response);
-    
-    // Send to chat
-    console.log('📤 Sending Gemmie message to chat...');
-    await sendGemmieMessage(response);
-    
-    // Trigger Pusher event for real-time update
-    const pusher = getPusherInstance();
-    const gemmieMessage = {
-      _id: new Date().getTime().toString(), // Temporary ID
-      content: response,
-      userName: 'gemmie',
-      userCountry: 'US',
-      timestamp: new Date(),
-      attachments: [],
-      replyTo: null,
-      reactions: [],
-      edited: false,
-      editedAt: null
-    };
-    
-    await pusher.trigger('chat-room', 'new-message', gemmieMessage);
-    console.log('✅ Gemmie response complete!');
-  } catch (error) {
-    console.error('❌ Error in Gemmie response:', error);
-  }
-}
