@@ -8,7 +8,7 @@ const JOB_SCHEDULED_KEY = 'gemmie:job-scheduled';
 const GEMMIE_MESSAGE_QUEUE_KEY = 'gemmie:message-queue';
 // Key for locking to prevent concurrent QStash job scheduling
 const GEMMIE_LOCK_KEY = 'gemmie:lock';
-const LOCK_EXPIRY_SECONDS = 30; // Ensure it's longer than the QStash handler execution time
+const LOCK_EXPIRY_SECONDS = 60; // Increase to cover worst-case handler execution + buffer
 
 // Time in seconds for the delay before Gemmie responds (15 seconds)
 const GEMMIE_DELAY = 15;
