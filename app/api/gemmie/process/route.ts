@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Receiver } from '@upstash/qstash';
-import { generateGemmieResponse, sendGemmieMessage } from '@/lib/openrouter';
+import { generateGemmieResponse, generateGemmieResponseForContext, sendGemmieMessage } from '@/lib/openrouter';
 import { getPusherInstance } from '@/lib/pusher';
 
 // This API route handles the delayed Gemmie response
