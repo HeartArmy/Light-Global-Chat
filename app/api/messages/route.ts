@@ -162,7 +162,14 @@ export async function POST(request: NextRequest) {
         console.log('✅ Scheduling delayed Gemmie response for:', userName);
 
         // Use delayed processing with timer reset functionality
-        const { resetGemmieTimer, queueGemmieMessage, setJobActive } = await import('@/lib/gemmie-timer');
+        const { resetGemmieTimer, queueGemmieMessage, setJobActive, setSelectedImageUrl } = await import('@/lib/gemmie-timer');
+        
+        // Store the first image URL for AI processing if available
+        const firstImage = attachments.find(attachment => attachment.type === 'image');
+        if (firstImage) {
+          console.log('📸 Storing selected image URL for AI processing:', firstImage.url);
+          await setSelectedImageUrl(firstImage.url);
+        }
         
         // Try to set job active (prevents multiple QStash jobs)
         const jobSet = await setJobActive();
