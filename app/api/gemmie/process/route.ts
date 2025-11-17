@@ -37,8 +37,31 @@ export async function POST(request: NextRequest) {
     }
 
   try {
-    // Parse the request body
-    const { userName, userMessage, userCountry } = JSON.parse(body);
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(body);
+    } catch (initialParseError: any) {
+      console.warn('Initial JSON.parse failed, attempting to extract JSON from body:', initialParseError.message);
+      // Attempt to find a JSON object string within the body
+      // This is a common pattern if QStash adds prefixes or the body is not plain JSON
+      const jsonMatch = body.match(/\{[\s\S]*\}/); // Find first {...}
+      if (jsonMatch) {
+        try {
+          parsedBody = JSON.parse(jsonMatch[0]);
+        } catch (secondParseError) {
+          console.error('Failed to parse extracted JSON:', secondParseError);
+          throw new Error('Invalid JSON format in request body');
+        }
+      } else {
+        throw new Error('No valid JSON object found in request body');
+      }
+    }
+    
+    const { userName, userMessage, userCountry } = parsedBody;
+    
+    if (!userName || !userMessage || !userCountry) {
+      throw new Error('Missing required fields in request body: userName, userMessage, or userCountry');
+    }
 
     console.log('🤖 Starting delayed Gemmie response process for:', userName);
 
