@@ -37,6 +37,11 @@ export async function POST(request: NextRequest) {
     }
 
   try {
+    // Clear the job scheduled key immediately to allow new messages to trigger QStash jobs
+    const redisClient = await import('@/lib/redis');
+    await redisClient.default.del('gemmie:job-scheduled');
+    console.log('🔓 Cleared gemmie:job-scheduled key. New messages can now schedule QStash jobs.');
+
     let parsedBody;
     try {
       parsedBody = JSON.parse(body);
