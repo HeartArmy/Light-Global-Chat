@@ -8,7 +8,6 @@ This implementation adds human-like emoji reactions from Gemmie to user messages
 
 ### 1. AI-Powered Emoji Selection
 Gemmie uses the same OpenRouter AI model to intelligently choose emojis based on message content:
-- **👍** - Positive/happy messages, compliments, approval
 - **❤️** - Love, appreciation, warm feelings  
 - **😂** - Funny content, laughter, jokes
 - **👋** - Greetings, hellos, salutations
@@ -61,17 +60,7 @@ if (shouldReact) {
 }
 ```
 
-### 3. Emoji Selection Logic
-```typescript
-// Content-based selection
-if (message.includes('!') || message.includes('awesome')) {
-  return Math.random() < 0.7 ? '👍' : '❤️';
-}
-if (message.includes('haha') || message.includes('lol')) {
-  return '😂';
-}
-// ... more rules
-```
+
 
 ## Configuration
 
@@ -84,7 +73,6 @@ const baseReactionChance = 0.15;      // 15% base probability
 ```
 
 ### Available Emojis
-- 👍 (Thumbs up)
 - ❤️ (Heart) 
 - 😂 (Laughing/crying)
 - 👋 (Waving hand)
@@ -142,15 +130,15 @@ console.log(`Last reaction: ${stats.lastReaction}`);
 ### User Message Flow
 1. User sends: "This is awesome! 🔥"
 2. System checks: Should Gemmie react? (15% chance + timing)
-3. If yes: Select emoji → "👍" or "❤️" 
-4. Add reaction: `[{emoji: "👍", userName: "gemmie"}]`
+3. If yes: Select emoji → "❤️" 
+4. Add reaction: `[{emoji: "❤️", userName: "gemmie"}]`
 5. Update database and trigger real-time event
 6. Continue with normal message processing
 
 ### Result in Chat
 ```
 User: This is awesome! 🔥
-[Message appears with 👍 gemmie reaction]
+[Message appears with ❤️ gemmie reaction]
 ```
 
 ## Future Enhancements

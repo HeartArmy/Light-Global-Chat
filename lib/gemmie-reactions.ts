@@ -14,7 +14,7 @@ const REACTED_MESSAGES_KEY = 'gemmie:reacted-messages';
 const AVAILABLE_EMOJIS = ['❤️', '😂', '👋', '😢'];
 
 // AI prompt for emoji selection
-const EMOJI_SELECTION_PROMPT = `You're gemmie, a chill friend in a chat. Based on the user's message content, choose exactly one emoji from this list to react with:  ❤️ 😂 👋 😢
+const EMOJI_SELECTION_PROMPT = `You're gemmie, a chill friend in a chat. Based on the user's message content, choose exactly one emoji from this list to react with: ❤️ 😂 👋 😢
 
 Choose based on the message vibe:
 - ❤️ for love/appreciation/warm feelings  
@@ -112,7 +112,7 @@ export async function selectEmojiForMessage(content: string): Promise<string> {
     } else {
       console.log(`⚠️ AI returned invalid emoji: "${emoji}", falling back to default`);
       // Fallback to a default emoji if AI returns something unexpected
-      return '👍';
+      return '❤️';
     }
     
   } catch (error) {
@@ -124,7 +124,7 @@ export async function selectEmojiForMessage(content: string): Promise<string> {
     if (lowerContent.includes('love') || lowerContent.includes('❤️') || lowerContent.includes('<3')) {
       return '❤️';
     }
-    // Positive/approval should trigger thumbs up
+    // Positive/approval should trigger heart emoji (replacing thumbs up)
     else if (lowerContent.includes('!') || lowerContent.includes('awesome') || lowerContent.includes('great') || lowerContent.includes('cool')) {
       return '❤️';
     } else if (lowerContent.includes('haha') || lowerContent.includes('lol') || lowerContent.includes('funny')) {
@@ -135,7 +135,7 @@ export async function selectEmojiForMessage(content: string): Promise<string> {
       return '😢';
     }
     
-    return '❤️'; // Default fallback for neutral positive content
+    return '❤️'; // Default fallback for neutral positive content (replacing thumbs up)
   }
 }
 
@@ -167,6 +167,50 @@ export async function recordGemmieReaction(messageId: string): Promise<void> {
     
   } catch (error) {
     console.error('❌ Error recording Gemmie reaction:', error);
+  }
+}
+
+/**
+ * Process emoji reaction with delay for natural timing
+ * This function should be called when a message is posted
+ */
+export async function processDelayedEmojiReaction(messageId: string, messageContent: string): Promise<void> {
+  try {
+    // Check if Gemmie should react to this message
+    const shouldReact = await shouldGemmieReact(messageId);
+    
+    if (shouldReact) {
+      // Wait 10 seconds before reacting to make it feel more natural
+      console.log(`⏰ Gemmie will react to message ${messageId} in 10 seconds...`);
+      
+      // Use setTimeout to delay the reaction
+      setTimeout(async () => {
+        try {
+          // Select appropriate emoji for the message
+          const emoji = await selectEmojiForMessage(messageContent);
+          
+          // Record the reaction (this would integrate with your chat system)
+          await recordGemmieReaction(messageId);
+          
+          console.log(`🎭 Gemmie reacted to message ${messageId} with ${emoji} after delay`);
+          
+          // TODO: Integrate this with your actual chat system to display the reaction
+          // This would typically involve:
+          // 1. Finding the message in your chat interface
+          // 2. Adding the emoji reaction to the message
+          // 3. Updating the UI to show the reaction
+          
+        } catch (error) {
+          console.error('❌ Error during delayed emoji reaction:', error);
+        }
+      }, 10000); // 10 second delay
+      
+    } else {
+      console.log(`⏭️ Gemmie decided not to react to message ${messageId}`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error processing delayed emoji reaction:', error);
   }
 }
 

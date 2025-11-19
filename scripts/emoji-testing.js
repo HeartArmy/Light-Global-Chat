@@ -2,10 +2,9 @@
 console.log('🧪 Testing Gemmie Emoji Reaction System...\n');
 
 // Use the actual AI model for emoji selection like in gemmie-reactions.ts
-const EMOJI_SELECTION_PROMPT = `You're gemmie, a chill friend in a chat. Based on the user's message content, choose exactly one emoji from this list to react with: 👍 ❤️ 😂 👋 😢
+const EMOJI_SELECTION_PROMPT = `You're gemmie, a chill friend in a chat. Based on the user's message content, choose exactly one emoji from this list to react with: ❤️ 😂 👋 😢
 
 Choose based on the message vibe:
-- 👍 for positive/approving/awesome content
 - ❤️ for love/appreciation/warm feelings  
 - 😂 for funny/laughing/humorous content
 - 👋 for greetings/hello/introductions
@@ -14,7 +13,6 @@ Choose based on the message vibe:
 Respond with ONLY the emoji character, nothing else. No explanation, no text, just the emoji.
 
 Examples:
-User: "this is awesome!" → 👍
 User: "haha that's funny" → 😂  
 User: "hi everyone" → 👋
 User: "i feel sad" → 😢
@@ -45,12 +43,12 @@ async function selectEmojiForMessage(content) {
     console.log('✅ AI selected emoji: 😢');
     return '😢';
   } else if (lowerContent.includes('!') || lowerContent.includes('awesome') || lowerContent.includes('great') || lowerContent.includes('cool')) {
-    console.log('✅ AI selected emoji: 👍');
-    return '👍';
+    console.log('✅ AI selected emoji: ❤️');
+    return '❤️';
   } else {
     // Default case for neutral content
-    console.log('✅ AI selected emoji: 👍');
-    return '👍';
+    console.log('✅ AI selected emoji: ❤️');
+    return '❤️';
   }
 }
 
