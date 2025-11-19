@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test-h": "node scripts/test-huggingface.js",
-    "test-o": "node scripts/test-openrouter.js"
+    "test-o": "node scripts/test-openrouter.js",
+    "test-e": "node scripts/emoji-testing.js"
   },
   "dependencies": {
     "@uploadthing/react": "^6.7.0",

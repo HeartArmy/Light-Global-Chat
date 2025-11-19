@@ -1,0 +1,210 @@
+import redis from '@/lib/redis';
+import { generateGemmieResponse } from '@/lib/openrouter';
+
+// Key for tracking last emoji reaction
+const LAST_REACTION_KEY = 'gemmie:last-emoji-reaction';
+// Key for tracking reaction cooldown
+const REACTION_COOLDOWN_KEY = 'gemmie:reaction-cooldown';
+// Key for tracking reaction frequency
+const REACTION_COUNT_KEY = 'gemmie:reaction-count';
+// Key for tracking which messages have been reacted to
+const REACTED_MESSAGES_KEY = 'gemmie:reacted-messages';
+
+// Available emojis from quick reactions
+const AVAILABLE_EMOJIS = ['❤️', '😂', '👋', '😢'];
+
+// AI prompt for emoji selection
+const EMOJI_SELECTION_PROMPT = `You're gemmie, a chill friend in a chat. Based on the user's message content, choose exactly one emoji from this list to react with:  ❤️ 😂 👋 😢
+
+Choose based on the message vibe:
+- ❤️ for love/appreciation/warm feelings  
+- 😂 for funny/laughing/humorous content
+- 👋 for greetings/hello/introductions
+- 😢 for sad/negative/upset content
+
+Respond with ONLY the emoji character, nothing else. No explanation, no text, just the emoji.
+
+Examples:
+User: "haha that's funny" → 😂  
+User: "hi everyone" → 👋
+User: "i feel sad" → 😢
+User: "love this" → ❤️
+
+User message:`;
+
+// Cooldown settings (in seconds)
+const MIN_REACTION_INTERVAL = 60; // Minimum 1 minute between reactions
+const MAX_REACTION_INTERVAL = 300; // Maximum 5 minutes between reactions
+const DAILY_REACTION_LIMIT = 8; // Maximum reactions per day
+
+/**
+ * Determines if Gemmie should react to a message with an emoji
+ */
+export async function shouldGemmieReact(messageId: string): Promise<boolean> {
+  try {
+    // Check if message was already reacted to
+    const alreadyReacted = await redis.sismember(REACTED_MESSAGES_KEY, messageId);
+    if (alreadyReacted) {
+      console.log('⏭️ Message already reacted to:', messageId);
+      return false;
+    }
+
+    // Check daily reaction limit
+    const today = new Date().toISOString().split('T')[0];
+    const dailyCountKey = `${REACTION_COUNT_KEY}:${today}`;
+    const todayReactionCount = await redis.get(dailyCountKey) as string | null;
+    
+    if (todayReactionCount && parseInt(todayReactionCount) >= DAILY_REACTION_LIMIT) {
+      console.log('⏭️ Daily reaction limit reached');
+      return false;
+    }
+
+    // Check cooldown period
+    const lastReactionTime = await redis.get(LAST_REACTION_KEY) as string | null;
+    const now = Math.floor(Date.now() / 1000);
+    
+    if (lastReactionTime) {
+      const timeSinceLastReaction = now - parseInt(lastReactionTime);
+      if (timeSinceLastReaction < MIN_REACTION_INTERVAL) {
+        console.log('⏭️ Still in cooldown period');
+        return false;
+      }
+    }
+
+    // Random chance to react (15% base chance)
+    const randomChance = Math.random();
+    const baseReactionChance = 0.15;
+    
+    // Higher chance if more time has passed since last reaction
+    const timeMultiplier = lastReactionTime 
+      ? Math.min(1 + ((now - parseInt(lastReactionTime)) / MAX_REACTION_INTERVAL), 2)
+      : 1;
+    
+    const adjustedChance = baseReactionChance * timeMultiplier;
+    
+    console.log(`🎲 Reaction check: ${randomChance.toFixed(3)} < ${adjustedChance.toFixed(3)} = ${randomChance < adjustedChance}`);
+    
+    return randomChance < adjustedChance;
+    
+  } catch (error) {
+    console.error('❌ Error checking if Gemmie should react:', error);
+    return false;
+  }
+}
+
+/**
+ * Selects an appropriate emoji based on message content using AI
+ */
+export async function selectEmojiForMessage(content: string): Promise<string> {
+  try {
+    console.log('🤖 Using AI to select emoji for:', content);
+    
+    // Call the same AI model that Gemmie uses for responses
+    const aiResponse = await generateGemmieResponse('system', EMOJI_SELECTION_PROMPT + ` "${content}"`, 'US');
+    
+    // Extract emoji from response (should be just the emoji character)
+    const emoji = aiResponse.trim();
+    
+    // Validate that the response is one of our allowed emojis
+    if (AVAILABLE_EMOJIS.includes(emoji)) {
+      console.log(`✅ AI selected emoji: ${emoji}`);
+      return emoji;
+    } else {
+      console.log(`⚠️ AI returned invalid emoji: "${emoji}", falling back to default`);
+      // Fallback to a default emoji if AI returns something unexpected
+      return '👍';
+    }
+    
+  } catch (error) {
+    console.error('❌ AI emoji selection failed, using fallback:', error);
+    // Fallback logic for when AI fails
+    const lowerContent = content.toLowerCase().trim();
+    
+    // Love/affection should trigger heart emoji
+    if (lowerContent.includes('love') || lowerContent.includes('❤️') || lowerContent.includes('<3')) {
+      return '❤️';
+    }
+    // Positive/approval should trigger thumbs up
+    else if (lowerContent.includes('!') || lowerContent.includes('awesome') || lowerContent.includes('great') || lowerContent.includes('cool')) {
+      return '❤️';
+    } else if (lowerContent.includes('haha') || lowerContent.includes('lol') || lowerContent.includes('funny')) {
+      return '😂';
+    } else if (lowerContent.includes('hi') || lowerContent.includes('hello') || lowerContent.includes('hey')) {
+      return '👋';
+    } else if (lowerContent.includes('sad') || lowerContent.includes('bad') || lowerContent.includes('hate')) {
+      return '😢';
+    }
+    
+    return '❤️'; // Default fallback for neutral positive content
+  }
+}
+
+/**
+ * Records that Gemmie has reacted to a message
+ */
+export async function recordGemmieReaction(messageId: string): Promise<void> {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const today = new Date().toISOString().split('T')[0];
+    const dailyCountKey = `${REACTION_COUNT_KEY}:${today}`;
+    
+    // Add message to reacted set
+    await redis.sadd(REACTED_MESSAGES_KEY, messageId);
+    
+    // Update last reaction time
+    await redis.set(LAST_REACTION_KEY, now.toString());
+    
+    // Increment daily count
+    const currentCount = await redis.get(dailyCountKey) as string | null;
+    const newCount = (parseInt(currentCount || '0') + 1).toString();
+    await redis.set(dailyCountKey, newCount, { ex: 86400 }); // Expire after 24 hours
+    
+    // Set cooldown
+    const cooldownTime = now + Math.floor(Math.random() * (MAX_REACTION_INTERVAL - MIN_REACTION_INTERVAL) + MIN_REACTION_INTERVAL);
+    await redis.set(REACTION_COOLDOWN_KEY, cooldownTime.toString());
+    
+    console.log(`🎉 Gemmie reacted to message ${messageId} with emoji. Daily count: ${newCount}`);
+    
+  } catch (error) {
+    console.error('❌ Error recording Gemmie reaction:', error);
+  }
+}
+
+/**
+ * Gets reaction statistics for monitoring
+ */
+export async function getReactionStats(): Promise<{today: number, lastReaction: string | null}> {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const dailyCountKey = `${REACTION_COUNT_KEY}:${today}`;
+    const todayCount = await redis.get(dailyCountKey) as string | null;
+    const lastReactionTime = await redis.get(LAST_REACTION_KEY) as string | null;
+    
+    const lastReaction = lastReactionTime 
+      ? new Date(parseInt(lastReactionTime) * 1000).toISOString() 
+      : null;
+    
+    return {
+      today: parseInt(todayCount || '0'),
+      lastReaction
+    };
+  } catch (error) {
+    console.error('❌ Error getting reaction stats:', error);
+    return { today: 0, lastReaction: null };
+  }
+}
+
+/**
+ * Clears reaction data (for testing or maintenance)
+ */
+export async function clearReactionData(): Promise<void> {
+  try {
+    await redis.del(LAST_REACTION_KEY);
+    await redis.del(REACTION_COOLDOWN_KEY);
+    await redis.del(REACTION_COUNT_KEY);
+    await redis.del(REACTED_MESSAGES_KEY);
+    console.log('🧹 Cleared all reaction data');
+  } catch (error) {
+    console.error('❌ Error clearing reaction data:', error);
+  }
+}

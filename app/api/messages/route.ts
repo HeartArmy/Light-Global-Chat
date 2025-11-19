@@ -6,6 +6,7 @@ import { getCountryFromIP, getClientIP } from '@/lib/country';
 import { checkRateLimit } from '@/lib/security';
 import { sendNewMessageNotification } from '@/lib/email';
 import redis from '@/lib/redis'; // Import redis
+import { shouldGemmieReact, selectEmojiForMessage, recordGemmieReaction } from '@/lib/gemmie-reactions';
 import { Attachment } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -139,6 +140,38 @@ export async function POST(request: NextRequest) {
     console.log('Populating replyTo...');
     const populatedMessage = await Message.findById(message._id).populate('replyTo').lean();
     console.log('ReplyTo populated successfully');
+
+    // Check if Gemmie should react with an emoji first (before any other processing)
+    const messageContent = content || `[Attachment: ${attachments.map((a: any) => a.name).join(', ')}]`;
+    
+    if (populatedMessage && userName.toLowerCase() !== 'arham' && userName.toLowerCase() !== 'gemmie') {
+      // Check if Gemmie should react with an emoji
+      const shouldReact = await shouldGemmieReact(message._id.toString());
+      if (shouldReact) {
+        const emoji = await selectEmojiForMessage(messageContent);
+        console.log(`🤖 Gemmie reacting with emoji: ${emoji} to message ${message._id}`);
+        
+        // Add the reaction to the message
+        populatedMessage.reactions.push({ emoji, userName: 'gemmie' });
+        
+        // Update the message in database with the reaction
+        await Message.findByIdAndUpdate(message._id, {
+          reactions: populatedMessage.reactions
+        });
+        
+        // Record that Gemmie has reacted
+        await recordGemmieReaction(message._id.toString());
+        
+        // Trigger Pusher event for the reaction
+        const pusher = getPusherInstance();
+        await pusher.trigger('chat-room', 'new-reaction', {
+          messageId: message._id.toString(),
+          reactions: populatedMessage.reactions,
+        });
+        
+        console.log(`🎉 Gemmie reaction ${emoji} sent for message ${message._id}`);
+      }
+    }
 
     // Trigger Pusher event and send notifications in parallel
     console.log('Triggering Pusher event and sending notifications...');
