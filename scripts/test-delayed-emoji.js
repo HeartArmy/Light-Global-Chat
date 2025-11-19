@@ -10,7 +10,7 @@ async function simulateDelayedEmojiReaction(messageId, messageContent) {
   const shouldReact = Math.random() < 0.15;
   
   if (shouldReact) {
-    console.log(`⏰ Gemmie will react to message ${messageId} in 10 seconds...`);
+    console.log(`⏰ Gemmie will react to message ${messageId} in 30 seconds...`);
     
     // Use setTimeout to delay the reaction
     setTimeout(async () => {
@@ -39,7 +39,7 @@ async function simulateDelayedEmojiReaction(messageId, messageContent) {
       } catch (error) {
         console.error('❌ Error during delayed emoji reaction:', error);
       }
-    }, 10000); // 10 second delay
+    }, 30000); // 30 second delay
     
   } else {
     console.log(`⏭️ Gemmie decided not to react to message ${messageId}`);
@@ -78,7 +78,7 @@ async function testDelayedEmojiReactions() {
   }
 
   console.log('\n✅ Delayed emoji reaction tests initiated!');
-  console.log('\n📝 Note: Reactions will appear 10 seconds after each message that Gemmie decides to react to.');
+  console.log('\n📝 Note: Reactions will appear 30 seconds after each message that Gemmie decides to react to.');
   console.log('   This simulates the natural timing you wanted - messages appear first, then reactions come later.');
 }
 

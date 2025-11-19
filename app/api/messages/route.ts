@@ -148,28 +148,61 @@ export async function POST(request: NextRequest) {
       // Check if Gemmie should react with an emoji
       const shouldReact = await shouldGemmieReact(message._id.toString());
       if (shouldReact) {
-        const emoji = await selectEmojiForMessage(messageContent);
-        console.log(`🤖 Gemmie reacting with emoji: ${emoji} to message ${message._id}`);
+        console.log(`⏰ Gemmie will react to message ${message._id} in 30 seconds...`);
         
-        // Add the reaction to the message
-        populatedMessage.reactions.push({ emoji, userName: 'gemmie' });
-        
-        // Update the message in database with the reaction
-        await Message.findByIdAndUpdate(message._id, {
-          reactions: populatedMessage.reactions
-        });
-        
-        // Record that Gemmie has reacted
-        await recordGemmieReaction(message._id.toString());
-        
-        // Trigger Pusher event for the reaction
-        const pusher = getPusherInstance();
-        await pusher.trigger('chat-room', 'new-reaction', {
-          messageId: message._id.toString(),
-          reactions: populatedMessage.reactions,
-        });
-        
-        console.log(`🎉 Gemmie reaction ${emoji} sent for message ${message._id}`);
+        // Schedule delayed emoji reaction using QStash
+        try {
+          const qstash = await import('@/lib/qstash');
+          
+          // Get the absolute URL for the delayed emoji processing endpoint
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+          const emojiEndpoint = `${baseUrl}/api/emoji-delayed-process`;
+          console.log('⏰ QStash emoji target endpoint:', emojiEndpoint);
+          
+          const emojiPayload = {
+            messageId: message._id.toString(),
+            messageContent: messageContent
+          };
+          console.log('⏰ QStash emoji payload:', JSON.stringify(emojiPayload));
+          
+          // Schedule emoji reaction with 30 second delay
+          const emojiResponse = await qstash.default.publishJSON({
+            url: emojiEndpoint,
+            body: emojiPayload,
+            delay: 30, // 30 second delay
+          });
+          console.log('⏰ QStash emoji publish successful. Response:', emojiResponse);
+          
+        } catch (qstashError) {
+          console.error('❌ QStash emoji publish failed:', qstashError);
+          // Fallback to immediate reaction if QStash fails
+          try {
+            const emoji = await selectEmojiForMessage(messageContent);
+            console.log(`🤖 Fallback: Gemmie reacting with emoji: ${emoji} to message ${message._id}`);
+            
+            // Add the reaction to the message
+            populatedMessage.reactions.push({ emoji, userName: 'gemmie' });
+            
+            // Update the message in database with the reaction
+            await Message.findByIdAndUpdate(message._id, {
+              reactions: populatedMessage.reactions
+            });
+            
+            // Record that Gemmie has reacted
+            await recordGemmieReaction(message._id.toString());
+            
+            // Trigger Pusher event for the reaction
+            const pusher = getPusherInstance();
+            await pusher.trigger('chat-room', 'new-reaction', {
+              messageId: message._id.toString(),
+              reactions: populatedMessage.reactions,
+            });
+            
+            console.log(`🎉 Fallback: Gemmie reaction ${emoji} sent for message ${message._id}`);
+          } catch (fallbackError) {
+            console.error('❌ Fallback emoji reaction also failed:', fallbackError);
+          }
+        }
       }
     }
 

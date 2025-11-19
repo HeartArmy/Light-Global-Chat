@@ -180,8 +180,8 @@ export async function processDelayedEmojiReaction(messageId: string, messageCont
     const shouldReact = await shouldGemmieReact(messageId);
     
     if (shouldReact) {
-      // Wait 10 seconds before reacting to make it feel more natural
-      console.log(`⏰ Gemmie will react to message ${messageId} in 10 seconds...`);
+      // Wait 30 seconds before reacting to make it feel more natural
+      console.log(`⏰ Gemmie will react to message ${messageId} in 30 seconds...`);
       
       // Use setTimeout to delay the reaction
       setTimeout(async () => {
@@ -203,7 +203,7 @@ export async function processDelayedEmojiReaction(messageId: string, messageCont
         } catch (error) {
           console.error('❌ Error during delayed emoji reaction:', error);
         }
-      }, 10000); // 10 second delay
+      }, 30000); // 30 second delay
       
     } else {
       console.log(`⏭️ Gemmie decided not to react to message ${messageId}`);
