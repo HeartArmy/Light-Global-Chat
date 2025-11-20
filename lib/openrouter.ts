@@ -95,7 +95,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openrouter/sherlock-think-alpha',
+        model: 'x-ai/grok-4.1-fast',
         messages: [
           {
             role: 'user',
@@ -209,7 +209,7 @@ export async function generateGemmieResponseForContext(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openrouter/sherlock-think-alpha', // Use sherlock-think-alpha which supports vision
+        model: 'x-ai/grok-4.1-fast', // Use sherlock-think-alpha which supports vision
         messages: [
           {
             role: 'user',

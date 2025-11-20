@@ -34,7 +34,7 @@ headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openrouter/sherlock-think-alpha',
+        model: 'x-ai/grok-4.1-fast',
         messages: [
           {
             role: 'user',
@@ -181,7 +181,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openrouter/sherlock-think-alpha',
+        model: 'x-ai/grok-4.1-fast',
         messages: [
           {
             role: 'user',
@@ -256,7 +256,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
 
     console.log('\n🎉 All tests passed! OpenRouter integration is working correctly.');
     console.log('💡 You can now deploy and Gemmie will respond to messages.');
-    console.log('💰 Using Meta Llama 3.3 70B Instruct model via OpenRouter!');
+    // console.log('💰 Using Meta Llama 3.3 70B Instruct model via OpenRouter!');
 
   } catch (error) {
     console.error('\n❌ OpenRouter API test failed:');
