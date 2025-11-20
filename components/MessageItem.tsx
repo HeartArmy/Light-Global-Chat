@@ -16,6 +16,8 @@ interface MessageItemProps {
   onEdit: (newContent: string) => void;
   onDelete: () => void;
   onScrollToParent?: () => void;
+  onActionToggle?: (messageId: string) => void;
+  isActive?: boolean;
 }
 
 export default function MessageItem({
@@ -27,24 +29,30 @@ export default function MessageItem({
   onEdit,
   onDelete,
   onScrollToParent,
+  onActionToggle,
+  isActive,
 }: MessageItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
-  const [showActions, setShowActions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [imageViewer, setImageViewer] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Auto-dismiss actions after timeout (like Telegram/WhatsApp)
   let actionsTimeout: NodeJS.Timeout | null = null;
+  
+  // Use isActive prop for singleton behavior
   const showActionsWithTimeout = () => {
-    setShowActions(true);
-    // Auto-hide after 3 seconds on mobile, similar to Telegram
-    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-      actionsTimeout = setTimeout(() => {
-        setShowActions(false);
-      }, 3000);
+    if (onActionToggle) {
+      onActionToggle(message._id);
     }
+    // Auto-hide after 3 seconds on mobile, similar to Telegram
+    // REMOVED: Actions on mobile will never auto-disappear except on background click
+    // if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+    //   actionsTimeout = setTimeout(() => {
+    //     if (onActionToggle) onActionToggle('');
+    //   }, 3000);
+    // }
   };
 
   const hideActions = () => {
@@ -52,7 +60,9 @@ export default function MessageItem({
       clearTimeout(actionsTimeout);
       actionsTimeout = null;
     }
-    setShowActions(false);
+    if (onActionToggle) {
+      onActionToggle('');
+    }
   };
 
   // Handle click outside to close actions on mobile
@@ -61,19 +71,6 @@ export default function MessageItem({
       hideActions();
     }
   };
-
-  // Prevent auto-dismiss on mobile - only dismiss on timeout or background click
-  const showActionsMobile = () => {
-    setShowActions(true);
-    // Auto-hide after 3 seconds on mobile, similar to Telegram
-    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-      actionsTimeout = setTimeout(() => {
-        setShowActions(false);
-      }, 3000);
-    }
-  };
-
-
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -132,7 +129,7 @@ export default function MessageItem({
   let longPressTimer: NodeJS.Timeout | null = null;
   const handleTouchStart = () => {
     longPressTimer = setTimeout(() => {
-      setShowActions(true);
+      showActionsWithTimeout();
     }, 500);
   };
 
@@ -167,7 +164,7 @@ export default function MessageItem({
     >
       <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} items-start gap-1.5`}>
         {/* Actions on left for own messages - DESKTOP ONLY */}
-        {showActions && !isEditing && isOwn && (
+        {isActive && !isEditing && isOwn && (
           <div className="hidden md:block">
             <MessageActions
               message={message}
@@ -330,7 +327,7 @@ export default function MessageItem({
           </div>
 
           {/* Actions below bubble - MOBILE ONLY */}
-          {showActions && !isEditing && (
+          {isActive && !isEditing && (
             <div className="md:hidden mt-0.5">
               <MessageActions
                 message={message}
@@ -370,7 +367,7 @@ export default function MessageItem({
         </div>
 
         {/* Actions on right for other users' messages - DESKTOP ONLY */}
-        {showActions && !isEditing && !isOwn && (
+        {isActive && !isEditing && !isOwn && (
           <div className="hidden md:block">
             <MessageActions
               message={message}

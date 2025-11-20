@@ -29,6 +29,7 @@ export default function MessageList({
 }: MessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const prevMessagesLengthRef = useRef(messages.length);
 
@@ -56,6 +57,11 @@ export default function MessageList({
     if (isNearTop && hasMore && !isLoading) {
       onLoadMore();
     }
+  };
+
+  // Handle action toggle for singleton behavior
+  const handleActionToggle = (messageId: string) => {
+    setActiveMessageId(prevId => prevId === messageId ? null : messageId);
   };
 
   // Scroll to specific message
@@ -127,6 +133,8 @@ export default function MessageList({
                 onScrollToParent={
                   replyToId ? () => scrollToMessage(replyToId) : undefined
                 }
+                onActionToggle={handleActionToggle}
+                isActive={activeMessageId === message._id}
               />
             </div>
           );
