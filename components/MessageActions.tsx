@@ -33,6 +33,22 @@ export default function MessageActions({
   const [showExtendedPicker, setShowExtendedPicker] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(TEN_MINUTES);
 
+  // Auto-dismiss emoji picker after timeout
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    if (showEmojiPicker) {
+      timeoutId = setTimeout(() => {
+        setShowEmojiPicker(false);
+        setShowExtendedPicker(false);
+      }, 5000); // Auto-hide after 5 seconds like Telegram
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [showEmojiPicker]);
+
   useEffect(() => {
     const messageAge = Date.now() - new Date(message.timestamp).getTime();
     if (messageAge > TEN_MINUTES) {
@@ -63,7 +79,7 @@ export default function MessageActions({
   };
 
   return (
-    <div className="flex items-center gap-0.5 bg-opacity-90 backdrop-blur-sm rounded-full px-1.5 py-0.5 shadow-lg" style={{ background: 'var(--surface-elevated)' }}>
+    <div className="flex items-center gap-0.5 bg-opacity-90 backdrop-blur-sm rounded-full px-1 py-0.25 shadow-lg" style={{ background: 'var(--surface-elevated)' }}>
       {/* Reply Button */}
       <button
         onClick={onReply}

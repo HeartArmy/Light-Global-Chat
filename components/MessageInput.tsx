@@ -398,7 +398,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
       )}
 
       {/* Input Area */}
-  <div className="flex items-end gap-1.5">
+      <div className="flex items-end gap-1.5">
         <input
           ref={fileInputRef}
           type="file"
@@ -408,11 +408,11 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
           className="hidden"
         />
         
-          <div className="flex-shrink-0 relative">
+        <div className="flex-shrink-0 relative">
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading || attachments.length >= 8}
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95 mb-2"
             style={{
               background: 'var(--background)',
               border: '1px solid var(--border)',
@@ -498,7 +498,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
         <button
           onClick={handleSend}
           disabled={(!content.trim() && attachments.length === 0) || isOverLimit || isUploading}
-          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95"
+          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95 mb-2"
           style={{
             background: 'var(--accent)',
             color: '#ffffff',

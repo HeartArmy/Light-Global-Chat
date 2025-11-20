@@ -345,7 +345,7 @@ export default function ChatRoomClient() {
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       {/* Header */}
       <header
-        className="flex items-center justify-between px-3.5 py-2.5 border-b"
+        className="flex items-center justify-between px-2.5 py-1.5 border-b"
         style={{
           background: 'var(--surface)',
           borderColor: 'var(--border)',
@@ -362,7 +362,7 @@ export default function ChatRoomClient() {
                 background: 'var(--surface-elevated)',
                 color: 'var(--text-secondary)',
               }}
-              title={isConnected ? 'Connected' : 'Disconnected'}
+              title={isConnected ? 'Online' : 'Away'}
             >
               <div
                 className="w-1.5 h-1.5 rounded-full"
@@ -370,7 +370,7 @@ export default function ChatRoomClient() {
                   background: isConnected ? 'var(--success)' : 'var(--error)',
                 }}
               />
-              {isConnected ? 'Connected' : 'Disconnected'}
+              {isConnected ? 'Online' : 'Away'}
             </span>
             <span
               className="text-xs px-1.5 py-0.5 rounded-full"
@@ -460,10 +460,14 @@ export default function ChatRoomClient() {
 
           <button
             onClick={toggleTheme}
-            className="p-1.5 rounded-sm transition-all duration-fast"
+            className="px-2.5 py-1.5 rounded-sm transition-all duration-fast"
             style={{
               background: 'var(--background)',
               border: '1px solid var(--border)',
+              height: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
             title="Toggle theme"
           >

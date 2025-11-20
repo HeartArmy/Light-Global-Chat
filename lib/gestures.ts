@@ -35,28 +35,38 @@ export function useLongPress(
 export function useSwipe(
   onSwipeRight?: () => void,
   onSwipeLeft?: () => void,
-  minSwipeDistance: number = 50
+  minSwipeDistance: number = 50,
+  maxVerticalMovement: number = 30
 ): {
   onTouchStart: (e: React.TouchEvent) => void;
   onTouchEnd: (e: React.TouchEvent) => void;
 } {
   let touchStartX = 0;
   let touchStartY = 0;
+  let isPotentialSwipe = false;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    isPotentialSwipe = true;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isPotentialSwipe) return;
+
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
 
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
 
-    // Only trigger if horizontal swipe is dominant
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+    // Reset swipe detection
+    isPotentialSwipe = false;
+
+    // Only trigger if horizontal swipe is dominant and meets criteria
+    if (Math.abs(deltaX) > minSwipeDistance && 
+        Math.abs(deltaY) < maxVerticalMovement && 
+        Math.abs(deltaX) > Math.abs(deltaY)) {
       if (deltaX > 0 && onSwipeRight) {
         onSwipeRight();
       } else if (deltaX < 0 && onSwipeLeft) {

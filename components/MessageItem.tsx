@@ -35,6 +35,44 @@ export default function MessageItem({
   const [imageViewer, setImageViewer] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Auto-dismiss actions after timeout (like Telegram/WhatsApp)
+  let actionsTimeout: NodeJS.Timeout | null = null;
+  const showActionsWithTimeout = () => {
+    setShowActions(true);
+    // Auto-hide after 3 seconds on mobile, similar to Telegram
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      actionsTimeout = setTimeout(() => {
+        setShowActions(false);
+      }, 3000);
+    }
+  };
+
+  const hideActions = () => {
+    if (actionsTimeout) {
+      clearTimeout(actionsTimeout);
+      actionsTimeout = null;
+    }
+    setShowActions(false);
+  };
+
+  // Handle click outside to close actions on mobile
+  const handleBackgroundClick = () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      hideActions();
+    }
+  };
+
+  // Prevent auto-dismiss on mobile - only dismiss on timeout or background click
+  const showActionsMobile = () => {
+    setShowActions(true);
+    // Auto-hide after 3 seconds on mobile, similar to Telegram
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      actionsTimeout = setTimeout(() => {
+        setShowActions(false);
+      }, 3000);
+    }
+  };
+
 
 
   const handleEdit = () => {
@@ -106,15 +144,24 @@ export default function MessageItem({
 
   return (
     <div
-      className="group px-2.5 py-1 transition-all duration-fast"
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
+      className="group px-2 py-0.5 transition-all duration-fast"
+      onMouseEnter={showActionsWithTimeout}
+      onMouseLeave={hideActions}
       onTouchStart={(e) => {
-        handleTouchStart();
+        // Use long press for actions on mobile
+        longPressTimer = setTimeout(() => {
+          showActionsWithTimeout();
+        }, 500);
         swipeHandlers.onTouchStart(e);
       }}
       onTouchEnd={(e) => {
-        handleTouchEnd();
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+        }
+        // Don't auto-hide on mobile - only hide on timeout or background click
+        if (typeof window !== 'undefined' && window.innerWidth > 768) {
+          hideActions();
+        }
         swipeHandlers.onTouchEnd(e);
       }}
     >
