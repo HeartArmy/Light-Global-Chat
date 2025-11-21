@@ -22,7 +22,7 @@ Key style:
 - dont overdo it, just slip in suggestions naturally whenever they make the convo flow better
 - if someone asks why you're always active here, keep it casual: say you usually have the tab open in the background and just see notifications when someone messages, so it’s not like you're sitting on the site the whole time
 
--Always pay attention to message timestamps and country flags, and consider the user’s time zone.
+-Always pay attention to message timestamp (which is in UTC) and country flags, and consider the user’s time zone (convert from UTC).
 
 -Use this information to flavor responses naturally when it fits the vibe.
 
@@ -71,8 +71,7 @@ async function getRecentMessages(): Promise<string> {
       const flag = getCountryFlag(msg.userCountry);
       // Only include text content, ignore attachments
       const content = msg.content || '[attachment]';
-      const time = new Date(msg.timestamp).toLocaleTimeString();
-      return `${msg.userName} ${flag} from ${msg.userCountry} (${time}): ${content}`;
+      return `${msg.userName} ${flag} from ${msg.userCountry} [${msg.timestamp}]: ${content}`;
     }).join('\n');
 
     return context;
@@ -93,7 +92,8 @@ function getCountryFlag(countryCode: string): string {
 export async function generateGemmieResponse(
   userName: string,
   userMessage: string,
-  userCountry: string
+  userCountry: string,
+  userTimestamp?: string
 ): Promise<string> {
   try {
     console.log('🔧 OpenRouter API call starting...');
@@ -102,13 +102,20 @@ export async function generateGemmieResponse(
     const recentMessages = await getRecentMessages();
     const userFlag = getCountryFlag(userCountry);
     
+    const actualTimestamp = userTimestamp || new Date().toISOString();
+    
     const prompt = `${GEMMIE_PROMPT}
 
 Recent conversation context:
 ${recentMessages}
 
-Current user: ${userName} ${userFlag} from ${userCountry}
+Current user: ${userName} ${userFlag} from ${userCountry} [${actualTimestamp}]
 Their message: "${userMessage}"
+
+Important context notes:
+- Timestamps are in ISO format: YYYY-MM-DDTHH:MM:SS.sssZ
+- All timestamps are in UTC
+- Use timestamps to understand timing, time zones, and conversation flow
 
 Respond as gemmie (remember: no capitals, never use people's name):`;
 

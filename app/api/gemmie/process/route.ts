@@ -94,8 +94,7 @@ export async function POST(request: NextRequest) {
     // Format messages for context with timestamp and country flag
     const formatMessageWithContext = (msg: any) => {
       const flag = msg.userCountry ? getCountryFlag(msg.userCountry) : '🌍';
-      const time = msg.timestamp ? new Date(msg.timestamp * 1000).toLocaleTimeString() : 'unknown time';
-      return `${msg.userName} ${flag} from ${msg.userCountry} (${time}): ${msg.userMessage}`;
+      return `${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp * 1000).toISOString()}]: ${msg.userMessage}`;
     };
 
     const contextString = allMessagesForContext.map(formatMessageWithContext).join('\n---\n');
