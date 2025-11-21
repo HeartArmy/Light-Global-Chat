@@ -3,6 +3,13 @@ import { Receiver } from '@upstash/qstash';
 import { generateGemmieResponse, generateGemmieResponseForContext, sendGemmieMessage } from '@/lib/openrouter';
 import { getPusherInstance } from '@/lib/pusher';
 
+// Get country flag
+function getCountryFlag(countryCode: string): string {
+  if (!countryCode || countryCode === 'XX') return '🌍';
+  const codePoints = countryCode.toUpperCase().split('').map(c => c.charCodeAt(0) + 127397);
+  return String.fromCodePoint(...codePoints);
+}
+
 // This API route handles the delayed Gemmie response
 export async function POST(request: NextRequest) {
   // Create a receiver for signature verification
@@ -78,16 +85,25 @@ export async function POST(request: NextRequest) {
 
     // Prepare all messages for context (current message + messages already in queue)
     const allMessagesForContext = [
-      { userName, userMessage, userCountry },
-      ...queuedMessagesAtStart // These are already objects with userName, userMessage, userCountry
+      { userName, userMessage, userCountry, timestamp: Math.floor(Date.now() / 1000) },
+      ...queuedMessagesAtStart // These are already objects with userName, userMessage, userCountry, timestamp
     ];
 
     console.log(`🧠 Generating AI response based on ${allMessagesForContext.length} messages...`);
 
+    // Format messages for context with timestamp and country flag
+    const formatMessageWithContext = (msg: any) => {
+      const flag = msg.userCountry ? getCountryFlag(msg.userCountry) : '🌍';
+      const time = msg.timestamp ? new Date(msg.timestamp * 1000).toLocaleTimeString() : 'unknown time';
+      return `${msg.userName} ${flag} from ${msg.userCountry} (${time}): ${msg.userMessage}`;
+    };
+
+    const contextString = allMessagesForContext.map(formatMessageWithContext).join('\n---\n');
+
     // Generate response using all messages as context
     const response = await generateGemmieResponseForContext(
       userName, 
-      allMessagesForContext.map(m => `${m.userName}: ${m.userMessage}`).join('\n---\n'), 
+      contextString, 
       userCountry, 
       allMessagesForContext
     );
