@@ -88,6 +88,24 @@ function getCountryFlag(countryCode: string): string {
   return String.fromCodePoint(...codePoints);
 }
 
+// Get current date and time information
+function getCurrentDateTimeInfo(): string {
+  const now = new Date();
+  const utcString = now.toISOString();
+  const day = now.getUTCDay();
+  const date = now.getUTCDate();
+  const month = now.getUTCMonth() + 1; // Month is 0-indexed
+  const year = now.getUTCFullYear();
+  
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  const dayName = dayNames[day];
+  const monthName = monthNames[month - 1];
+  
+  return `${dayName}, ${monthName} ${date}, ${year} UTC | Current timestamp: ${utcString}`;
+}
+
 // Generate Gemmie's response using OpenRouter with Meta Llama model
 export async function generateGemmieResponse(
   userName: string,
@@ -103,8 +121,11 @@ export async function generateGemmieResponse(
     const userFlag = getCountryFlag(userCountry);
     
     const actualTimestamp = userTimestamp || new Date().toISOString();
+    const currentDateTime = getCurrentDateTimeInfo();
     
     const prompt = `${GEMMIE_PROMPT}
+
+Current date/time: ${currentDateTime}
 
 Recent conversation context:
 ${recentMessages}
@@ -116,6 +137,7 @@ Important context notes:
 - Timestamps are in ISO format: YYYY-MM-DDTHH:MM:SS.sssZ
 - All timestamps are in UTC
 - Use timestamps to understand timing, time zones, and conversation flow
+- Current date/time is provided above for reference
 
 Respond as gemmie (remember: no capitals, never use people's name):`;
 
