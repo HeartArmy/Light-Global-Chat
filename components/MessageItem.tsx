@@ -215,7 +215,7 @@ export default function MessageItem({
           )}
 
           {/* Message Bubble */}
-          <div className="relative">
+          <div className="relative message-bubble">
             <div
               className="rounded-2xl px-2.5 py-1 shadow-sm"
               style={{
