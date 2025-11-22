@@ -26,11 +26,14 @@ export default function ChristmasEffects() {
       const lightsContainer = document.createElement('div');
       lightsContainer.className = 'christmas-lights';
       
-      // Create multiple lights
-      for (let i = 0; i < 50; i++) {
+      const numLights = window.innerWidth < 768 ? 50 : 100;
+      for (let i = 0; i < numLights; i++) {
         const light = document.createElement('div');
         light.className = 'christmas-light';
-        light.style.left = `${i * 2}vw`;
+        const leftPos = (i / (numLights - 1)) * 100;
+        const topPos = (window.innerWidth < 768 ? 10 : 18) + Math.sin(i * 0.12) * (window.innerWidth < 768 ? 8 : 16);
+        light.style.left = `${leftPos}%`;
+        light.style.top = `${topPos}px`;
         lightsContainer.appendChild(light);
       }
       
@@ -45,15 +48,41 @@ export default function ChristmasEffects() {
         createSnowflake();
       }
     }, 800);
-
+  
+    // Christmas popup items
+    const christmasItems = ['🎄', '⛄', '🍪', '🏡', '🕊️', '🦌', '🎅', '🎁', '🔔', '⭐', '🌟'];
+    
+    const createPopup = () => {
+      if (document.querySelectorAll('.christmas-popup').length >= 6) return;
+      
+      const popup = document.createElement('div');
+      popup.className = 'christmas-popup';
+      popup.textContent = christmasItems[Math.floor(Math.random() * christmasItems.length)];
+      popup.style.left = `${Math.random() * 85 + 5}%`;
+      popup.style.bottom = `${Math.random() * 60 + 5}%`;
+      popup.style.animationDuration = `${3 + Math.random() * 2}s`;
+      popup.style.animationDelay = `${Math.random() * 1}s`;
+      popup.style.fontSize = `${2.5 + Math.random() * 3}rem`;
+      
+      document.body.appendChild(popup);
+      
+      setTimeout(() => {
+        popup.remove();
+      }, 6000);
+    };
+  
+    const popupInterval = setInterval(createPopup, 2500);
+  
     // Add Christmas lights
     const removeLights = createChristmasLights();
 
     return () => {
       clearInterval(snowInterval);
+      clearInterval(popupInterval);
       removeLights?.();
-      // Clean up any remaining snowflakes
+      // Clean up any remaining elements
       document.querySelectorAll('.snowflake').forEach(el => el.remove());
+      document.querySelectorAll('.christmas-popup').forEach(el => el.remove());
     };
   }, []);
 

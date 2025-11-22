@@ -153,18 +153,19 @@ button {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  height: 4px;
-  z-index: 51;
+  width: 100vw;
+  height: 40px;
+  z-index: 100;
   pointer-events: none;
 }
 
 .christmas-light {
-  display: inline-block;
-  width: 4px;
-  height: 4px;
+  position: absolute;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  animation: twinkle 2s infinite;
+  animation: twinkle 1.5s ease-in-out infinite alternate, gentleGlow 2s ease-in-out infinite alternate;
+  box-shadow: 0 0 12px currentColor;
 }
 
 .christmas-light:nth-child(3n) {
@@ -182,6 +183,49 @@ button {
   animation-delay: 1.4s;
 }
 
+/* Christmas popup items */
+@keyframes popupFloat {
+  0% {
+    transform: scale(0) translateY(0) rotate(-15deg);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.1) translateY(-20px) rotate(5deg);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(1) translateY(-10px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8) translateY(-50px) rotate(10deg);
+    opacity: 0;
+  }
+}
+
+.christmas-popup {
+  position: fixed;
+  z-index: 45;
+  pointer-events: none;
+  user-select: none;
+  font-size: clamp(3rem, 8vw, 8rem);
+  animation: popupFloat 4s ease-out forwards;
+  left: 10%;
+  bottom: 10%;
+}
+
+.christmas-popup:nth-child(5n+1) { left: 20%; bottom: 20%; animation-delay: 0.5s; }
+.christmas-popup:nth-child(5n+2) { left: 50%; bottom: 15%; animation-delay: 1s; }
+.christmas-popup:nth-child(5n+3) { left: 80%; bottom: 25%; animation-delay: 1.5s; }
+.christmas-popup:nth-child(5n+4) { left: 5%; bottom: 40%; animation-delay: 2s; }
+.christmas-popup:nth-child(5n) { left: 70%; bottom: 35%; animation-delay: 2.5s; }
+
+@media (max-width: 768px) {
+  .christmas-popup {
+    font-size: clamp(2rem, 6vw, 5rem) !important;
+  }
+}
+
 /* Subtle Christmas glow for input fields */
 input:focus,
 textarea:focus,
@@ -190,10 +234,6 @@ button:focus {
   animation: gentleGlow 3s ease-in-out infinite;
 }
 
-/* Christmas cursor effects */
-body {
-  cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="%23d32f2f" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="%23d32f2f"/></svg>'), auto;
-}
 
 /* Christmas-themed selection */
 ::selection {
@@ -209,4 +249,33 @@ body {
   opacity: 0.3;
   animation: twinkle 3s infinite;
   font-size: 10px;
+}
+
+/* Responsive Christmas effects */
+@media (max-width: 768px) {
+  .snowflake {
+    font-size: 1.2rem !important;
+  }
+  .christmas-lights {
+    height: 28px !important;
+  }
+  .christmas-light {
+    width: 8px !important;
+    height: 8px !important;
+    box-shadow: 0 0 8px currentColor !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .snowflake {
+    font-size: 2rem !important;
+  }
+  .christmas-lights {
+    height: 50px !important;
+  }
+  .christmas-light {
+    width: 16px !important;
+    height: 16px !important;
+    box-shadow: 0 0 16px currentColor !important;
+  }
 }
