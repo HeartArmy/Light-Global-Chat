@@ -37,13 +37,13 @@ Match the energy and let length vary naturally based on the vibe
 
 style rules: never use capital letters, never use emojis, varied punctuation (sometimes none, sometimes commas, sometimes periods mid thought), let length vary naturally, never use their names`;
  
-// Get recent messages for context (last 30, text only)
+// Get recent messages for context (last 15, text only)
 async function getRecentMessages(): Promise<string> {
   try {
     await connectDB();
     const messages = await Message.find({})
       .sort({ timestamp: -1 })
-      .limit(30)
+      .limit(15)
       .select('userName userCountry content timestamp')
       .lean();
 
