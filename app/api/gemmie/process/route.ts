@@ -108,15 +108,15 @@ export async function POST(request: NextRequest) {
     );
     console.log('💬 Generated response:', response);
 
-    // Simulate realistic typing delay based on response length
-    const words = (response.match(/\S+/g) || []).length;
-    const typingSpeedWps = 0.5; // words/sec (30 WPM, slow casual typing)
-    let typingDelaySec = words / typingSpeedWps;
-    typingDelaySec = Math.max(1, Math.min(10, typingDelaySec)); // cap 1-10s
-    typingDelaySec *= (0.8 + Math.random() * 0.4); // 20% variance
-    const typingDelayMs = typingDelaySec * 1000;
-    console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
-    await new Promise(resolve => setTimeout(resolve, typingDelayMs));
+    // // Simulate realistic typing delay based on response length
+    // const words = (response.match(/\S+/g) || []).length;
+    // const typingSpeedWps = 100; // words/sec (6000 WPM, super fast typing)
+    // let typingDelaySec = words / typingSpeedWps;
+    // typingDelaySec = Math.max(1, Math.min(10, typingDelaySec)); // cap 1-10s
+    // typingDelaySec *= (0.8 + Math.random() * 0.4); // 20% variance
+    // const typingDelayMs = typingDelaySec * 1000;
+    // console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
+    // await new Promise(resolve => setTimeout(resolve, typingDelayMs));
 
     // Send to chat
     console.log('📤 Sending Gemmie message to chat...');
