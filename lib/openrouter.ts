@@ -116,10 +116,9 @@ Their message: "${userMessage}"
 Important context notes:
 - Timestamps are in ISO format: YYYY-MM-DDTHH:MM:SS.sssZ
 - All timestamps are in UTC
-- Use timestamps to understand timing, time zones, and conversation flow
 - Current date/time is provided above for reference
 
-Respond as gemmie (remember: no capitals, never use people's name):`;
+Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/usernames/timestamps/context. Just your natural response. No capitals, no names.:`;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',

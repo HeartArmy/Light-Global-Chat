@@ -11,7 +11,7 @@ const JOB_ACTIVE_KEY = 'gemmie:job-active';
 // Key for storing the URL of the single image selected for AI processing in the current burst
 const GEMMIE_SELECTED_IMAGE_URL_KEY = 'gemmie:selected-image-url';
 // Time in seconds for the delay before Gemmie responds (random between 10-15 seconds to match job window)
-const GEMMIE_DELAY = Math.floor(Math.random() * 4) + 8; // Random number between 9-14
+const GEMMIE_DELAY = 8; // Fixed short thinking delay before AI (typing added after)
 
 /**
  * Resets the Gemmie response timer when a user sends a message
