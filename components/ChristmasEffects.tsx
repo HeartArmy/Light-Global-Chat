@@ -11,7 +11,7 @@ export default function ChristmasEffects() {
       snowflake.textContent = '❄';
       snowflake.style.left = `${Math.random() * 100}vw`;
       snowflake.style.animationDuration = `${Math.random() * 3 + 2}s`;
-      snowflake.style.opacity = `${Math.random() * 0.7 + 0.3}`;
+      snowflake.style.opacity = `${Math.random() * 0.4 + 0.2}`;
       
       document.body.appendChild(snowflake);
       
@@ -62,7 +62,6 @@ export default function ChristmasEffects() {
       popup.style.bottom = `${Math.random() * 60 + 5}%`;
       popup.style.animationDuration = `${3 + Math.random() * 2}s`;
       popup.style.animationDelay = `${Math.random() * 1}s`;
-      popup.style.fontSize = `${2.5 + Math.random() * 3}rem`;
       
       document.body.appendChild(popup);
       

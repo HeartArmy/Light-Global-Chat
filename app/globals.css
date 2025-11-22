@@ -154,19 +154,19 @@ button {
   top: 0;
   left: 0;
   width: 100vw;
-  height: 24px;
+  height: 3px;
   z-index: 100;
   pointer-events: none;
 }
 
 .christmas-light {
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: 1px;
+  height: 1px;
   border-radius: 50%;
-  opacity: 0.7;
+  opacity: 0.4;
   animation: twinkle 1.5s ease-in-out infinite alternate, gentleGlow 2s ease-in-out infinite alternate;
-  box-shadow: 0 0 8px currentColor;
+  box-shadow: 0 0 3px currentColor;
 }
 
 .christmas-light:nth-child(3n) {
@@ -209,8 +209,8 @@ button {
   z-index: 45;
   pointer-events: none;
   user-select: none;
-  opacity: 0.5;
-  font-size: clamp(1.5rem, 4vw, 4rem);
+  opacity: 0.2;
+  font-size: clamp(0.8rem, 2.5vw, 2rem);
   animation: popupFloat 4s ease-out forwards;
   left: 10%;
   bottom: 10%;
@@ -224,7 +224,8 @@ button {
 
 @media (max-width: 768px) {
   .christmas-popup {
-    font-size: clamp(1.2rem, 3vw, 3rem) !important;
+    font-size: clamp(0.6rem, 1.5vw, 1.5rem) !important;
+    opacity: 0.15 !important;
   }
 }
 
@@ -259,13 +260,13 @@ button:focus {
     font-size: 1.2rem !important;
   }
   .christmas-lights {
-    height: 18px !important;
+    height: 10px !important;
   }
   .christmas-light {
-    width: 4px !important;
-    height: 4px !important;
-    opacity: 0.7 !important;
-    box-shadow: 0 0 6px currentColor !important;
+    width: 2px !important;
+    height: 2px !important;
+    opacity: 0.3 !important;
+    box-shadow: 0 0 2px currentColor !important;
   }
 }
 
@@ -274,12 +275,12 @@ button:focus {
     font-size: 2rem !important;
   }
   .christmas-lights {
-    height: 32px !important;
+    height: 16px !important;
   }
   .christmas-light {
-    width: 10px !important;
-    height: 10px !important;
-    opacity: 0.7 !important;
-    box-shadow: 0 0 12px currentColor !important;
+    width: 4px !important;
+    height: 4px !important;
+    opacity: 0.4 !important;
+    box-shadow: 0 0 4px currentColor !important;
   }
 }
