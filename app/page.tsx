@@ -32,7 +32,7 @@ export default function Page() {
       for (let i = 0; i < 50; i++) {
         const light = document.createElement('div');
         light.className = 'christmas-light';
-        light.style.left = (i * 2) + 'vw';
+        light.style.left = `${i * 2}vw`;
         lightsContainer.appendChild(light);
       }
       
