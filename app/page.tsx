@@ -1,3 +1,5 @@
+'use client';
+
 import ChatRoomClient from '@/components/ChatRoomClient';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { useEffect } from 'react';
