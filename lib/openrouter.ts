@@ -95,7 +95,7 @@ export async function generateGemmieResponse(
   userTimestamp?: string
 ): Promise<string> {
   try {
-    console.log('🔧 OpenRouter API call starting...');
+    console.log('🔧 OpenRouter API call starting...'); 
     console.log('📝 User:', userName, 'Country:', userCountry, 'Message:', userMessage);
     // Get recent conversation context
     const recentMessages = await getRecentMessages();
