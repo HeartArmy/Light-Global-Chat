@@ -11,7 +11,7 @@ export default function ChristmasEffects() {
       snowflake.textContent = '❄';
       snowflake.style.left = `${Math.random() * 100}vw`;
       snowflake.style.animationDuration = `${Math.random() * 3 + 2}s`;
-      snowflake.style.opacity = `${Math.random() * 0.1 + 0.05}`;
+      snowflake.style.opacity = `${Math.random() * 0.3 + 0.3}`;
       
       document.body.appendChild(snowflake);
       
@@ -26,7 +26,7 @@ export default function ChristmasEffects() {
       const lightsContainer = document.createElement('div');
       lightsContainer.className = 'christmas-lights';
       
-      const numLights = window.innerWidth < 768 ? 50 : 100;
+      const numLights = window.innerWidth < 768 ? 40 : 100;
       for (let i = 0; i < numLights; i++) {
         const light = document.createElement('div');
         light.className = 'christmas-light';
@@ -44,7 +44,7 @@ export default function ChristmasEffects() {
 
     // Start snow effect (limited to avoid performance issues)
     const snowInterval = setInterval(() => {
-      if (document.querySelectorAll('.snowflake').length < 10 && Math.random() < 0.1) {
+      if (document.querySelectorAll('.snowflake').length < 10 && Math.random() < 0.2) {
         createSnowflake();
       }
     }, 1600);
@@ -53,7 +53,8 @@ export default function ChristmasEffects() {
     const christmasItems = ['🎄', '⛄', '🍪', '🕊️', '🦌', '🎅', '🎁', '🌟'];
     
     const createPopup = () => {
-      if (document.querySelectorAll('.christmas-popup').length >= 3 || Math.random() >= 0.05) return;
+      const isMobile = window.innerWidth < 768;
+      if (document.querySelectorAll('.christmas-popup').length >= (isMobile ? 4 : 3) || Math.random() >= (isMobile ? 0.24 : 0.24)) return;
       
       const popup = document.createElement('div');
       popup.className = 'christmas-popup';
