@@ -209,7 +209,7 @@ button {
   z-index: 45;
   pointer-events: none;
   user-select: none;
-  opacity: 0.1;
+  opacity: 0.7;
   font-size: clamp(0.8rem, 2.5vw, 2rem);
   animation: popupFloat 4s ease-out forwards;
   left: 10%;
@@ -225,7 +225,7 @@ button {
 @media (max-width: 768px) {
   .christmas-popup {
     font-size: clamp(0.8rem, 2vw, 1.8rem) !important;
-    opacity: 0.25 !important;
+    opacity: 0.7 !important;
   }
 }
 

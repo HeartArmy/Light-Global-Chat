@@ -54,7 +54,7 @@ export default function ChristmasEffects() {
     
     const createPopup = () => {
       const isMobile = window.innerWidth < 768;
-      if (document.querySelectorAll('.christmas-popup').length >= (isMobile ? 4 : 3) || Math.random() >= (isMobile ? 0.24 : 0.24)) return;
+      if (document.querySelectorAll('.christmas-popup').length >= (isMobile ? 4 : 3) || Math.random() >= (isMobile ? 0.90 : 0.90)) return;
       
       const popup = document.createElement('div');
       popup.className = 'christmas-popup';
