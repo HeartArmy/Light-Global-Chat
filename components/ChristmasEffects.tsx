@@ -11,7 +11,7 @@ export default function ChristmasEffects() {
       snowflake.textContent = '❄';
       snowflake.style.left = `${Math.random() * 100}vw`;
       snowflake.style.animationDuration = `${Math.random() * 3 + 2}s`;
-      snowflake.style.opacity = `${Math.random() * 0.4 + 0.2}`;
+      snowflake.style.opacity = `${Math.random() * 0.1 + 0.05}`;
       
       document.body.appendChild(snowflake);
       
@@ -44,16 +44,16 @@ export default function ChristmasEffects() {
 
     // Start snow effect (limited to avoid performance issues)
     const snowInterval = setInterval(() => {
-      if (document.querySelectorAll('.snowflake').length < 20) {
+      if (document.querySelectorAll('.snowflake').length < 10 && Math.random() < 0.1) {
         createSnowflake();
       }
-    }, 800);
+    }, 1600);
   
     // Christmas popup items
     const christmasItems = ['🎄', '⛄', '🍪', '🕊️', '🦌', '🎅', '🎁', '🌟'];
     
     const createPopup = () => {
-      if (document.querySelectorAll('.christmas-popup').length >= 6) return;
+      if (document.querySelectorAll('.christmas-popup').length >= 3 || Math.random() >= 0.05) return;
       
       const popup = document.createElement('div');
       popup.className = 'christmas-popup';
@@ -70,7 +70,7 @@ export default function ChristmasEffects() {
       }, 6000);
     };
   
-    const popupInterval = setInterval(createPopup, 2500);
+    const popupInterval = setInterval(createPopup, 5000);
   
     // Add Christmas lights
     const removeLights = createChristmasLights();
