@@ -50,7 +50,7 @@ export default function ChristmasEffects() {
     }, 800);
   
     // Christmas popup items
-    const christmasItems = ['🎄', '⛄', '🍪', '🏡', '🕊️', '🦌', '🎅', '🎁', '🔔', '⭐', '🌟'];
+    const christmasItems = ['🎄', '⛄', '🍪', '🕊️', '🦌', '🎅', '🎁', '🌟'];
     
     const createPopup = () => {
       if (document.querySelectorAll('.christmas-popup').length >= 6) return;
