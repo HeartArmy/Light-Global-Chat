@@ -15,13 +15,14 @@ export function formatTimestamp(date: Date): string {
     const seconds = messageDate.getUTCSeconds().toString().padStart(2, '0');
     return `${hours}:${minutes}:${seconds} UTC`;
   } else {
-    // MMM DD, HH:MM UTC
+    // MMM DD, HH:MM:SS UTC
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const month = months[messageDate.getUTCMonth()];
     const day = messageDate.getUTCDate();
     const hours = messageDate.getUTCHours().toString().padStart(2, '0');
     const minutes = messageDate.getUTCMinutes().toString().padStart(2, '0');
-    return `${month} ${day}, ${hours}:${minutes} UTC`;
+    const seconds = messageDate.getUTCSeconds().toString().padStart(2, '0');
+    return `${month} ${day}, ${hours}:${minutes}:${seconds} UTC`;
   }
 }
 
