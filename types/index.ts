@@ -28,3 +28,10 @@ export interface ApiError {
   code: string;
   details?: any;
 }
+
+export interface ResponseValidationResult {
+  isValid: boolean;
+  needsCleaning: boolean;
+  cleanedResponse: string;
+  reason: string;
+}

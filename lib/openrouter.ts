@@ -2,6 +2,7 @@ import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import redis from '@/lib/redis';
 import { getAndClearSelectedImageUrl } from '@/lib/gemmie-timer';
+import { validateAIResponse, validateWithSecondaryAI } from '@/lib/response-validator';
 
 const GEMMIE_PROMPT = `You're gemmie, a 23yo chill friend who keeps messages natural like real texting. Vary your response length based on what feels right. You are on public global chatroom. this place has no dms, no blocking, no whispering, nothing private. every message is public & persistent. Never give out your gender.
 
@@ -152,21 +153,34 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
     let text = data.choices[0]?.message?.content?.trim() || '';
     console.log('🎯 Raw AI response:', text);
     
-    // Ensure no capitals and clean up
-    text = text.toLowerCase();
+    // Validate and clean the response
+    console.log('🔍 Validating AI response...');
+    const validationResult = validateAIResponse(text);
     
-    // Remove any emojis or unwanted punctuation
-    text = text.replace(/[^\w\s,.]/g, '');
+    if (!validationResult.isValid) {
+      console.log('🚨 Response validation failed:', validationResult.reason);
+      
+      if (validationResult.needsCleaning) {
+        console.log('🧹 Attempting to clean response...');
+        text = validationResult.cleanedResponse;
+        
+        // If still problematic after basic cleaning, use secondary AI validation
+        const revalidation = validateAIResponse(text);
+        if (!revalidation.isValid) {
+          console.log('🤖 Using secondary AI for advanced cleaning...');
+          text = await validateWithSecondaryAI(text);
+        }
+      }
+    }
     
-    // Limit to 2 sentences max
-    // const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim());
-    // if (sentences.length > 2) {
-    //   text = sentences.slice(0, 2).join('. ') + '.';
-    // }
-    
-    // Just trim and return
-    text = text.trim();
+    // Ensure no capitals and clean up (only if we haven't already cleaned it)
+    if (text === data.choices[0]?.message?.content?.trim()) {
+      text = text.toLowerCase();
+      text = text.replace(/[^\w\s,.]/g, '');
+      text = text.trim();
+    }
 
+    console.log('✅ Final processed response:', text);
     return text || '(◍•ᴗ•◍)';
   } catch (error) {
     console.error('OpenRouter API error:', error);
@@ -243,7 +257,7 @@ export async function generateGemmieResponseForContext(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'x-ai/grok-4.1-fast', // Use sherlock-think-alpha which supports vision
+        model: 'x-ai/grok-4.1-fast',
         messages: [
           {
             role: 'user',
@@ -260,7 +274,7 @@ export async function generateGemmieResponseForContext(
               }
             ] : [
               {
-                type: 'text', 
+                type: 'text',
                 text: fullPrompt
               }
             ]
@@ -282,18 +296,39 @@ export async function generateGemmieResponseForContext(
     let text = data.choices[0]?.message?.content?.trim() || '';
     console.log('🎯 Raw AI response:', text);
     
-    // Ensure no capitals and clean up
-    text = text.toLowerCase();
+    // Validate and clean the response
+    console.log('🔍 Validating AI response...');
+    const validationResult = validateAIResponse(text);
     
-    // Remove any emojis but keep varied punctuation
-    text = text.replace(/[^\w\s,.'?!-]/g, '');
-    
-    // Limit to 2 sentences max
-    const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim());
-    if (sentences.length > 2) {
-      text = sentences.slice(0, 2).join('. ') + '.';
+    if (!validationResult.isValid) {
+      console.log('🚨 Response validation failed:', validationResult.reason);
+      
+      if (validationResult.needsCleaning) {
+        console.log('🧹 Attempting to clean response...');
+        text = validationResult.cleanedResponse;
+        
+        // If still problematic after basic cleaning, use secondary AI validation
+        const revalidation = validateAIResponse(text);
+        if (!revalidation.isValid) {
+          console.log('🤖 Using secondary AI for advanced cleaning...');
+          text = await validateWithSecondaryAI(text);
+        }
+      }
     }
     
+    // Ensure no capitals and clean up (only if we haven't already cleaned it)
+    if (text === data.choices[0]?.message?.content?.trim()) {
+      text = text.toLowerCase();
+      text = text.replace(/[^\w\s,.'?!-]/g, '');
+      
+      // Limit to 2 sentences max (only if we haven't already processed it)
+      const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim());
+      if (sentences.length > 2) {
+        text = sentences.slice(0, 2).join('. ') + '.';
+      }
+    }
+    
+    console.log('✅ Final processed response:', text);
     return text || 'hey there, how are you doing today.';
   } catch (error) {
     console.error('OpenRouter API error (with context):', error);
