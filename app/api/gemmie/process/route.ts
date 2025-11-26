@@ -145,7 +145,11 @@ export async function POST(request: NextRequest) {
     // Check Gemmie's recent messages for repetition and delete if needed
     console.log('🔍 Checking Gemmie messages for repetition...');
     await connectDB();
-    const recentGemmieMessages = await Message.find({ userName: 'gemmie' })
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const recentGemmieMessages = await Message.find({
+      userName: 'gemmie',
+      timestamp: { $gte: tenMinutesAgo }
+    })
       .sort({ timestamp: -1 })
       .limit(5)
       .select('_id content timestamp')
@@ -160,7 +164,7 @@ export async function POST(request: NextRequest) {
 
 ${messagesContext}
 
-Decide if any should be deleted to avoid repetition. Prefer deleting older repetitive ones. Do not delete the newest unless it exactly duplicates another.
+Decide if any should be deleted to avoid repetition. Prefer deleting older repetitive ones.
 
 Output ONLY valid JSON: {"deleteIds": ["msgId1", "msgId2"]} or {"deleteIds": []} if none needed.`;
 
