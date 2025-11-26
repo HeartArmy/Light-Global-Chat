@@ -30,14 +30,28 @@ export async function resetGemmieTimer(userName: string, userMessage: string, us
   await redis.del(GEMMIE_SELECTED_IMAGE_URL_KEY);
   console.log('🗑️ Cleared previously selected image URL for new message burst.');
 
-  // Check if there's already a scheduled job
+  // Check if there's already a scheduled job and cancel it
   const jobScheduled = await redis.get(JOB_SCHEDULED_KEY);
+  if (jobScheduled) {
+    try {
+      const response = await fetch(`https://qstash.upstash.com/v2/messages/${jobScheduled}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${process.env.QSTASH_TOKEN!}`,
+        },
+      });
+      if (response.ok) {
+        console.log(`✅ Cancelled previous QStash job: ${jobScheduled}`);
+      } else {
+        console.error(`❌ Failed to cancel QStash job ${jobScheduled}: ${response.status}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error cancelling previous QStash job ${jobScheduled}:`, error);
+    }
+    await redis.del(JOB_SCHEDULED_KEY);
+  }
   
-  // If there was a previously scheduled job, we need to cancel and reschedule
-  // In QStash, we'd need to use message IDs to cancel, but for simplicity
-  // we'll just rely on the timestamp check in the handler
-  
-  // Schedule the delayed response using QStash
+  // Schedule the new delayed response using QStash
   await scheduleDelayedResponse(userName, userMessage, userCountry);
   
   console.log('✅ Gemmie timer reset and response scheduled');

@@ -194,10 +194,15 @@ export async function POST(request: NextRequest) {
       // For safety, if an error occurs, we try to release the lock.
       // The main logic handles the "happy path" or rescheduling path.
       console.log('🔧 Finally block: Checking if job active flag needs cleanup due to error.');
-      // A simple approach: if an error occurred, assume the lock might be stale.
-      // This is a broad cleanup. More precise error handling would be better.
-      await clearJobActive();
-      console.log('🔓 Cleared job active flag in finally block (error path).');
+      const redis = (await import('@/lib/redis')).default;
+      const JOB_ACTIVE_KEY = 'gemmie:job-active';
+      const isActive = await redis.get(JOB_ACTIVE_KEY);
+      if (isActive === 'active') {
+        await clearJobActive();
+        console.log('🔓 Cleared job active flag in finally block (error path).');
+      } else {
+        console.log('ℹ️ Job active flag already cleared by main logic.');
+      }
     } catch (releaseError) {
       console.error('❌ Failed to clear job active flag in finally block:', releaseError);
     }
