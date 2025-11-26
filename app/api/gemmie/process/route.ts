@@ -234,7 +234,7 @@ Output ONLY valid JSON: {"deleteIndices": [1,3]} or {"deleteIndices": []} if non
     }
 
     // --- Check for new messages that arrived during processing ---
-    const { getAndClearGemmieQueue: getQueueAgain, resetGemmieTimer: rescheduleJob } = await import('@/lib/gemmie-timer');
+    const { getAndClearGemmieQueue: getQueueAgain, resetGemmieTimer: rescheduleJob, queueGemmieMessage } = await import('@/lib/gemmie-timer');
     const newlyQueuedMessages = await getQueueAgain();
     
     let shouldClearJobActive = true; // Assume we'll clear the flag
@@ -245,13 +245,17 @@ Output ONLY valid JSON: {"deleteIndices": [1,3]} or {"deleteIndices": []} if non
       const nextMessageToProcess = newlyQueuedMessages[0]; // Process the oldest one next
       console.log('🔄 Scheduling next QStash job for:', nextMessageToProcess.userName);
 
-      // Reschedule for the next message. This will:
-      // 1. Try to set gemmie:job-active (it should succeed as we are still "active")
-      // 2. Schedule a new QStash job if job active was set.
-      // The resetGemmieTimer handles the QStash scheduling and redis key updates.
+      // Reschedule for the next message
       await rescheduleJob(nextMessageToProcess.userName, nextMessageToProcess.userMessage, nextMessageToProcess.userCountry);
       
-      console.log('✅ Next QStash job scheduled. gemmie:job-active remains set.');
+      // Re-queue the remaining messages (if any)
+      const remainingMessages = newlyQueuedMessages.slice(1);
+      for (const remainingMsg of remainingMessages) {
+        await queueGemmieMessage(remainingMsg.userName, remainingMsg.userMessage, remainingMsg.userCountry);
+        console.log(`📝 Re-queued remaining message from: ${remainingMsg.userName}`);
+      }
+      
+      console.log('✅ Next QStash job scheduled and remaining messages re-queued. gemmie:job-active remains set.');
       shouldClearJobActive = false; // Do not clear the flag, a new job is scheduled
     } else {
       console.log('🧹 No new messages found in queue after processing.');
