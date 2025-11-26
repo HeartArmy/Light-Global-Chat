@@ -181,6 +181,9 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
     }
 
     console.log('✅ Final processed response:', text);
+    if (text.trim() === 'gemmie 🇺🇸') {
+      text = '(╯°□°）╯︵ ┻━┻';
+    }
     return text || '(◍•ᴗ•◍)';
   } catch (error) {
     console.error('OpenRouter API error:', error);
@@ -329,7 +332,7 @@ export async function generateGemmieResponseForContext(
     }
     
     console.log('✅ Final processed response:', text);
-    return text || 'hey there, how are you doing today.';
+    return text || '¯\_( ͡~ ͜ʖ ͡°)_/¯';
   } catch (error) {
     console.error('OpenRouter API error (with context):', error);
     // Fallback responses

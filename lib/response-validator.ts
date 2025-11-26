@@ -106,7 +106,7 @@ export function validateAIResponse(response: string): ResponseValidationResult {
 function extractCleanResponse(response: string): string {
   // Split by common separators and find the most likely actual response
   const separators = [
-    '\n', '---', '...', 'lol', 'naughty', 'how', 'spill', 'gmt',
+    'gmt',
     'coordinate', 'universal', 'time', 'from', 'nov', '2025'
   ];
   
