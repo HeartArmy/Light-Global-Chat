@@ -33,18 +33,10 @@ export async function resetGemmieTimer(userName: string, userMessage: string, us
   // Check if there's already a scheduled job and cancel it
   const jobScheduled = await redis.get(JOB_SCHEDULED_KEY);
   if (jobScheduled) {
+    const qstash = await import('@/lib/qstash');
     try {
-      const response = await fetch(`https://qstash.upstash.com/v2/messages/${jobScheduled}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${process.env.QSTASH_TOKEN!}`,
-        },
-      });
-      if (response.ok) {
-        console.log(`✅ Cancelled previous QStash job: ${jobScheduled}`);
-      } else {
-        console.error(`❌ Failed to cancel QStash job ${jobScheduled}: ${response.status}`);
-      }
+      await qstash.default.delete({ id: jobScheduled });
+      console.log(`✅ Cancelled previous QStash job: ${jobScheduled}`);
     } catch (error) {
       console.error(`❌ Error cancelling previous QStash job ${jobScheduled}:`, error);
     }
