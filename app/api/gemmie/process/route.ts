@@ -174,7 +174,7 @@ Output ONLY valid JSON: {"deleteIds": ["msgId1", "msgId2"]} or {"deleteIds": []}
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'nvidia/nemotron-4-340b-instruct',
+            model: 'nvidia/nemotron-nano-12b-v2-vl:free',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 200,
             temperature: 0.1
