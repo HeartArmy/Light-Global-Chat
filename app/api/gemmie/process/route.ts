@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Receiver } from '@upstash/qstash';
 import { generateGemmieResponse, generateGemmieResponseForContext, sendGemmieMessage } from '@/lib/openrouter';
 import { getPusherInstance } from '@/lib/pusher';
+import connectDB from '@/lib/mongodb';
+import Message from '@/models/Message';
 
 // Get country flag
 function getCountryFlag(countryCode: string): string {
@@ -139,6 +141,75 @@ export async function POST(request: NextRequest) {
 
     await pusher.trigger('chat-room', 'new-message', gemmieMessage);
     console.log('✅ Delayed Gemmie response sent for the initial message(s).');
+
+    // Check Gemmie's recent messages for repetition and delete if needed
+    console.log('🔍 Checking Gemmie messages for repetition...');
+    await connectDB();
+    const recentGemmieMessages = await Message.find({ userName: 'gemmie' })
+      .sort({ timestamp: -1 })
+      .limit(5)
+      .select('_id content timestamp')
+      .lean();
+
+    if (recentGemmieMessages.length > 1) {
+      const messagesContext = recentGemmieMessages.map((msg, index) =>
+        `${index + 1}. ID: ${msg._id} Content: "${msg.content}" Time: ${new Date(msg.timestamp).toISOString()}`
+      ).join('\n');
+
+      const reviewPrompt = `Review these last 5 Gemmie messages (newest first) for repetition or similarity.
+
+${messagesContext}
+
+Decide if any should be deleted to avoid repetition. Prefer deleting older repetitive ones. Do not delete the newest unless it exactly duplicates another.
+
+Output ONLY valid JSON: {"deleteIds": ["msgId1", "msgId2"]} or {"deleteIds": []} if none needed.`;
+
+      try {
+        const reviewResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
+            'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'nvidia/nemotron-4-340b-instruct',
+            messages: [{ role: 'user', content: reviewPrompt }],
+            max_tokens: 200,
+            temperature: 0.1
+          })
+        });
+
+        if (reviewResponse.ok) {
+          const data = await reviewResponse.json();
+          const reviewText = data.choices[0]?.message?.content?.trim();
+          console.log('🤖 Nemotron review:', reviewText);
+
+          let deleteIds: string[] = [];
+          try {
+            const jsonMatch = reviewText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              deleteIds = Array.isArray(parsed.deleteIds) ? parsed.deleteIds.map((id: any) => id.toString()) : [];
+            }
+          } catch (parseError) {
+            console.error('Failed to parse review JSON:', parseError);
+          }
+
+          console.log(`🗑️ Deleting ${deleteIds.length} repetitive messages`);
+          for (const id of deleteIds) {
+            await Message.findByIdAndDelete(id);
+            await pusher.trigger('chat-room', 'message-deleted', { messageId: id });
+            console.log(`🗑️ Deleted repetitive Gemmie message: ${id}`);
+          }
+        } else {
+          console.error('Nemotron review failed:', reviewResponse.status);
+        }
+      } catch (reviewError) {
+        console.error('Error in Gemmie self-review:', reviewError);
+      }
+    }
 
     // --- Check for new messages that arrived during processing ---
     const { getAndClearGemmieQueue: getQueueAgain, resetGemmieTimer: rescheduleJob } = await import('@/lib/gemmie-timer');
