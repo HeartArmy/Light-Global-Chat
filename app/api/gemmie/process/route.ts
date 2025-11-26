@@ -4,6 +4,7 @@ import { generateGemmieResponse, generateGemmieResponseForContext, sendGemmieMes
 import { getPusherInstance } from '@/lib/pusher';
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
+import mongoose from 'mongoose';
 
 // Get country flag
 function getCountryFlag(countryCode: string): string {
@@ -202,10 +203,20 @@ Output ONLY valid JSON: {"deleteIds": ["msgId1", "msgId2"]} or {"deleteIds": []}
           }
 
           console.log(`🗑️ Deleting ${deleteIds.length} repetitive messages`);
-          for (const id of deleteIds) {
-            await Message.findByIdAndDelete(id);
-            await pusher.trigger('chat-room', 'message-deleted', { messageId: id });
-            console.log(`🗑️ Deleted repetitive Gemmie message: ${id}`);
+          for (const idStr of deleteIds) {
+            try {
+              const id = new mongoose.Types.ObjectId(idStr);
+              const message = await Message.findById(id);
+              if (message && message.userName === 'gemmie') {
+                await Message.findByIdAndDelete(id);
+                await pusher.trigger('chat-room', 'message-deleted', { messageId: idStr });
+                console.log(`🗑️ Successfully deleted repetitive Gemmie message: ${idStr}`);
+              } else {
+                console.log(`ℹ️ Message ${idStr} not found or not Gemmie's, skipping delete`);
+              }
+            } catch (deleteError) {
+              console.error(`❌ Failed to delete message ${idStr}:`, deleteError);
+            }
           }
         } else {
           console.error('Nemotron review failed:', reviewResponse.status);
