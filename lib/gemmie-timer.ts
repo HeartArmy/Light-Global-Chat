@@ -87,12 +87,19 @@ export async function getAndClearGemmieQueue(): Promise<any[]> {
   const messages: any[] = [];
   for (const msg of messagesJson) {
     try {
-      const parsedMsg = JSON.parse(msg);
+      let parsedMsg;
+      if (typeof msg === 'string') {
+        parsedMsg = JSON.parse(msg);
+      } else if (typeof msg === 'object' && msg !== null) {
+        parsedMsg = msg;
+        console.log('📥 Using already-parsed queued message object');
+      } else {
+        throw new Error('Invalid message format');
+      }
       messages.push(parsedMsg);
     } catch (parseError: any) {
       console.error('❌ Failed to parse queued message:', msg, 'Error:', parseError.message);
-      // Optionally, handle the error (e.g., skip, log, or store for later inspection)
-      // For now, we'll skip it.
+      // Skip invalid messages
     }
   }
   
