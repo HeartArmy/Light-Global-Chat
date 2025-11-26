@@ -221,7 +221,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        model: 'x-ai/grok-4.1-fast',
         messages: [
           {
             role: 'user',

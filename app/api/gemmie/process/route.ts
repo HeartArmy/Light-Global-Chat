@@ -161,13 +161,13 @@ export async function POST(request: NextRequest) {
         `${index + 1}. ID: ${msg._id} Content: "${msg.content}" Time: ${new Date(msg.timestamp).toISOString()}`
       ).join('\n');
 
-      const reviewPrompt = `Review these last 5 Gemmie messages (newest first) for repetition or similarity.
+      const reviewPrompt = `Review these last 5 Gemmie messages (1=newest, 5=oldest) for repetition or similarity.
 
 ${messagesContext}
 
-Decide if any should be deleted to avoid repetition. Prefer deleting older repetitive ones.
+Decide if any should be deleted to avoid repetition. Prefer deleting older repetitive ones (higher numbers).
 
-Output ONLY valid JSON: {"deleteIds": ["msgId1", "msgId2"]} or {"deleteIds": []} if none needed.`;
+Output ONLY valid JSON: {"deleteIndices": [1,3]} or {"deleteIndices": []} if none needed. Use 1-based indices (1=newest).`;
 
       try {
         const reviewResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -179,7 +179,7 @@ Output ONLY valid JSON: {"deleteIds": ["msgId1", "msgId2"]} or {"deleteIds": []}
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+            model: 'x-ai/grok-4.1-fast',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 200,
             temperature: 0.1
@@ -189,37 +189,44 @@ Output ONLY valid JSON: {"deleteIds": ["msgId1", "msgId2"]} or {"deleteIds": []}
         if (reviewResponse.ok) {
           const data = await reviewResponse.json();
           const reviewText = data.choices[0]?.message?.content?.trim();
-          console.log('🤖 Nemotron review:', reviewText);
+          console.log('🤖 AI review:', reviewText);
 
-          let deleteIds: string[] = [];
+          let deleteIndices: number[] = [];
           try {
             const jsonMatch = reviewText.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
               const parsed = JSON.parse(jsonMatch[0]);
-              deleteIds = Array.isArray(parsed.deleteIds) ? parsed.deleteIds.map((id: any) => id.toString()) : [];
+              deleteIndices = Array.isArray(parsed.deleteIndices) ? parsed.deleteIndices.map((i: any) => parseInt(i)) : [];
             }
           } catch (parseError) {
             console.error('Failed to parse review JSON:', parseError);
           }
 
-          console.log(`🗑️ Deleting ${deleteIds.length} repetitive messages`);
-          for (const idStr of deleteIds) {
+          console.log(`🗑️ Deleting ${deleteIndices.length} repetitive messages by index`);
+          for (const idx of deleteIndices) {
+            if (idx < 1 || idx > recentGemmieMessages.length) {
+              console.log(`ℹ️ Invalid index ${idx}, skipping`);
+              continue;
+            }
+            const msgIndex = idx - 1;
+            const msg = recentGemmieMessages[msgIndex];
+            const idStr = msg._id.toString();
             try {
               const id = new mongoose.Types.ObjectId(idStr);
               const message = await Message.findById(id);
               if (message && message.userName === 'gemmie') {
                 await Message.findByIdAndDelete(id);
-                await pusher.trigger('chat-room', 'message-deleted', { messageId: idStr });
-                console.log(`🗑️ Successfully deleted repetitive Gemmie message: ${idStr}`);
+                await pusher.trigger('chat-room', 'delete-message', { messageId: idStr });
+                console.log(`🗑️ Successfully deleted repetitive Gemmie message index ${idx} (${idStr})`);
               } else {
-                console.log(`ℹ️ Message ${idStr} not found or not Gemmie's, skipping delete`);
+                console.log(`ℹ️ Message index ${idx} (${idStr}) not found or not Gemmie's, skipping delete`);
               }
             } catch (deleteError) {
-              console.error(`❌ Failed to delete message ${idStr}:`, deleteError);
+              console.error(`❌ Failed to delete message index ${idx} (${idStr}):`, deleteError);
             }
           }
         } else {
-          console.error('Nemotron review failed:', reviewResponse.status);
+          console.error('AI review failed:', reviewResponse.status);
         }
       } catch (reviewError) {
         console.error('Error in Gemmie self-review:', reviewError);
