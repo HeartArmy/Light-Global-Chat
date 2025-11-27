@@ -2,29 +2,31 @@ import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import redis from '@/lib/redis';
 import { getAndClearSelectedImageUrl } from '@/lib/gemmie-timer';
-import { validateAIResponse, validateWithSecondaryAI } from '@/lib/response-validator';
+import { hasProblematicPatterns, validateWithSecondaryAI } from '@/lib/response-validator';
 
 const GEMMIE_PROMPT = `You're gemmie, a 23yo chill friend who keeps messages natural like real texting. Vary your response length based on what feels right. You are on public global chatroom. this place has no dms, no blocking, no whispering, nothing private. every message is public & persistent. Never give out your gender.
 
 
 Key style:
 - mix it up, sometimes 5 words, sometimes 15, let it flow naturally
+- the chatroom allows people to edit and delete their messages, so explain that if people question u after you delete or edit your messsages
 - react authentically, sometimes brief sometimes you get hyped and say more
 - sometimes just vibe with what they said
 - mix up punctuation, sometimes no period at all, sometimes keep going with commas
 - if someone wants to connect on socials, say you are a private person
 - be casual and real, like youre quickly typing between doing other stuff
 - drop quick takes and opinions
-- there is a tv show called "you", please dont get thrown off by this 
+- there is a tv show called "you", please dont get thrown off by this
 - keep your responses varied and the words you use varied
 - if something excites you, show it by saying more
 - if its chill just give a quick reaction
 - playfully dismiss any allegation of being a bot
-- if someone doesn’t answer a question, you drop it immediately and switch topics like you never asked it
+- if someone doesn't answer a question, you drop it immediately and switch topics like you never asked it
 - if someone calls u a bot, tell them "would a bot tell u to go f urself" or other variations on this, if you had already used that line
 - dont take shit from anyone
 - respond only to the most recent message/person who triggered you, ignore/don't continue old conversations from different users
 - dont mention their country or country code
+- occasionally make common typos like "teh" instead of "the", "thikn" instead of "think", "waht" instead of "what", "freind" instead of "friend" - make it look natural like you're typing fast
 
 
 Examples of good short responses:
@@ -157,24 +159,14 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
     let text = data.choices[0]?.message?.content?.trim() || '';
     console.log('🎯 Raw AI response:', text);
     
-    // Validate and clean the response
-    console.log('🔍 Validating AI response...');
-    const validationResult = validateAIResponse(text);
+    // Check for problematic patterns
+    console.log('🔍 Checking for problematic patterns...');
+    const patternCheck = hasProblematicPatterns(text);
     
-    if (!validationResult.isValid) {
-      console.log('🚨 Response validation failed:', validationResult.reason);
-      
-      if (validationResult.needsCleaning) {
-        console.log('🧹 Attempting to clean response...');
-        text = validationResult.cleanedResponse;
-        
-        // If still problematic after basic cleaning, use secondary AI validation
-        const revalidation = validateAIResponse(text);
-        if (!revalidation.isValid) {
-          console.log('🤖 Using secondary AI for advanced cleaning...');
-          text = await validateWithSecondaryAI(text);
-        }
-      }
+    if (patternCheck.hasProblem) {
+      console.log('🚨 Problematic pattern detected:', patternCheck.reason);
+      console.log('🤖 Using grok for advanced cleaning...');
+      text = await validateWithSecondaryAI(text);
     }
     
     // Ensure no capitals and clean up (only if we haven't already cleaned it)
@@ -193,9 +185,7 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
     console.error('OpenRouter API error:', error);
     // Fallback responses
     const fallbacks = [
-      '(•‿•)',
       '(¬_¬)',
-      '(._.)',
       'o_O',
     ];
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
@@ -303,24 +293,14 @@ export async function generateGemmieResponseForContext(
     let text = data.choices[0]?.message?.content?.trim() || '';
     console.log('🎯 Raw AI response:', text);
     
-    // Validate and clean the response
-    console.log('🔍 Validating AI response...');
-    const validationResult = validateAIResponse(text);
+    // Check for problematic patterns
+    console.log('🔍 Checking for problematic patterns...');
+    const patternCheck = hasProblematicPatterns(text);
     
-    if (!validationResult.isValid) {
-      console.log('🚨 Response validation failed:', validationResult.reason);
-      
-      if (validationResult.needsCleaning) {
-        console.log('🧹 Attempting to clean response...');
-        text = validationResult.cleanedResponse;
-        
-        // If still problematic after basic cleaning, use secondary AI validation
-        const revalidation = validateAIResponse(text);
-        if (!revalidation.isValid) {
-          console.log('🤖 Using secondary AI for advanced cleaning...');
-          text = await validateWithSecondaryAI(text);
-        }
-      }
+    if (patternCheck.hasProblem) {
+      console.log('🚨 Problematic pattern detected:', patternCheck.reason);
+      console.log('🤖 Using grok for advanced cleaning...');
+      text = await validateWithSecondaryAI(text);
     }
     
     // Ensure no capitals and clean up (only if we haven't already cleaned it)
@@ -336,15 +316,18 @@ export async function generateGemmieResponseForContext(
     }
     
     console.log('✅ Final processed response:', text);
+    
+    // Prevent gemmie from sending just "gemmie 🇺🇸"
+    if (text.trim() === 'gemmie 🇺🇸') {
+      text = '(╯°□°）╯︵ ┻━┻';
+    }
+    
     return text || '¯\_( ͡~ ͜ʖ ͡°)_/¯';
   } catch (error) {
     console.error('OpenRouter API error (with context):', error);
     // Fallback responses
     const fallbacks = [
-      '(•‿•)',
-      '(¬_¬)',
       '(._.)',
-      'o_O',
     ];
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   }

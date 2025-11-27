@@ -150,11 +150,20 @@ export default function ChatRoomClient() {
       console.log('🗑️ Current messages count before delete:', messages.length);
       console.log('🗑️ Looking for message to delete:', data.messageId);
       
-      const filteredMessages = messages.filter((msg) => msg._id !== data.messageId);
-      console.log('🗑️ Messages count after delete:', filteredMessages.length);
-      console.log('🗑️ Message was found and removed:', filteredMessages.length < messages.length);
+      // Check if the message actually exists in our current state
+      const messageExists = messages.some((msg) => msg._id === data.messageId);
+      console.log('🗑️ Message exists in current state:', messageExists);
       
-      setMessages(filteredMessages);
+      if (messageExists) {
+        const filteredMessages = messages.filter((msg) => msg._id !== data.messageId);
+        console.log('🗑️ Messages count after delete:', filteredMessages.length);
+        console.log('🗑️ Message was found and removed:', filteredMessages.length < messages.length);
+        setMessages(filteredMessages);
+      } else {
+        console.log('🗑️ Message not found in current state, possibly already deleted or not loaded yet');
+        // Force a refresh of messages from the server
+        fetchMessages();
+      }
     });
 
     // Listen for reactions
@@ -264,11 +273,23 @@ export default function ChatRoomClient() {
 
   const handleDeleteMessage = async (messageId: string) => {
     try {
+      // First check if the message exists in current state
+      const messageExists = messages.some((msg) => msg._id === messageId);
+      console.log('🗑️ Manual delete - message exists in state:', messageExists);
+      
       await fetch(`/api/messages/${messageId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userName }),
       });
+      
+      // Only update local state if message exists
+      if (messageExists) {
+        setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
+      } else {
+        // If message doesn't exist in state, refresh from server
+        fetchMessages();
+      }
     } catch (error) {
       console.error('Failed to delete message:', error);
       alert('Failed to delete message');
@@ -318,6 +339,17 @@ export default function ChatRoomClient() {
       setIsLoading(false);
     }
   }, [messages, hasMore, isLoading]);
+
+  const fetchMessages = useCallback(async () => {
+    try {
+      const res = await fetch('/api/messages?limit=50');
+      const data = await res.json();
+      setMessages(data.messages.reverse());
+      setHasMore(data.hasMore);
+    } catch (error) {
+      console.error('Failed to refresh messages:', error);
+    }
+  }, []);
 
   const handleToggleGemmie = async () => {
     if (userName !== 'arham') return;

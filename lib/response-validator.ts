@@ -58,14 +58,9 @@ const LEGITIMATE_PATTERNS = [
   /\w+\s+\d+,\s+\d+/g,  // Date mentions
 ];
 
-export function validateAIResponse(response: string): ResponseValidationResult {
+export function hasProblematicPatterns(response: string): { hasProblem: boolean; pattern?: string; reason: string } {
   if (!response || typeof response !== 'string') {
-    return {
-      isValid: false,
-      needsCleaning: false,
-      cleanedResponse: '',
-      reason: 'Empty or invalid response'
-    };
+    return { hasProblem: true, reason: 'Empty or invalid response' };
   }
 
   const trimmedResponse = response.trim();
@@ -75,9 +70,8 @@ export function validateAIResponse(response: string): ResponseValidationResult {
     if (pattern.test(trimmedResponse)) {
       console.log('🚨 Problematic pattern detected:', pattern.source);
       return {
-        isValid: false,
-        needsCleaning: true,
-        cleanedResponse: extractCleanResponse(trimmedResponse),
+        hasProblem: true,
+        pattern: pattern.source,
         reason: `Detected problematic pattern: ${pattern.source}`
       };
     }
@@ -88,98 +82,14 @@ export function validateAIResponse(response: string): ResponseValidationResult {
   if (wordCount > 50) {
     console.log('🚨 Excessively long response detected:', wordCount, 'words');
     return {
-      isValid: false,
-      needsCleaning: true,
-      cleanedResponse: extractCleanResponse(trimmedResponse),
+      hasProblem: true,
       reason: `Response too long: ${wordCount} words`
     };
   }
 
-  return {
-    isValid: true,
-    needsCleaning: false,
-    cleanedResponse: trimmedResponse,
-    reason: 'Response is valid'
-  };
+  return { hasProblem: false, reason: 'Response is valid' };
 }
 
-function extractCleanResponse(response: string): string {
-  // Split by common separators and find the most likely actual response
-  const separators = [
-    'gmt',
-    'coordinate', 'universal', 'time', 'from', 'nov', '2025'
-  ];
-  
-  let bestCandidate = response;
-  let bestScore = calculateResponseScore(response);
-  
-  // Try splitting by various separators
-  for (const separator of separators) {
-    const parts = response.split(new RegExp(separator, 'i'));
-    
-    for (const part of parts) {
-      const trimmedPart = part.trim();
-      if (trimmedPart.length < 10) continue; // Skip very short parts
-      
-      const score = calculateResponseScore(trimmedPart);
-      if (score > bestScore) {
-        bestScore = score;
-        bestCandidate = trimmedPart;
-      }
-    }
-  }
-  
-  // If we found a much better candidate, use it
-  if (bestScore > calculateResponseScore(response) + 0.3) {
-    console.log('🎯 Extracted cleaner response:', bestCandidate);
-    return bestCandidate.trim();
-  }
-  
-  // Fallback: remove obvious system messages and take the last meaningful part
-  const lines = response.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  let cleanLines: string[] = [];
-  
-  for (const line of lines) {
-    // Skip lines that look like system messages
-    if (line.match(/^(system|context|timestamp|user|assistant|model|role|choices|message|content|openrouter|api|response|recent|conversation|from.*\w+\s+\d+\s+\d+)/i)) {
-      continue;
-    }
-    // Skip lines with timestamps
-    if (line.match(/\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}/i)) {
-      continue;
-    }
-    cleanLines.push(line);
-  }
-  
-  // Take the last 1-2 lines as they're most likely to be the actual response
-  const finalResponse = cleanLines.slice(-2).join(' ').trim();
-  
-  if (finalResponse.length > 0 && finalResponse.length < response.length) {
-    console.log('🎯 Cleaned response using line filtering:', finalResponse);
-    return finalResponse;
-  }
-  
-  // Ultimate fallback: return a simple placeholder
-  return '(•‿•)';
-}
-
-function calculateResponseScore(text: string): number {
-  let score = 0;
-  
-  // Positive indicators
-  if (text.match(/^[a-zA-Z\s,.!?-]+$/)) score += 0.3; // Only text characters
-  if (text.length > 5 && text.length < 200) score += 0.3; // Reasonable length
-  if (text.match(/[.!?]$/)) score += 0.2; // Ends with punctuation
-  if (text.split(/\s+/).length < 30) score += 0.2; // Not too many words
-  
-  // Negative indicators
-  if (text.match(/\d{4}-\d{2}-\d{2}/)) score -= 0.5; // ISO dates
-  if (text.match(/system|context|timestamp|user|assistant/i)) score -= 0.4; // System keywords
-  if (text.match(/[{}[\]<>]/)) score -= 0.3; // Code/JSON characters
-  if (text.length > 500) score -= 0.3; // Too long
-  
-  return Math.max(0, Math.min(1, score));
-}
 
 /**
  * Uses a secondary AI model to validate and clean responses

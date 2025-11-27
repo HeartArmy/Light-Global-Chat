@@ -33,9 +33,9 @@ User: "love this" → ❤️
 User message:`;
 
 // Cooldown settings (in seconds)
-const MIN_REACTION_INTERVAL = 60; // Minimum 1 minute between reactions
-const MAX_REACTION_INTERVAL = 300; // Maximum 5 minutes between reactions
-const DAILY_REACTION_LIMIT = 8; // Maximum reactions per day
+const MIN_REACTION_INTERVAL = 180; // Minimum 3 minutes between reactions
+const MAX_REACTION_INTERVAL = 600; // Maximum 10 minutes between reactions
+const DAILY_REACTION_LIMIT = 4; // Maximum reactions per day
 
 /**
  * Determines if Gemmie should react to a message with an emoji
@@ -71,7 +71,7 @@ export async function shouldGemmieReact(messageId: string): Promise<boolean> {
       }
     }
 
-    // Random chance to react (15% base chance)
+    // Random chance to react (15% base chance - much lower frequency)
     const randomChance = Math.random();
     const baseReactionChance = 0.15;
     
