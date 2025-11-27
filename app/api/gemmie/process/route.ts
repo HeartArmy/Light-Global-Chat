@@ -15,6 +15,78 @@ function getCountryFlag(countryCode: string): string {
   return String.fromCodePoint(...codePoints);
 }
 
+// Check if response is too similar to recent messages using AI
+async function checkResponseSimilarity(newResponse: string, recentMessages: any[]): Promise<{ shouldSkip: boolean; similarityScore: number; similarMessage?: string }> {
+  if (recentMessages.length === 0) {
+    return { shouldSkip: false, similarityScore: 0 };
+  }
+
+  // Get the most recent message to compare against
+  const mostRecentMessage = recentMessages[0].content;
+  
+  const similarityPrompt = `You are checking if two messages are too similar. Determine if the new response is essentially the same as the recent message, just with minor wording changes.
+
+NEW RESPONSE:
+"${newResponse}"
+
+RECENT MESSAGE:
+"${mostRecentMessage}"
+
+ANALYSIS RULES:
+- Consider them too similar if they convey the same core message with minimal changes
+- Look for repeated phrases, same intent, or very similar structure
+- Minor word changes or punctuation differences don't count as different enough
+- If both messages are very short (under 10 words), be more strict about similarity
+- If both messages are longer, allow some variation in expression
+
+Respond ONLY with a JSON object:
+{"shouldSkip": true/false, "similarityScore": 0-100, "explanation": "brief reason"}
+
+shouldSkip = true if messages are too similar (70%+ similarity)
+similarityScore = how similar they are (0-100 scale)`;
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
+        'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'x-ai/grok-4.1-fast',
+        messages: [{ role: 'user', content: similarityPrompt }],
+        max_tokens: 150,
+        temperature: 0.1
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const resultText = data.choices[0]?.message?.content?.trim();
+      
+      try {
+        const jsonMatch = resultText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return {
+            shouldSkip: parsed.shouldSkip || false,
+            similarityScore: parsed.similarityScore || 0,
+            similarMessage: mostRecentMessage
+          };
+        }
+      } catch (parseError) {
+        console.error('Failed to parse similarity check JSON:', parseError);
+      }
+    }
+  } catch (error) {
+    console.error('Error in similarity check:', error);
+  }
+
+  return { shouldSkip: false, similarityScore: 0 };
+}
+
 // This API route handles the delayed Gemmie response
 export async function POST(request: NextRequest) {
   // Create a receiver for signature verification
@@ -49,6 +121,9 @@ export async function POST(request: NextRequest) {
     }
 
   try {
+    // Connect to database early for similarity checks
+    await connectDB();
+    
     // Clear the job scheduled key to allow new messages to trigger QStash jobs
     // This is important so that if resetGemmieTimer is called later for a rescheduled job,
     // it can successfully store the new QStash message ID.
@@ -123,6 +198,26 @@ export async function POST(request: NextRequest) {
     console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
     await new Promise(resolve => setTimeout(resolve, typingDelayMs));
 
+    // Check for similarity with recent Gemmie messages before sending
+    console.log('🔍 Checking for similarity with recent Gemmie messages...');
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const recentGemmieMessages = await Message.find({
+      userName: 'gemmie',
+      timestamp: { $gte: tenMinutesAgo }
+    })
+      .sort({ timestamp: -1 })
+      .limit(3)
+      .select('_id content timestamp')
+      .lean();
+
+    const similarityCheck = await checkResponseSimilarity(response, recentGemmieMessages);
+    
+    if (similarityCheck.shouldSkip) {
+      console.log(`⚠️ Response too similar to recent message (${similarityCheck.similarityScore}%), skipping send`);
+      console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
+      return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
+    }
+
     // Send to chat
     console.log('📤 Sending Gemmie message to chat...');
     await sendGemmieMessage(response);
@@ -147,16 +242,6 @@ export async function POST(request: NextRequest) {
 
     // Check Gemmie's recent messages for repetition and delete if needed
     console.log('🔍 Checking Gemmie messages for repetition...');
-    await connectDB();
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const recentGemmieMessages = await Message.find({
-      userName: 'gemmie',
-      timestamp: { $gte: tenMinutesAgo }
-    })
-      .sort({ timestamp: -1 })
-      .limit(5)
-      .select('_id content timestamp')
-      .lean();
 
     if (recentGemmieMessages.length > 1) {
       const messagesContext = recentGemmieMessages.map((msg, index) =>
@@ -172,7 +257,7 @@ IMPORTANT RULES:
 - Do NOT delete messages from index 3 or higher (older messages)
 - Only delete if there's clear repetition between the most recent messages
 - Prefer deleting the older of the two repetitive messages
-- CRITICAL: You can only delete a message if it was sent within 30 seconds of the most recent message. Check the timestamps and only delete if the time difference is 30 seconds or less.
+- CRITICAL: You can only delete a message if it was sent within 60 seconds of the most recent message. Check the timestamps and only delete if the time difference is 60 seconds or less.
 
 Output ONLY valid JSON: {"deleteIndices": [1]} or {"deleteIndices": [2]} or {"deleteIndices": []} if none needed.
 Allowed indices: [1] or [2] only!`;

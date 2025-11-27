@@ -135,13 +135,28 @@ export default function ChatRoomClient() {
 
     // Listen for message edits
     channel.bind('edit-message', (data: any) => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === data.messageId
-            ? { ...msg, content: data.newContent, edited: true, editedAt: new Date() }
-            : msg
-        )
-      );
+      console.log('📝 Received edit-message event:', data);
+      console.log('📝 Current messages count:', messages.length);
+      console.log('📝 Looking for message to edit:', data.messageId);
+      
+      // Check if the message actually exists in our current state
+      const messageExists = messages.some((msg) => msg._id === data.messageId);
+      console.log('📝 Message exists in current state:', messageExists);
+      
+      if (messageExists) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === data.messageId
+              ? { ...msg, content: data.newContent, edited: true, editedAt: new Date() }
+              : msg
+          )
+        );
+        console.log('✅ Message edited successfully');
+      } else {
+        console.log('⚠️ Message not found in current state, forcing refresh');
+        // Force a refresh of messages from the server
+        fetchMessages();
+      }
     });
 
     // Listen for message deletions
