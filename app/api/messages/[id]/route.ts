@@ -83,9 +83,9 @@ export async function PATCH(
 
     // Trigger Pusher event
     const pusher = getPusherInstance();
-    await pusher.trigger('chat-room', 'update-message', {
+    await pusher.trigger('chat-room', 'edit-message', {
       messageId: id,
-      content,
+      newContent: content,
       edited: true,
       editedAt: message.editedAt,
     });

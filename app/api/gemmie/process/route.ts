@@ -24,20 +24,28 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
   // Get the most recent message to compare against
   const mostRecentMessage = recentMessages[0].content;
   
-  const similarityPrompt = `You are checking if two messages are too similar. Determine if the new response is essentially the same as the recent message, just with minor wording changes.
+  // Create context showing the conversation flow
+  const contextMessages = recentMessages.slice(0, 5).map((msg, index) =>
+    `${index + 1}. ${msg.userName}: "${msg.content}" (${new Date(msg.timestamp).toISOString()})`
+  ).join('\n');
+
+  const similarityPrompt = `You are checking if Gemmie's new response is too similar to her recent responses, especially when users send many messages in short bursts.
 
 NEW RESPONSE:
 "${newResponse}"
 
-RECENT MESSAGE:
-"${mostRecentMessage}"
+RECENT CONTEXT (last 5 messages, 1=newest):
+${contextMessages}
 
 ANALYSIS RULES:
-- Consider them too similar if they convey the same core message with minimal changes
-- Look for repeated phrases, same intent, or very similar structure
+- Focus on detecting when Gemmie is repeating similar patterns in response to message bursts
+- Check if the new response covers the same topic or gives similar advice as recent responses
+- Look for repeated phrases, same intent, or very similar structure across Gemmie's messages
 - Minor word changes or punctuation differences don't count as different enough
+- If multiple users are having similar conversations, Gemmie should vary her responses more
 - If both messages are very short (under 10 words), be more strict about similarity
 - If both messages are longer, allow some variation in expression
+- Consider the context: if users are sending many messages quickly, Gemmie should avoid repetitive responses
 
 Respond ONLY with a JSON object:
 {"shouldSkip": true/false, "similarityScore": 0-100, "explanation": "brief reason"}
@@ -198,19 +206,18 @@ export async function POST(request: NextRequest) {
     console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
     await new Promise(resolve => setTimeout(resolve, typingDelayMs));
 
-    // Check for similarity with recent Gemmie messages before sending
-    console.log('🔍 Checking for similarity with recent Gemmie messages...');
+    // Check for similarity with recent messages from all users before sending
+    console.log('🔍 Checking for similarity with recent messages...');
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const recentGemmieMessages = await Message.find({
-      userName: 'gemmie',
+    const recentMessages = await Message.find({
       timestamp: { $gte: tenMinutesAgo }
     })
       .sort({ timestamp: -1 })
-      .limit(3)
-      .select('_id content timestamp')
+      .limit(10)
+      .select('_id content userName timestamp')
       .lean();
 
-    const similarityCheck = await checkResponseSimilarity(response, recentGemmieMessages);
+    const similarityCheck = await checkResponseSimilarity(response, recentMessages);
     
     if (similarityCheck.shouldSkip) {
       console.log(`⚠️ Response too similar to recent message (${similarityCheck.similarityScore}%), skipping send`);
@@ -243,12 +250,15 @@ export async function POST(request: NextRequest) {
     // Check Gemmie's recent messages for repetition and delete if needed
     console.log('🔍 Checking Gemmie messages for repetition...');
 
-    if (recentGemmieMessages.length > 1) {
-      const messagesContext = recentGemmieMessages.map((msg, index) =>
+    // Filter for only Gemmie messages from the recent messages
+    const gemmieMessagesForRepetition = recentMessages.filter(msg => msg.userName === 'gemmie');
+
+    if (gemmieMessagesForRepetition.length > 1) {
+      const messagesContext = gemmieMessagesForRepetition.map((msg, index) =>
         `${index + 1}. ID: ${msg._id} Content: "${msg.content}" Time: ${new Date(msg.timestamp).toISOString()}`
       ).join('\n');
 
-      const reviewPrompt = `Review these last 5 Gemmie messages (1=newest, 5=oldest) for repetition or similarity.
+      const reviewPrompt = `Review these last ${gemmieMessagesForRepetition.length} Gemmie messages (1=newest, ${gemmieMessagesForRepetition.length}=oldest) for repetition or similarity.
 
 ${messagesContext}
 
@@ -257,7 +267,7 @@ IMPORTANT RULES:
 - Do NOT delete messages from index 3 or higher (older messages)
 - Only delete if there's clear repetition between the most recent messages
 - Prefer deleting the older of the two repetitive messages
-- CRITICAL: You can only delete a message if it was sent within 60 seconds of the most recent message. Check the timestamps and only delete if the time difference is 60 seconds or less.
+- CRITICAL: You can only delete older message only if it was sent within 120 seconds of the most recent message. Check the timestamps and only delete if the time difference is 120 seconds or less.
 
 Output ONLY valid JSON: {"deleteIndices": [1]} or {"deleteIndices": [2]} or {"deleteIndices": []} if none needed.
 Allowed indices: [1] or [2] only!`;
@@ -302,12 +312,12 @@ Allowed indices: [1] or [2] only!`;
               console.log(`⚠️ Invalid index ${idx}, only indices 1 and 2 are allowed, skipping`);
               continue;
             }
-            if (idx > recentGemmieMessages.length) {
+            if (idx > gemmieMessagesForRepetition.length) {
               console.log(`ℹ️ Index ${idx} out of range, skipping`);
               continue;
             }
             const msgIndex = idx - 1;
-            const msg = recentGemmieMessages[msgIndex];
+            const msg = gemmieMessagesForRepetition[msgIndex];
             const idStr = msg._id.toString();
             try {
               const id = new mongoose.Types.ObjectId(idStr);
