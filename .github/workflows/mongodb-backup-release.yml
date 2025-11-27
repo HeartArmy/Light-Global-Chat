@@ -31,7 +31,7 @@ jobs:
           const fs = require('fs');
           const path = require('path');
           const { MongoClient } = require('mongodb');
-          require('dotenv').config();
+          // Remove dotenv dependency since we're using environment variables directly
 
           async function backupMongoDB() {
             try {
@@ -121,7 +121,14 @@ jobs:
       - name: Run MongoDB backup
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
-        run: node backup-mongodb.js
+        run: |
+          # Ensure MongoDB URI has proper scheme
+          if [[ "$MONGODB_URI" != mongodb* ]]; then
+            echo "⚠️  MongoDB URI missing scheme, adding mongodb+srv://"
+            MONGODB_URI="mongodb+srv://$MONGODB_URI"
+            echo "Modified URI: $MONGODB_URI"
+          fi
+          node backup-mongodb.js
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
