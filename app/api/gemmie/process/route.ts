@@ -413,9 +413,11 @@ ${messagesContext}
 IMPORTANT RULES:
 - You can ONLY edit Gemmie's most recent message (index 1) or the second most recent message (index 2)
 - Do NOT edit messages from index 3 or higher (older messages)
-- Only consider editing if the user's latest message expresses confusion, accuses Gemmie of sounding like a bot, says she made a mistake, or jokes about her tone.
+- ALWAYS check for spelling errors, grammar mistakes, and typos FIRST, even without explicit user feedback
+- Common typos to catch: "everytime" → "every time", "alot" → "a lot", "dont" → "don't", "cant" → "can't", "wont" → "won't", etc.
+- Also consider editing if the user's latest message expresses confusion, accuses Gemmie of sounding like a bot, says she made a mistake, or jokes about her tone.
 - For clarification requests: Only edit if it's a small, relevant clarification that can be naturally added to the existing message. For larger explanations or new information, Gemmie should send a new message instead.
-- If editing is needed, choose the **single most relevant** Gemmie message (usually the one the user reacted to).
+- If editing is needed, choose the **single most relevant** Gemmie message (usually the most recent one).
 - For corrections: Fix typos, grammar mistakes, or clarify confusing statements. Make it look like a natural self-correction.
 - For small clarifications: Add brief, relevant details that naturally extend the original message. Use phrases like "Oh wait, actually..." or "I should mention..."
 - The edit should sound natural and human-like, as if Gemmie just noticed something and is improving her message.
@@ -425,7 +427,8 @@ Examples:
 - User: "lol you type like a bot" → Edit to sound more casual and human
 - User: "that doesn't make sense" → Edit to clarify the meaning
 - User: "can you explain more about that" → Usually send new message, but if editing, only add small relevant detail
-- If Gemmie made a typo: Fix it naturally like "whoops" or just correct it
+- If Gemmie made a typo like "everytime": Fix it naturally like "whoops, every time" or just "every time"
+- If Gemmie made a typo like "alot": Fix it naturally like "actually, a lot" or just "a lot"
 
 Output ONLY valid JSON with this shape:
 
