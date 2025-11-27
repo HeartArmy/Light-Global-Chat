@@ -121,6 +121,7 @@ jobs:
       - name: Run MongoDB backup
         env:
           MONGODB_URI: "${{ secrets.MONGODB_URI }}"
+          DATABASE_NAME: "${{ secrets.DATABASE_NAME }}"
         run: |
           # Ensure MongoDB URI has proper scheme (strict check)
           if [[ "$MONGODB_URI" != mongodb://* && "$MONGODB_URI" != mongodb+srv://* ]]; then
@@ -129,16 +130,7 @@ jobs:
             echo "Modified URI: $MONGODB_URI"
           fi
           
-          # Extract database name properly from URI
-          echo "Original URI: $MONGODB_URI"
-          
-          # Parse the URI to get just the database name (without query parameters)
-          DB_NAME=$(echo "$MONGODB_URI" | sed -n 's/.*\/\([^?]*\).*/\1/p')
-          echo "Database name: $DB_NAME"
-          
-          # Set the database name as an environment variable
-          echo "DATABASE_NAME=$DB_NAME" >> $GITHUB_ENV
-          
+          echo "Database name: $DATABASE_NAME"
           node backup-mongodb.js
 
       - name: Create GitHub Release
