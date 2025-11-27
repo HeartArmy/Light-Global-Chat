@@ -29,18 +29,20 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
     `${index + 1}. ${msg.userName}: "${msg.content}" (${new Date(msg.timestamp).toISOString()})`
   ).join('\n');
 
-  const similarityPrompt = `You are checking if Gemmie's new response is too similar to her recent responses, especially when users send many messages in short bursts.
+  const similarityPrompt = `You are checking if Gemmie's new response is too similar to her OWN recent responses. This mechanism exists because Gemmie is activated whenever ANY user sends a message, so when multiple users send messages in short succession, Gemmie might respond multiple times with similar content if not filtered.
 
-NEW RESPONSE:
+BACKGROUND: This chatroom has a delayed response system where each user message can trigger Gemmie's response after a short delay. During message bursts (multiple messages in quick succession), this system might generate several Gemmie responses in sequence, potentially leading to repetitive content if not checked.
+
+NEW RESPONSE FROM GEMMIE:
 "${newResponse}"
 
-RECENT CONTEXT (last 5 messages, 1=newest):
+FULL CONVERSATION CONTEXT (for understanding the flow, but only compare Gemmie's messages):
 ${contextMessages}
 
-ANALYSIS RULES:
-- Focus on detecting when Gemmie is repeating similar patterns in response to message bursts
-- Check if the new response covers the same topic or gives similar advice as recent responses
-- Look for repeated phrases, same intent, or very similar structure across Gemmie's messages
+IMPORTANT ANALYSIS RULES:
+- You are ONLY checking for similarity between Gemmie's new response and her OWN previous messages
+- IGNORE other users' messages for similarity comparison - they are just for context
+- Look for repeated phrases, same intent, or very similar structure specifically in Gemmie's messages
 - Minor word changes or punctuation differences don't count as different enough
 - If multiple users are having similar conversations, Gemmie should vary her responses more
 - If both messages are very short (under 10 words), be more strict about similarity
@@ -50,8 +52,8 @@ ANALYSIS RULES:
 Respond ONLY with a JSON object:
 {"shouldSkip": true/false, "similarityScore": 0-100, "explanation": "brief reason"}
 
-shouldSkip = true if messages are too similar (70%+ similarity)
-similarityScore = how similar they are (0-100 scale)`;
+shouldSkip = true if Gemmie's new response is too similar to her OWN previous messages (70%+ similarity)
+similarityScore = how similar Gemmie's new response is to her OWN previous messages (0-100 scale)`;
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -206,10 +208,22 @@ export async function POST(request: NextRequest) {
     console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
     await new Promise(resolve => setTimeout(resolve, typingDelayMs));
 
-    // Check for similarity with recent messages from all users before sending
-    console.log('🔍 Checking for similarity with recent messages...');
+    // Check for similarity with recent messages from GEMMIE only before sending
+    console.log('🔍 Checking for similarity with recent Gemmie messages only...');
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const recentMessages = await Message.find({
+    
+    // Get all recent messages for context (for AI understanding)
+    const allRecentMessages = await Message.find({
+      timestamp: { $gte: tenMinutesAgo }
+    })
+      .sort({ timestamp: -1 })
+      .limit(10)
+      .select('_id content userName timestamp')
+      .lean();
+    
+    // Get only Gemmie messages for similarity comparison
+    const gemmieMessages = await Message.find({
+      userName: 'gemmie',
       timestamp: { $gte: tenMinutesAgo }
     })
       .sort({ timestamp: -1 })
@@ -217,7 +231,7 @@ export async function POST(request: NextRequest) {
       .select('_id content userName timestamp')
       .lean();
 
-    const similarityCheck = await checkResponseSimilarity(response, recentMessages);
+    const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
     
     if (similarityCheck.shouldSkip) {
       console.log(`⚠️ Response too similar to recent message (${similarityCheck.similarityScore}%), skipping send`);
@@ -250,11 +264,11 @@ export async function POST(request: NextRequest) {
     // Check Gemmie's recent messages for repetition and delete if needed
     console.log('🔍 Checking Gemmie messages for repetition...');
 
-    // Filter for only Gemmie messages from the recent messages
-    const gemmieMessagesForRepetition = recentMessages.filter(msg => msg.userName === 'gemmie');
+    // Filter for only Gemmie messages from the all recent messages
+    const gemmieMessagesForRepetition = allRecentMessages.filter((msg: any) => msg.userName === 'gemmie');
 
     if (gemmieMessagesForRepetition.length > 1) {
-      const messagesContext = gemmieMessagesForRepetition.map((msg, index) =>
+      const messagesContext = gemmieMessagesForRepetition.map((msg: any, index: number) =>
         `${index + 1}. ID: ${msg._id} Content: "${msg.content}" Time: ${new Date(msg.timestamp).toISOString()}`
       ).join('\n');
 
