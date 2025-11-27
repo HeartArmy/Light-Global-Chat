@@ -5,6 +5,7 @@ import { getPusherInstance } from '@/lib/pusher';
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import DeletedMessageByGemmie from '@/models/DeletedMessageByGemmie';
+import EditedMessageByGemmie from '@/models/EditedMessageByGemmie';
 import mongoose from 'mongoose';
 
 // Get country flag
@@ -236,8 +237,10 @@ Output ONLY valid JSON: {"deleteIndices": [1,3]} or {"deleteIndices": []} if non
                 
                 // Delete the original message
                 await Message.findByIdAndDelete(id);
-                await pusher.trigger('chat-room', 'delete-message', { messageId: idStr });
-                console.log(`🗑️ Successfully deleted repetitive Gemmie message index ${idx} (${idStr})`);
+                const eventData = { messageId: idStr };
+                console.log('🗑️ About to trigger Pusher delete event with data:', eventData);
+                await pusher.trigger('chat-room', 'delete-message', eventData);
+                console.log(`🗑️ Successfully deleted repetitive Gemmie message index ${idx} (${idStr}) and triggered Pusher event`);
               } else {
                 console.log(`ℹ️ Message index ${idx} (${idStr}) not found or not Gemmie's, skipping delete`);
               }
@@ -250,6 +253,247 @@ Output ONLY valid JSON: {"deleteIndices": [1,3]} or {"deleteIndices": []} if non
         }
       } catch (reviewError) {
         console.error('Error in Gemmie self-review:', reviewError);
+      }
+    }
+
+    // Check Gemmie's recent messages for user feedback and edit if needed
+    console.log('🔍 Checking Gemmie messages for user feedback...');
+    const recentGemmieMessagesForEdit = await Message.find({
+      userName: 'gemmie',
+      timestamp: { $gte: tenMinutesAgo }
+    })
+      .sort({ timestamp: -1 })
+      .limit(5)
+      .select('_id content timestamp')
+      .lean();
+
+    if (recentGemmieMessagesForEdit.length > 0) {
+      const messagesContext = recentGemmieMessagesForEdit.map((msg, index) =>
+        `${index + 1}. ID: ${msg._id} Content: "${msg.content}" Time: ${new Date(msg.timestamp).toISOString()}`
+      ).join('\n');
+
+      const reviewPrompt = `You are reviewing Gemmie's recent messages to decide whether one of them should be edited based on the user's latest reaction.
+
+User's latest message:
+"${userName}: ${userMessage}"
+
+Recent Gemmie messages (1 = newest, 5 = oldest):
+${messagesContext}
+
+Rules for deciding whether to edit:
+- Only consider editing if the user's latest message expresses confusion, accuses Gemmie of sounding like a bot, says she made a mistake, or jokes about her tone.
+- For clarification requests: Only edit if it's a small, relevant clarification that can be naturally added to the existing message. For larger explanations or new information, Gemmie should send a new message instead.
+- If editing is needed, choose the **single most relevant** Gemmie message (usually the one the user reacted to).
+- For corrections: Fix typos, grammar mistakes, or clarify confusing statements. Make it look like a natural self-correction.
+- For small clarifications: Add brief, relevant details that naturally extend the original message. Use phrases like "Oh wait, actually..." or "I should mention..."
+- The edit should sound natural and human-like, as if Gemmie just noticed something and is improving her message.
+- Keep edits short and plausible as a real chat message.
+
+Examples:
+- User: "lol you type like a bot" → Edit to sound more casual and human
+- User: "that doesn't make sense" → Edit to clarify the meaning
+- User: "can you explain more about that" → Usually send new message, but if editing, only add small relevant detail
+- If Gemmie made a typo: Fix it naturally like "whoops" or just correct it
+
+Output ONLY valid JSON with this shape:
+
+{"editIndex": 1, "newContent": "updated text here"}
+
+If no edit is needed:
+
+{"editIndex": null, "newContent": null}`;
+
+      try {
+        const reviewResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
+            'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'x-ai/grok-4.1-fast',
+            messages: [{ role: 'user', content: reviewPrompt }],
+            max_tokens: 200,
+            temperature: 0.1
+          })
+        });
+
+        if (reviewResponse.ok) {
+          const data = await reviewResponse.json();
+          const reviewText = data.choices[0]?.message?.content?.trim();
+          console.log('🤖 AI review for editing:', reviewText);
+
+          let editIndex: number | null = null;
+          let newContent: string | null = null;
+          try {
+            const jsonMatch = reviewText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              editIndex = parsed.editIndex !== null ? parseInt(parsed.editIndex) : null;
+              newContent = parsed.newContent || null;
+            }
+          } catch (parseError) {
+            console.error('Failed to parse edit review JSON:', parseError);
+          }
+
+          if (editIndex !== null && newContent !== null && editIndex >= 1 && editIndex <= recentGemmieMessagesForEdit.length) {
+            const msgIndex = editIndex - 1;
+            const msg = recentGemmieMessagesForEdit[msgIndex];
+            const idStr = msg._id.toString();
+            
+            try {
+              const id = new mongoose.Types.ObjectId(idStr);
+              const message = await Message.findById(id);
+              if (message && message.userName === 'gemmie') {
+                // Store the edit in the EditedMessageByGemmie collection
+                const editedMessage = new EditedMessageByGemmie({
+                  originalMessageId: id,
+                  originalContent: message.content,
+                  newContent: newContent,
+                  editReason: 'user-feedback', // This can now include corrections and enhancements
+                  userName: message.userName,
+                  userCountry: message.userCountry,
+                  timestamp: message.timestamp,
+                  attachments: message.attachments,
+                  replyTo: message.replyTo,
+                  reactions: message.reactions,
+                  edited: message.edited,
+                  editedAtOriginal: message.editedAt,
+                  triggerMessage: `${userName}: ${userMessage}`,
+                  aiPrompt: reviewPrompt
+                });
+                
+                await editedMessage.save();
+                console.log(`💾 Stored edited message ${idStr} in EditedMessageByGemmie collection`);
+                
+                // Update the original message
+                message.content = newContent;
+                message.edited = true;
+                message.editedAt = new Date();
+                await message.save();
+                
+                // Trigger Pusher event for real-time update
+                const pusher = getPusherInstance();
+                await pusher.trigger('chat-room', 'edit-message', {
+                  messageId: idStr,
+                  newContent: newContent
+                });
+                console.log(`✅ Successfully edited Gemmie message index ${editIndex} (${idStr})`);
+              } else {
+                console.log(`ℹ️ Message index ${editIndex} (${idStr}) not found or not Gemmie's, skipping edit`);
+              }
+            } catch (editError) {
+              console.error(`❌ Failed to edit message index ${editIndex} (${idStr}):`, editError);
+            }
+          }
+        } else {
+          console.error('AI edit review failed:', reviewResponse.status);
+        }
+      } catch (reviewError) {
+        console.error('Error in Gemmie self-edit review:', reviewError);
+      }
+    }
+
+    // Check for message corrections - intentionally make small mistakes and fix them
+    console.log('🔍 Checking for message correction opportunities...');
+    const correctionWindow = new Date(Date.now() - 2 * 60 * 1000); // 2 minutes ago
+    const recentGemmieMessagesForCorrection = await Message.find({
+      userName: 'gemmie',
+      timestamp: { $gte: correctionWindow },
+      edited: false // Only consider messages that haven't been edited yet
+    })
+      .sort({ timestamp: -1 })
+      .limit(3)
+      .select('_id content timestamp')
+      .lean();
+
+    if (recentGemmieMessagesForCorrection.length > 0 && Math.random() < 0.3) { // 30% chance
+      const randomMessage = recentGemmieMessagesForCorrection[Math.floor(Math.random() * recentGemmieMessagesForCorrection.length)];
+      const idStr = randomMessage._id.toString();
+      
+      // Common mistakes to make (actual typos, not just casual abbreviations)
+      const mistakes = [
+        { pattern: /\b(think)\b/g, replacement: (match: string) => 'thikn' }, // common typo
+        { pattern: /\b(the)\b/g, replacement: (match: string) => 'teh' }, // common transposition
+        { pattern: /\b(what)\b/g, replacement: (match: string) => 'waht' }, // common transposition
+        { pattern: /\b(have)\b/g, replacement: (match: string) => 'haev' }, // common transposition
+        { pattern: /\b(they)\b/g, replacement: (match: string) => 'thye' }, // common transposition
+        { pattern: /\b(friend)\b/g, replacement: (match: string) => 'freind' }, // common misspelling
+        { pattern: /\b(really)\b/g, replacement: (match: string) => 'realy' }, // common misspelling
+        { pattern: /\b(because)\b/g, replacement: (match: string) => 'becuase' }, // common misspelling
+      ];
+      
+      const randomMistake = mistakes[Math.floor(Math.random() * mistakes.length)];
+      const originalContent = randomMessage.content;
+      const mistakeContent = originalContent.replace(randomMistake.pattern, randomMistake.replacement);
+      
+      // Only apply mistake if it actually changes the content
+      if (mistakeContent !== originalContent) {
+        try {
+          // First, make the mistake
+          const message = await Message.findById(idStr);
+          if (message) {
+            message.content = mistakeContent;
+            await message.save();
+            
+            // Trigger Pusher event for the mistake
+            const pusher = getPusherInstance();
+            await pusher.trigger('chat-room', 'edit-message', {
+              messageId: idStr,
+              newContent: mistakeContent
+            });
+            
+            console.log(`😅 Applied intentional mistake to message ${idStr}: "${originalContent}" → "${mistakeContent}"`);
+            
+            // Set timeout to correct it (2-5 seconds later)
+            setTimeout(async () => {
+              try {
+                const messageToCorrect = await Message.findById(idStr);
+                if (messageToCorrect) {
+                  // Store the correction in EditedMessageByGemmie
+                  const correction = new EditedMessageByGemmie({
+                    originalMessageId: idStr,
+                    originalContent: mistakeContent,
+                    newContent: originalContent,
+                    editReason: 'self-correction',
+                    userName: 'gemmie',
+                    userCountry: messageToCorrect.userCountry,
+                    timestamp: messageToCorrect.timestamp,
+                    attachments: messageToCorrect.attachments,
+                    replyTo: messageToCorrect.replyTo,
+                    reactions: messageToCorrect.reactions,
+                    edited: messageToCorrect.edited,
+                    editedAtOriginal: messageToCorrect.editedAt,
+                    triggerMessage: 'self-correction',
+                    aiPrompt: 'Automatic typo correction'
+                  });
+                  
+                  await correction.save();
+                  
+                  // Correct the message
+                  messageToCorrect.content = originalContent;
+                  messageToCorrect.edited = true;
+                  messageToCorrect.editedAt = new Date();
+                  await messageToCorrect.save();
+                  
+                  // Trigger Pusher event for the correction
+                  await pusher.trigger('chat-room', 'edit-message', {
+                    messageId: idStr,
+                    newContent: originalContent
+                  });
+                  
+                  console.log(`✅ Corrected mistake in message ${idStr}: "${mistakeContent}" → "${originalContent}"`);
+                }
+              } catch (correctError) {
+                console.error(`❌ Failed to correct message ${idStr}:`, correctError);
+              }
+            }, Math.random() * 3000 + 2000); // 2-5 seconds delay
+          }
+        } catch (applyError) {
+          console.error(`❌ Failed to apply mistake to message ${idStr}:`, applyError);
+        }
       }
     }
 

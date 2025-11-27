@@ -133,12 +133,12 @@ export default function ChatRoomClient() {
       }
     });
 
-    // Listen for message updates
-    channel.bind('update-message', (data: any) => {
+    // Listen for message edits
+    channel.bind('edit-message', (data: any) => {
       setMessages((prev) =>
         prev.map((msg) =>
           msg._id === data.messageId
-            ? { ...msg, content: data.content, edited: data.edited, editedAt: data.editedAt }
+            ? { ...msg, content: data.newContent, edited: true, editedAt: new Date() }
             : msg
         )
       );
@@ -146,7 +146,15 @@ export default function ChatRoomClient() {
 
     // Listen for message deletions
     channel.bind('delete-message', (data: any) => {
-      setMessages((prev) => prev.filter((msg) => msg._id !== data.messageId));
+      console.log('🗑️ Received delete-message event:', data);
+      console.log('🗑️ Current messages count before delete:', messages.length);
+      console.log('🗑️ Looking for message to delete:', data.messageId);
+      
+      const filteredMessages = messages.filter((msg) => msg._id !== data.messageId);
+      console.log('🗑️ Messages count after delete:', filteredMessages.length);
+      console.log('🗑️ Message was found and removed:', filteredMessages.length < messages.length);
+      
+      setMessages(filteredMessages);
     });
 
     // Listen for reactions

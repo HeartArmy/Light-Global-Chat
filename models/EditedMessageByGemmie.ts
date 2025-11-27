@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { Message as MessageType, DeletedMessageByGemmie as DeletedMessageByGemmieType } from '@/types';
+import { Message as MessageType, EditedMessageByGemmie as EditedMessageByGemmieType } from '@/types';
 
 const AttachmentSchema = new Schema({
   type: {
@@ -32,16 +32,26 @@ const ReactionSchema = new Schema({
   },
 }, { _id: false });
 
-const DeletedMessageByGemmieSchema = new Schema({
+const EditedMessageByGemmieSchema = new Schema({
   originalMessageId: {
     type: Schema.Types.ObjectId,
     required: true,
     ref: 'Message',
   },
-  content: {
+  originalContent: {
     type: String,
     required: true,
     maxlength: 5000,
+  },
+  newContent: {
+    type: String,
+    required: true,
+    maxlength: 5000,
+  },
+  editReason: {
+    type: String,
+    enum: ['user-feedback', 'self-correction', 'tone-adjustment', 'personality-showcase', 'enhancement'],
+    required: true,
   },
   userName: {
     type: String,
@@ -58,7 +68,7 @@ const DeletedMessageByGemmieSchema = new Schema({
     default: Date.now,
     index: true,
   },
-  deletedAt: {
+  editedAt: {
     type: Date,
     default: Date.now,
     index: true,
@@ -78,33 +88,41 @@ const DeletedMessageByGemmieSchema = new Schema({
   },
   edited: {
     type: Boolean,
-    default: false,
+    default: true,
   },
-  editedAt: {
+  editedAtOriginal: {
     type: Date,
     default: null,
   },
-  deletionReason: {
+  triggerMessage: {
     type: String,
-    enum: ['repetition', 'self-correction', 'manual'],
-    default: 'repetition',
+    required: true,
+    maxlength: 1000,
+  },
+  aiPrompt: {
+    type: String,
+    required: true,
+    maxlength: 2000,
   },
 }, {
   timestamps: false,
 });
 
-// Index for efficient querying by deletion time
-DeletedMessageByGemmieSchema.index({ deletedAt: -1 });
+// Index for efficient querying by edit time
+EditedMessageByGemmieSchema.index({ editedAt: -1 });
 
 // Index for efficient querying by original message ID
-DeletedMessageByGemmieSchema.index({ originalMessageId: 1 });
+EditedMessageByGemmieSchema.index({ originalMessageId: 1 });
+
+// Index for efficient querying by edit reason
+EditedMessageByGemmieSchema.index({ editReason: 1 });
 
 // Prevent model recompilation in development
-const DeletedMessageByGemmie: Model<DeletedMessageByGemmieType> =
-  mongoose.models.DeletedMessageByGemmie ||
-  mongoose.model<DeletedMessageByGemmieType>(
-    'DeletedMessageByGemmie',
-    DeletedMessageByGemmieSchema
+const EditedMessageByGemmie: Model<EditedMessageByGemmieType> =
+  mongoose.models.EditedMessageByGemmie ||
+  mongoose.model<EditedMessageByGemmieType>(
+    'EditedMessageByGemmie',
+    EditedMessageByGemmieSchema
   );
 
-export default DeletedMessageByGemmie;
+export default EditedMessageByGemmie;

@@ -51,3 +51,22 @@ export interface DeletedMessageByGemmie {
   editedAt?: Date;
   deletionReason: 'repetition' | 'self-correction' | 'manual';
 }
+
+export interface EditedMessageByGemmie {
+  _id: string;
+  originalMessageId: string;
+  originalContent: string;
+  newContent: string;
+  editReason: 'user-feedback' | 'self-correction' | 'tone-adjustment' | 'personality-showcase' | 'enhancement';
+  userName: string;
+  userCountry: string;
+  timestamp: Date;
+  editedAt: Date;
+  attachments: Attachment[];
+  replyTo?: string | Message;
+  reactions: Reaction[];
+  edited: boolean;
+  editedAtOriginal?: Date;
+  triggerMessage: string;
+  aiPrompt: string;
+}
