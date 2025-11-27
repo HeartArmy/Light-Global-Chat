@@ -4,6 +4,7 @@ import { generateGemmieResponse, generateGemmieResponseForContext, sendGemmieMes
 import { getPusherInstance } from '@/lib/pusher';
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
+import DeletedMessageByGemmie from '@/models/DeletedMessageByGemmie';
 import mongoose from 'mongoose';
 
 // Get country flag
@@ -215,6 +216,25 @@ Output ONLY valid JSON: {"deleteIndices": [1,3]} or {"deleteIndices": []} if non
               const id = new mongoose.Types.ObjectId(idStr);
               const message = await Message.findById(id);
               if (message && message.userName === 'gemmie') {
+                // Store the deleted message in the DeletedMessageByGemmie collection
+                const deletedMessage = new DeletedMessageByGemmie({
+                  originalMessageId: id,
+                  content: message.content,
+                  userName: message.userName,
+                  userCountry: message.userCountry,
+                  timestamp: message.timestamp,
+                  attachments: message.attachments,
+                  replyTo: message.replyTo,
+                  reactions: message.reactions,
+                  edited: message.edited,
+                  editedAt: message.editedAt,
+                  deletionReason: 'repetition'
+                });
+                
+                await deletedMessage.save();
+                console.log(`💾 Stored deleted message ${idStr} in DeletedMessageByGemmie collection`);
+                
+                // Delete the original message
                 await Message.findByIdAndDelete(id);
                 await pusher.trigger('chat-room', 'delete-message', { messageId: idStr });
                 console.log(`🗑️ Successfully deleted repetitive Gemmie message index ${idx} (${idStr})`);

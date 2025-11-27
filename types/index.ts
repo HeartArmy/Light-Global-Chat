@@ -35,3 +35,19 @@ export interface ResponseValidationResult {
   cleanedResponse: string;
   reason: string;
 }
+
+export interface DeletedMessageByGemmie {
+  _id: string;
+  originalMessageId: string;
+  content: string;
+  userName: string;
+  userCountry: string;
+  timestamp: Date;
+  deletedAt: Date;
+  attachments: Attachment[];
+  replyTo?: string | Message;
+  reactions: Reaction[];
+  edited: boolean;
+  editedAt?: Date;
+  deletionReason: 'repetition' | 'self-correction' | 'manual';
+}
