@@ -1,16 +1,17 @@
-name: MongoDB Backup
+name: MongoDB Backup to Release
 
 on:
   schedule:
-    # Every 30 minutes (cron uses: minute hour day-of-month month day-of-week)
+    # Every 30 minutes
     - cron: '*/30 * * * *'
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch:
 
 jobs:
   backup:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -122,23 +123,28 @@ jobs:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
         run: node backup-mongodb.js
 
-      - name: Commit and push backup
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # Check if there are changes
-          if git diff --quiet; then
-            echo "No changes to commit"
-          else
-            git add mongodb-backup/
-            git commit -m "🔄 MongoDB backup $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-            git push
-            echo "✅ Backup committed and pushed successfully"
-          fi
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: mongodb-backup-${{ github.run_number }}
+          name: MongoDB Backup ${{ github.run_number }}
+          body: |
+            Automated MongoDB backup created at ${{ github.event.head_commit.timestamp }}
+            
+            **Backup Details:**
+            - Timestamp: ${{ github.event.head_commit.timestamp }}
+            - Run Number: ${{ github.run_number }}
+            - Collections: See backup-info.json in assets
+            
+            **⚠️ Warning:** This backup contains sensitive data. Keep it secure.
+          files: mongodb-backup/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cleanup
         if: always()
         run: |
-          # Remove the backup script after execution
-          rm -f backup-mongodb.js
+          # Remove the backup script and directory after creating release
+          rm -rf backup-mongodb.js mongodb-backup/
