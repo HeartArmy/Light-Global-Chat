@@ -41,12 +41,12 @@ const EditedMessageByGemmieSchema = new Schema({
   originalContent: {
     type: String,
     required: true,
-    maxlength: 5000,
+    maxlength: 7000,
   },
   newContent: {
     type: String,
     required: true,
-    maxlength: 5000,
+    maxlength: 7000,
   },
   editReason: {
     type: String,
@@ -97,12 +97,12 @@ const EditedMessageByGemmieSchema = new Schema({
   triggerMessage: {
     type: String,
     required: true,
-    maxlength: 1000,
+    maxlength: 7000,
   },
   aiPrompt: {
     type: String,
     required: true,
-    maxlength: 2000,
+    maxlength: 7000,
   },
 }, {
   timestamps: false,
