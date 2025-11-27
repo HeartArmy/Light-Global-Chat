@@ -120,10 +120,10 @@ jobs:
 
       - name: Run MongoDB backup
         env:
-          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_URI: "${{ secrets.MONGODB_URI }}"
         run: |
-          # Ensure MongoDB URI has proper scheme
-          if [[ "$MONGODB_URI" != mongodb* ]]; then
+          # Ensure MongoDB URI has proper scheme (strict check)
+          if [[ "$MONGODB_URI" != mongodb://* && "$MONGODB_URI" != mongodb+srv://* ]]; then
             echo "⚠️  MongoDB URI missing scheme, adding mongodb+srv://"
             MONGODB_URI="mongodb+srv://$MONGODB_URI"
             echo "Modified URI: $MONGODB_URI"
