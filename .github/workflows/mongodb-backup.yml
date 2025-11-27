@@ -1,0 +1,144 @@
+name: MongoDB Backup
+
+on:
+  schedule:
+    # Every 30 minutes (cron uses: minute hour day-of-month month day-of-week)
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create backup script
+        run: |
+          cat > backup-mongodb.js << 'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          const { MongoClient } = require('mongodb');
+          require('dotenv').config();
+
+          async function backupMongoDB() {
+            try {
+              if (!process.env.MONGODB_URI) {
+                throw new Error('MONGODB_URI not found in environment variables');
+              }
+
+              console.log('🔄 Starting MongoDB backup...');
+              
+              // Connect to MongoDB
+              const client = new MongoClient(process.env.MONGODB_URI);
+              await client.connect();
+              console.log('✅ Connected to MongoDB');
+
+              // Get database name from URI or use default
+              const dbName = new URL(process.env.MONGODB_URI).pathname.substring(1) || 'chatdb';
+              const database = client.db(dbName);
+              
+              // Create backup directory
+              const backupDir = path.join(process.cwd(), 'mongodb-backup');
+              if (!fs.existsSync(backupDir)) {
+                fs.mkdirSync(backupDir, { recursive: true });
+              }
+
+              // Get all collections
+              const collections = await database.listCollections().toArray();
+              console.log(`📁 Found ${collections.length} collections to backup`);
+
+              let totalDocuments = 0;
+
+              // Backup each collection
+              for (const collectionInfo of collections) {
+                const collectionName = collectionInfo.name;
+                const collection = database.collection(collectionName);
+                
+                console.log(`📦 Backing up collection: ${collectionName}`);
+                
+                // Get all documents from collection
+                const documents = await collection.find({}).toArray();
+                totalDocuments += documents.length;
+                
+                // Save to JSON file
+                const backupFile = path.join(backupDir, `${collectionName}.json`);
+                fs.writeFileSync(backupFile, JSON.stringify(documents, null, 2));
+                
+                console.log(`✅ Backed up ${documents.length} documents from ${collectionName}`);
+              }
+
+              console.log(`🎉 Backup completed! Total documents backed up: ${totalDocuments}`);
+              
+              // Create backup info file
+              const backupInfo = {
+                timestamp: new Date().toISOString(),
+                database: dbName,
+                collections: collections.length,
+                totalDocuments: totalDocuments,
+                collections: collections.map(c => c.name)
+              };
+              
+              fs.writeFileSync(
+                path.join(backupDir, 'backup-info.json'),
+                JSON.stringify(backupInfo, null, 2)
+              );
+
+              await client.close();
+              console.log('🔓 Disconnected from MongoDB');
+              
+              return backupDir;
+            } catch (error) {
+              console.error('❌ Backup failed:', error);
+              throw error;
+            }
+          }
+
+          // Run the backup
+          backupMongoDB()
+            .then((backupDir) => {
+              console.log('✅ Backup successful:', backupDir);
+              process.exit(0);
+            })
+            .catch((error) => {
+              console.error('❌ Backup failed:', error);
+              process.exit(1);
+            });
+          EOF
+
+      - name: Run MongoDB backup
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: node backup-mongodb.js
+
+      - name: Commit and push backup
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Check if there are changes
+          if git diff --quiet; then
+            echo "No changes to commit"
+          else
+            git add mongodb-backup/
+            git commit -m "🔄 MongoDB backup $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            git push
+            echo "✅ Backup committed and pushed successfully"
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Remove the backup script after execution
+          rm -f backup-mongodb.js
