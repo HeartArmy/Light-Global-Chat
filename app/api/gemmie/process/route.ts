@@ -172,6 +172,7 @@ IMPORTANT RULES:
 - Do NOT delete messages from index 3 or higher (older messages)
 - Only delete if there's clear repetition between the most recent messages
 - Prefer deleting the older of the two repetitive messages
+- CRITICAL: You can only delete a message if it was sent within 30 seconds of the most recent message. Check the timestamps and only delete if the time difference is 30 seconds or less.
 
 Output ONLY valid JSON: {"deleteIndices": [1]} or {"deleteIndices": [2]} or {"deleteIndices": []} if none needed.
 Allowed indices: [1] or [2] only!`;
