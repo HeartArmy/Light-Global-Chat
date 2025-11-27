@@ -133,25 +133,13 @@ jobs:
           echo "Database name: $DATABASE_NAME"
           node backup-mongodb.js
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+      - name: Upload MongoDB Backup as Artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: mongodb-backup-${{ github.run_number }}
-          name: MongoDB Backup ${{ github.run_number }}
-          body: |
-            Automated MongoDB backup created at ${{ github.event.head_commit.timestamp }}
-            
-            **Backup Details:**
-            - Timestamp: ${{ github.event.head_commit.timestamp }}
-            - Run Number: ${{ github.run_number }}
-            - Collections: See backup-info.json in assets
-            
-            **⚠️ Warning:** This backup contains sensitive data. Keep it secure.
-          files: mongodb-backup/*
-          draft: true
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: mongodb-backup-${{ github.run_number }}
+          path: mongodb-backup/
+          retention-days: 90
+          overwrite: true
 
       - name: Cleanup
         if: always()
