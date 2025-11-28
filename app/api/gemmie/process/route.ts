@@ -414,9 +414,8 @@ IMPORTANT RULES:
 - You can ONLY edit Gemmie's most recent message (index 1) or the second most recent message (index 2)
 - Do NOT edit messages from index 3 or higher (older messages)
 - ALWAYS check for spelling errors, grammar mistakes, and typos FIRST, even without explicit user feedback
-- Common typos to fix: "everytime" → "every time", "alot" → "a lot", "dont" → "don't", "cant" → "can't", "wont" → "won't", "teh" → "the", "goin" → "going", "runnin" → "running", etc.
+- Common typos to fix: "everytime" → "every time", "alot" → "a lot", "dont" → "don't", "cant" → "can't", "wont" → "won't", "teh" → "the", etc.
 - Intentional slang/shortcuts that are OK: "gonna", "wanna", "gimme", "cause" (as in "because"), "cos" (as in "because")
-- Fix misspellings even if they look like slang: "goin" should be "going", "runnin" should be "running"
 - Also consider editing if the user's latest message expresses confusion, accuses Gemmie of sounding like a bot, says she made a mistake, or jokes about her tone.
 - For clarification requests: Only edit if it's a small, relevant clarification that can be naturally added to the existing message. For larger explanations or new information, Gemmie should send a new message instead.
 - If editing is needed, choose the **single most relevant** Gemmie message (usually the most recent one).
@@ -431,8 +430,6 @@ Examples:
 - User: "can you explain more about that" → Usually send new message, but if editing, only add small relevant detail
 - If Gemmie made a typo like "everytime": Fix it naturally like "whoops, every time" or just "every time"
 - If Gemmie made a typo like "alot": Fix it naturally like "actually, a lot" or just "a lot"
-- If Gemmie made "goin": Fix it to "going" (not intentional slang, it's a misspelling)
-- If Gemmie made "runnin": Fix it to "running" (not intentional slang, it's a misspelling)
 
 Output ONLY valid JSON with this shape:
 
