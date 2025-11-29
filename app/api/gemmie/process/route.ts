@@ -52,7 +52,7 @@ IMPORTANT ANALYSIS RULES:
 Respond ONLY with a JSON object:
 {"shouldSkip": true/false, "similarityScore": 0-100, "explanation": "brief reason"}
 
-shouldSkip = true if Gemmie's new response is too similar to her OWN previous messages (70%+ similarity)
+shouldSkip = true if Gemmie's new response is too similar to her OWN previous messages (95%+ similarity)
 similarityScore = how similar Gemmie's new response is to her OWN previous messages (0-100 scale)`;
 
   try {

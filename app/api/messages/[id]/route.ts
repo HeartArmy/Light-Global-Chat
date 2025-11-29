@@ -42,6 +42,14 @@ export async function PATCH(
 
     await connectDB();
 
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { error: 'Invalid message ID', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
+
     // Find message
     const message = await Message.findById(new mongoose.Types.ObjectId(id));
 
@@ -118,6 +126,14 @@ export async function DELETE(
     }
 
     await connectDB();
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { error: 'Invalid message ID', code: 'INVALID_INPUT' },
+        { status: 400 }
+      );
+    }
 
     // Find message
     const message = await Message.findById(new mongoose.Types.ObjectId(id));
