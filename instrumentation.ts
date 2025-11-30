@@ -34,8 +34,11 @@ function extractRouteFromStack(): string {
 
 // Save log to MongoDB
 async function saveToMongoDB(level: string, message: string, args: any[] = []) {
+  console.log('🔍 saveToMongoDB called:', level, message.substring(0, 50));
   try {
+    console.log('🔍 Calling connectDB...');
     await connectDB();
+    console.log('✅ connectDB done');
     
     const logEntry = new Log({
       level,
@@ -47,17 +50,22 @@ async function saveToMongoDB(level: string, message: string, args: any[] = []) {
       route: extractRouteFromStack(),
     });
 
+    console.log('💾 Saving log entry...');
     await logEntry.save();
-    console.log('Log saved to MongoDB:', level, message);
+    console.log('✅ Log saved to MongoDB:', level);
   } catch (error) {
-    console.error('Failed to save log to MongoDB:', error);
+    console.error('❌ Failed to save log to MongoDB:', error);
   }
 }
 
 export function register() {
+  console.log('🚀 === INSTRUMENTATION REGISTER CALLED ===');
+  
   registerOTel({
     serviceName: process.env.OTEL_SERVICE_NAME || 'globalchat',
   });
+
+  console.log('📊 OTel registered, patching console...');
 
   // Console.log interception for server-side
   const originalLog = console.log;
@@ -94,9 +102,11 @@ export function register() {
     saveToMongoDB('debug', message, args);
     originalDebug(...args);
   };
+
+  console.log('✅ Console patching completed successfully!');
 }
 
-// OpenTelemetry configuration for Kubiks
+// OpenTelemetry configuration for Kubiks (optional)
 // The @vercel/otel package will automatically use these environment variables:
 // - OTEL_EXPORTER_OTLP_ENDPOINT: https://ingest.kubiks.app
 // - OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
