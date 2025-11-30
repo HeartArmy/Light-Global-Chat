@@ -1,6 +1,6 @@
 import pino from 'pino';
 
-// Custom Logflare transport for Pino
+// Custom Logflare transport for Pino (server-side)
 class LogflareTransport {
   private apiKey: string;
   private sourceToken: string;
@@ -10,13 +10,13 @@ class LogflareTransport {
     this.sourceToken = sourceToken;
   }
 
-  async send(logs: any[]): Promise<void> {
+  write(log: any): void {
     if (!this.apiKey || !this.sourceToken) {
       return;
     }
 
     try {
-      const logEntries = logs.map(log => ({
+      const logEntry = {
         source: this.sourceToken,
         log_entry: log.msg,
         metadata: {
@@ -24,15 +24,18 @@ class LogflareTransport {
           timestamp: log.time,
           ...log.obj,
         },
-      }));
+      };
 
-      await fetch('https://api.logflare.app/logs/json', {
+      fetch('https://api.logflare.app/logs/json', {
         method: 'POST',
         headers: {
           'X-API-KEY': this.apiKey,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(logEntries),
+        body: JSON.stringify([logEntry]),
+      }).catch(error => {
+        // Don't let logging failures break the application
+        console.error('Failed to send logs to Logflare:', error);
       });
     } catch (error) {
       // Don't let logging failures break the application
@@ -50,19 +53,22 @@ const logflareTransport = new LogflareTransport(
   logflareSourceId || ''
 );
 
-// Create Pino logger with Logflare transport only
+// Create Pino logger with Logflare transport (server-side)
 const logger = pino(
   {
     level: 'info',
-    browser: {
-      transmit: {
-        level: 'info',
-        send: (level, log) => {
-          logflareTransport.send([log]);
-        },
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        translateTime: 'SYS:standard',
+        ignore: 'pid,hostname',
       },
     },
-  }
+  },
+  pino.multistream([
+    { level: 'info', stream: logflareTransport },
+    { level: 'info', stream: process.stdout }, // Also log to console for debugging
+  ])
 );
 
 // Console.log interception
