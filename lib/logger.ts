@@ -1,74 +1,28 @@
 import pino from 'pino';
+import { logflarePinoVercel } from 'pino-logflare';
 
-// Custom Logflare transport for Pino (server-side)
-class LogflareTransport {
-  private apiKey: string;
-  private sourceToken: string;
+// Create pino-logflare console stream for serverless functions and send function for browser logs
+const { stream, send } = logflarePinoVercel({
+  apiKey: process.env.LOGFLARE_API_KEY!,
+  sourceToken: process.env.LOGFLARE_SOURCE_ID!,
+});
 
-  constructor(apiKey: string, sourceToken: string) {
-    this.apiKey = apiKey;
-    this.sourceToken = sourceToken;
-  }
-
-  write(log: any): void {
-    if (!this.apiKey || !this.sourceToken) {
-      return;
-    }
-
-    try {
-      const logEntry = {
-        source: this.sourceToken,
-        log_entry: log.msg,
-        metadata: {
-          level: log.level,
-          timestamp: log.time,
-          ...log.obj,
-        },
-      };
-
-      // Use the correct Logflare API endpoint from the docs
-      fetch('https://api.logflare.app/logs/json?api_key=' + this.apiKey + '&source=' + this.sourceToken, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify([logEntry]),
-      }).catch(error => {
-        // Don't let logging failures break the application
-        console.error('Failed to send logs to Logflare:', error);
-      });
-    } catch (error) {
-      // Don't let logging failures break the application
-      console.error('Failed to send logs to Logflare:', error);
-    }
-  }
-}
-
-// Create Logflare transport instance
-const logflareApiKey = process.env.LOGFLARE_API_KEY;
-const logflareSourceId = process.env.LOGFLARE_SOURCE_ID;
-
-const logflareTransport = new LogflareTransport(
-  logflareApiKey || '',
-  logflareSourceId || ''
-);
-
-// Create Pino logger with Logflare transport (server-side)
+// Create Pino logger with official Logflare transport
 const logger = pino(
   {
-    level: 'info',
-    transport: {
-      target: 'pino-pretty',
-      options: {
-        translateTime: 'SYS:standard',
-        ignore: 'pid,hostname',
+    browser: {
+      transmit: {
+        level: 'info',
+        send: send,
       },
     },
+    level: 'info',
+    base: {
+      env: process.env.VERCEL_ENV,
+      revision: process.env.VERCEL_GITHUB_COMMIT_SHA,
+    },
   },
-  pino.multistream([
-    { level: 'info', stream: logflareTransport },
-    { level: 'info', stream: process.stdout }, // Also log to console for debugging
-  ])
+  stream
 );
 
 // Console.log interception
