@@ -14,7 +14,16 @@ jobs:
         uses: geekyeggo/delete-artifact@v2
         with:
           name: "mongodb-backup-*"
-          token: ${{ github.token }}
+          useGlob: true
+          failOnError: false
+
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 7
+          keep_minimum_runs: 5
 
   backup:
     runs-on: ubuntu-latest
