@@ -18,9 +18,9 @@ jobs:
       contents: read
     steps:
       - name: Delete old artifacts
-        uses: actions/delete-artifact@v4
+        uses: geekyeggo/delete-artifact@v5
         with:
-          name: mongodb-backup-
+          name: mongodb-backup-*
           failOnError: false
 
       - name: Delete old workflow runs
