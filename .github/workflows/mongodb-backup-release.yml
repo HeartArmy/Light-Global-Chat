@@ -6,6 +6,10 @@ on:
     - cron: '0 6,18 * * *'
   workflow_dispatch:
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
@@ -14,16 +18,15 @@ jobs:
       contents: read
     steps:
       - name: Delete old artifacts
-        uses: geekyeggo/delete-artifact@v2
+        uses: actions/delete-artifact@v4
         with:
-          name: "mongodb-backup-*"
-          useGlob: true
+          name: mongodb-backup-
           failOnError: false
 
       - name: Delete old workflow runs
         uses: Mattraks/delete-workflow-runs@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
           repository: "HeartArmy/Light-Global-Chat"
           retain_days: 7
           keep_minimum_runs: 5
