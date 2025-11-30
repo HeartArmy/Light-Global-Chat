@@ -26,10 +26,10 @@ class LogflareTransport {
         },
       };
 
-      fetch('https://api.logflare.app/logs/json', {
+      // Use the correct Logflare API endpoint from the docs
+      fetch('https://api.logflare.app/logs/json?api_key=' + this.apiKey + '&source=' + this.sourceToken, {
         method: 'POST',
         headers: {
-          'X-API-KEY': this.apiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify([logEntry]),
