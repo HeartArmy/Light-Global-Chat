@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import { getPusherInstance } from '@/lib/pusher';
 import mongoose from 'mongoose';
+import Log from '@/models/Log';
 
 export const dynamic = 'force-dynamic';
 
@@ -165,6 +166,22 @@ export async function DELETE(
         { status: 403 }
       );
     }
+
+    // Save deleted message to MongoDB logs
+    const logEntry = new Log({
+      level: 'info',
+      message: `Message deleted: ${id}`,
+      meta: {
+        messageId: id,
+        userName: userName,
+        userCountry: message.userCountry,
+        originalContent: message.content,
+        timestamp: new Date(),
+      },
+      route: '/api/messages/[id]',
+    });
+
+    await logEntry.save();
 
     // Delete message
     await Message.findByIdAndDelete(new mongoose.Types.ObjectId(id));

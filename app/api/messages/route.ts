@@ -8,6 +8,7 @@ import { sendNewMessageNotification } from '@/lib/email';
 import redis from '@/lib/redis'; // Import redis
 import { shouldGemmieReact, selectEmojiForMessage, recordGemmieReaction } from '@/lib/gemmie-reactions';
 import { Attachment } from '@/types';
+import Log from '@/models/Log';
 
 export const dynamic = 'force-dynamic';
 
@@ -261,6 +262,23 @@ export async function POST(request: NextRequest) {
       console.log('⏭️ Skipping Gemmie response (user is arham or gemmie)');
     }
 
+    // Save message creation to MongoDB logs
+    const logEntry = new Log({
+      level: 'info',
+      message: `Message created: ${message._id}`,
+      meta: {
+        messageId: message._id.toString(),
+        userName,
+        userCountry: countryCode,
+        content: content || '[attachment]',
+        attachmentsCount: attachments.length,
+        timestamp: new Date(),
+      },
+      route: '/api/messages',
+    });
+
+    await logEntry.save();
+
     console.log('Message creation completed successfully');
     return NextResponse.json({ message: populatedMessage });
   } catch (error) {
@@ -397,7 +415,7 @@ export async function DELETE(request: NextRequest) {
 
     // Allow deleting if user is arham or gemmie, or if message is from the user and within 10 minutes
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const isAuthorizedUser = ['arham', 'gemmie'].includes(userName.toLowerCase()) || 
+    const isAuthorizedUser = ['arham', 'gemmie'].includes(userName.toLowerCase()) ||
                              (message.userName === userName && message.timestamp > tenMinutesAgo);
 
     if (!isAuthorizedUser) {
@@ -406,6 +424,22 @@ export async function DELETE(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    // Save deleted message to MongoDB logs
+    const logEntry = new Log({
+      level: 'info',
+      message: `Message deleted: ${messageId}`,
+      meta: {
+        messageId: messageId,
+        userName: userName,
+        userCountry: message.userCountry,
+        originalContent: message.content,
+        timestamp: new Date(),
+      },
+      route: '/api/messages',
+    });
+
+    await logEntry.save();
 
     await Message.findByIdAndDelete(messageId);
 
