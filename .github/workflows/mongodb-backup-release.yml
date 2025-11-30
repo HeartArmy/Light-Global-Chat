@@ -9,6 +9,9 @@ on:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     steps:
       - name: Delete old artifacts
         uses: geekyeggo/delete-artifact@v2
@@ -21,7 +24,7 @@ jobs:
         uses: Mattraks/delete-workflow-runs@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
+          repository: "HeartArmy/Light-Global-Chat"
           retain_days: 7
           keep_minimum_runs: 5
 
