@@ -34,7 +34,6 @@ function extractRouteFromStack(): string {
 
 // Save log to MongoDB
 async function saveToMongoDB(level: string, message: string, args: any[] = []) {
-  console.log('🔍 saveToMongoDB called:', level, message.substring(0, 50));
   try {
     await connectDB();
     
@@ -49,9 +48,8 @@ async function saveToMongoDB(level: string, message: string, args: any[] = []) {
     });
 
     await logEntry.save();
-    console.log('✅ Log saved to MongoDB:', level);
   } catch (error) {
-    console.error('❌ Failed to save log to MongoDB:', error);
+    // Don't let logging failures break the application
   }
 }
 
@@ -90,8 +88,6 @@ console.debug = (...args) => {
   saveToMongoDB('debug', message, args);
   originalDebug(...args);
 };
-
-console.log('✅ MongoDB console patching loaded!');
 
 // === MONGODB CONNECTION ===
 const MONGODB_URI = process.env.MONGODB_URI!;
