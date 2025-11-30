@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import '@/lib/logger'; // Enable MongoDB logging interception
 
 export function middleware(request: NextRequest) {
   const response = NextResponse.next();

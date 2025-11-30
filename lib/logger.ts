@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
 import Log from '@/models/Log';
+import connectDB from '@/lib/mongodb';
 
 // Helper function to convert arguments to string
 function argsToString(args: any[]): string {
@@ -34,12 +34,7 @@ function extractRouteFromStack(): string {
 // Save log to MongoDB
 async function saveToMongoDB(level: string, message: string, args: any[] = []) {
   try {
-    // Connect to MongoDB if not already connected
-    if (!mongoose.connection.readyState) {
-      await mongoose.connect(process.env.MONGODB_URI!, {
-        bufferCommands: false,
-      });
-    }
+    await connectDB();
     
     const logEntry = new Log({
       level,

@@ -4,7 +4,6 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import JsonLd from './jsonld';
 import './globals.css';
-import '@/lib/console-patch'; // Import console patch to intercept all logs and send to Logflare
 import '@/lib/logger'; // Import logger to enable console interception for MongoDB
 
 export const metadata: Metadata = {
