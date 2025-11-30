@@ -50,7 +50,7 @@ const logflareTransport = new LogflareTransport(
   logflareSourceId || ''
 );
 
-// Create Pino logger with Logflare transport
+// Create Pino logger with Logflare transport only
 const logger = pino(
   {
     level: 'info',
@@ -62,11 +62,7 @@ const logger = pino(
         },
       },
     },
-  },
-  pino.transport({
-    target: 'pino/file',
-    options: { destination: './logs/app.log' },
-  })
+  }
 );
 
 // Console.log interception
