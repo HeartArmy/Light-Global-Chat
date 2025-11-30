@@ -1,0 +1,26 @@
+name: One-Time Cleanup
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  aggressive-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete ALL old artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: mongodb-backup-*
+          failOnError: false
+
+      - name: Delete old workflow runs (keep only 2 most recent)
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: "HeartArmy/Light-Global-Chat"
+          retain_days: 0
+          keep_minimum_runs: 2
