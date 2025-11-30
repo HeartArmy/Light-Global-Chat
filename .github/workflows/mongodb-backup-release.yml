@@ -23,13 +23,13 @@ jobs:
           name: mongodb-backup-*
           failOnError: false
 
-      - name: Delete old workflow runs
+      - name: Delete old workflow runs (keep only 2 most recent)
         uses: Mattraks/delete-workflow-runs@v2
         with:
           token: ${{ github.token }}
           repository: "HeartArmy/Light-Global-Chat"
-          retain_days: 7
-          keep_minimum_runs: 5
+          retain_days: 0
+          keep_minimum_runs: 2
 
   backup:
     runs-on: ubuntu-latest
