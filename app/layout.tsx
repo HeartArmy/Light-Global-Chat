@@ -4,7 +4,6 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import JsonLd from './jsonld';
 import './globals.css';
-import '@/lib/logger'; // Import logger to enable console interception for MongoDB
 
 export const metadata: Metadata = {
   title: 'Global Live Chat Room - Free Real-Time Chat Room | Live Chat Online',
