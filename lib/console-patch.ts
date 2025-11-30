@@ -1,5 +1,3 @@
-import { logInfo, logError, logWarn, logDebug } from './logger';
-
 // Store original console methods
 const originalConsole = {
   log: console.log,
@@ -41,19 +39,48 @@ function argsToString(args: any[]): string {
   }).join(' ');
 }
 
+// Send log to Logflare
+async function sendToLogflare(level: string, message: string, route: string, args: any[]) {
+  const logflareApiKey = process.env.LOGFLARE_API_KEY;
+  const logflareSourceId = process.env.LOGFLARE_SOURCE_ID;
+
+  if (!logflareApiKey || !logflareSourceId) {
+    return; // Skip Logflare if not configured
+  }
+
+  try {
+    const logEntry = {
+      source: logflareSourceId,
+      log_entry: message,
+      metadata: {
+        level,
+        route,
+        originalArgs: args,
+        timestamp: new Date().toISOString(),
+      },
+    };
+
+    await fetch('https://api.logflare.app/logs/json', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': logflareApiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify([logEntry]), // Logflare expects an array of log entries
+    });
+  } catch (error) {
+    // Don't let logging failures break the application
+    console.error('Failed to send log to Logflare:', error);
+  }
+}
+
 // Patch console.log
 console.log = (...args: any[]) => {
   originalConsole.log(...args);
   const message = argsToString(args);
   const route = extractRouteFromStack();
   
-  logInfo(message, {
-    route,
-    meta: {
-      originalArgs: args,
-      timestamp: new Date().toISOString(),
-    }
-  });
+  sendToLogflare('info', message, route, args);
 };
 
 // Patch console.error
@@ -62,13 +89,7 @@ console.error = (...args: any[]) => {
   const message = argsToString(args);
   const route = extractRouteFromStack();
   
-  logError(message, {
-    route,
-    meta: {
-      originalArgs: args,
-      timestamp: new Date().toISOString(),
-    }
-  });
+  sendToLogflare('error', message, route, args);
 };
 
 // Patch console.warn
@@ -77,13 +98,7 @@ console.warn = (...args: any[]) => {
   const message = argsToString(args);
   const route = extractRouteFromStack();
   
-  logWarn(message, {
-    route,
-    meta: {
-      originalArgs: args,
-      timestamp: new Date().toISOString(),
-    }
-  });
+  sendToLogflare('warn', message, route, args);
 };
 
 // Patch console.info
@@ -92,13 +107,7 @@ console.info = (...args: any[]) => {
   const message = argsToString(args);
   const route = extractRouteFromStack();
   
-  logInfo(message, {
-    route,
-    meta: {
-      originalArgs: args,
-      timestamp: new Date().toISOString(),
-    }
-  });
+  sendToLogflare('info', message, route, args);
 };
 
 // Patch console.debug
@@ -107,13 +116,7 @@ console.debug = (...args: any[]) => {
   const message = argsToString(args);
   const route = extractRouteFromStack();
   
-  logDebug(message, {
-    route,
-    meta: {
-      originalArgs: args,
-      timestamp: new Date().toISOString(),
-    }
-  });
+  sendToLogflare('debug', message, route, args);
 };
 
 // Export the original console methods for cases where you need to bypass the patch

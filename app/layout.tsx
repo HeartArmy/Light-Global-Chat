@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import JsonLd from './jsonld';
 import './globals.css';
+import '@/lib/console-patch'; // Import console patch to intercept all logs and send to Logflare
 
 export const metadata: Metadata = {
   title: 'Global Live Chat Room - Free Real-Time Chat Room | Live Chat Online',
