@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
     const words = (response.match(/\S+/g) || []).length;
     const typingSpeedWps = 1.3; // words/sec (chatgpt said 1.3 word per second for 100 wpm)
     let typingDelaySec = words / typingSpeedWps;
-    typingDelaySec = Math.max(1, Math.min(10, typingDelaySec)); // cap 1-10s
+    typingDelaySec = Math.max(1, Math.min(1, typingDelaySec)); // cap 1-10s
     typingDelaySec *= (0.8 + Math.random() * 0.4); // 20% variance
     const typingDelayMs = typingDelaySec * 1000;
     console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
