@@ -170,10 +170,12 @@ export default function ChatRoomClient() {
       console.log('🗑️ Message exists in current state:', messageExists);
       
       if (messageExists) {
-        const filteredMessages = messages.filter((msg) => msg._id !== data.messageId);
-        console.log('🗑️ Messages count after delete:', filteredMessages.length);
-        console.log('🗑️ Message was found and removed:', filteredMessages.length < messages.length);
-        setMessages(filteredMessages);
+        setMessages((prevMessages) => {
+          const filteredMessages = prevMessages.filter((msg) => msg._id !== data.messageId);
+          console.log('🗑️ Messages count after delete:', filteredMessages.length);
+          console.log('🗑️ Message was found and removed:', filteredMessages.length < prevMessages.length);
+          return filteredMessages;
+        });
       } else {
         console.log('🗑️ Message not found in current state, possibly already deleted or not loaded yet');
         // Force a refresh of messages from the server

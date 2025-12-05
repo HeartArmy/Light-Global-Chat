@@ -42,7 +42,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'amazon/nova-2-lite-v1:free',
+        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
         messages: [
           {
             role: 'user',

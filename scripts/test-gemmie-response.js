@@ -39,10 +39,10 @@ Return ONLY the cleaned conversational response, nothing else.`;
   console.log('---');
   
   try {
-    console.log('\n🚀 Making API call to amazon/nova-2-lite-v1:free...');
+    console.log('\n🚀 Making API call to nvidia/nemotron-nano-12b-v2-vl:free...');
     
     console.log('🔑 Using OpenRouter API key from .env.local');
-    console.log('🔗 Model: amazon/nova-2-lite-v1:free');
+    console.log('🔗 Model: nvidia/nemotron-nano-12b-v2-vl:free');
     console.log('🌐 Site URL:', process.env.NEXT_PUBLIC_SITE_URL);
     console.log('🏷️  Site Name:', process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App');
 
@@ -55,7 +55,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'amazon/nova-2-lite-v1:free',
+        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
         messages: [
           {
             role: 'user',

@@ -65,7 +65,7 @@ similarityScore = how similar Gemmie's new response is to her OWN previous messa
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'amazon/nova-2-lite-v1:free',
+        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
         messages: [{ role: 'user', content: similarityPrompt }],
         max_tokens: 150,
         temperature: 0.1
@@ -296,7 +296,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'amazon/nova-2-lite-v1:free',
+            model: 'nvidia/nemotron-nano-12b-v2-vl:free',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 200,
             temperature: 0.1
@@ -359,8 +359,15 @@ Allowed indices: [1] or [2] only!`;
                 await Message.findByIdAndDelete(id);
                 const eventData = { messageId: idStr };
                 console.log('🗑️ About to trigger Pusher delete event with data:', eventData);
-                await pusher.trigger('chat-room', 'delete-message', eventData);
-                console.log(`🗑️ Successfully deleted repetitive Gemmie message index ${idx} (${idStr}) and triggered Pusher event`);
+                
+                // Ensure Pusher event is sent successfully before continuing
+                try {
+                  await pusher.trigger('chat-room', 'delete-message', eventData);
+                  console.log(`🗑️ Successfully deleted repetitive Gemmie message index ${idx} (${idStr}) and triggered Pusher event`);
+                } catch (pusherError) {
+                  console.error(`❌ Failed to trigger Pusher event for message ${idStr}:`, pusherError);
+                  // Continue processing even if Pusher fails - the message is still deleted
+                }
               } else {
                 console.log(`ℹ️ Message index ${idx} (${idStr}) not found or not Gemmie's, skipping delete`);
               }
@@ -452,7 +459,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'amazon/nova-2-lite-v1:free',
+            model: 'nvidia/nemotron-nano-12b-v2-vl:free',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 200,
             temperature: 0.1
@@ -562,6 +569,9 @@ Allowed indices: [1] or [2] only!`;
 
 
     // --- Check for new messages that arrived during processing ---
+    // Add a small delay to ensure Pusher events are processed before checking queue
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     const { getAndClearGemmieQueue: getQueueAgain, resetGemmieTimer: rescheduleJob, queueGemmieMessage } = await import('@/lib/gemmie-timer');
     const newlyQueuedMessages = await getQueueAgain();
     
