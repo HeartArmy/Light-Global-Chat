@@ -314,6 +314,11 @@ export async function POST(request: NextRequest) {
     console.log('📤 Sending Gemmie message to chat...');
     await sendGemmieMessage(response);
 
+    // Clear typing indicator when Gemmie sends response
+    const { setTypingIndicator } = await import('@/lib/gemmie-timer');
+    await setTypingIndicator(false);
+    console.log('💬 Gemmie typing indicator cleared');
+
     // Trigger Pusher event for real-time update
     const pusher = getPusherInstance();
     const gemmieMessage = {

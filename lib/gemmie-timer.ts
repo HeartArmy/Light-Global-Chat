@@ -10,6 +10,8 @@ const GEMMIE_MESSAGE_QUEUE_KEY = 'gemmie:message-queue';
 const JOB_ACTIVE_KEY = 'gemmie:job-active';
 // Key for storing the URL of the single image selected for AI processing in the current burst
 const GEMMIE_SELECTED_IMAGE_URL_KEY = 'gemmie:selected-image-url';
+// Key for tracking typing indicator status
+const TYPING_INDICATOR_KEY = 'typing:indicator';
 // Time in seconds for the delay before Gemmie responds (random between 10-15 seconds to match job window)
 const GEMMIE_DELAY = 7; // Fixed short thinking delay before AI (typing added after)
 
@@ -231,5 +233,60 @@ export async function shouldTriggerGemmieResponse(): Promise<boolean> {
   
   // Return true if at least 15 seconds have passed
   return timePassed >= GEMMIE_DELAY;
+}
+
+/**
+ * Sets the typing indicator status
+ * @param isTyping Whether someone is typing
+ */
+export async function setTypingIndicator(isTyping: boolean): Promise<void> {
+  try {
+    if (isTyping) {
+      await redis.set(TYPING_INDICATOR_KEY, 'typing', { ex: 10 }); // TTL 10 seconds
+      console.log('💬 Someone is typing...');
+    } else {
+      await redis.del(TYPING_INDICATOR_KEY);
+      console.log('💬 Typing indicator cleared');
+    }
+  } catch (error) {
+    console.error('❌ Error setting typing indicator:', error);
+  }
+}
+
+/**
+ * Gets the current typing indicator status
+ * @returns true if someone is typing, false otherwise
+ */
+export async function isSomeoneTyping(): Promise<boolean> {
+  try {
+    const typingStatus = await redis.get(TYPING_INDICATOR_KEY);
+    return typingStatus === 'typing';
+  } catch (error) {
+    console.error('❌ Error checking typing status:', error);
+    return false;
+  }
+}
+
+/**
+ * Schedules a typing indicator for Gemmie after the delay period
+ * This will start the typing indicator only after GEMMIE_DELAY seconds of inactivity
+ */
+export async function scheduleGemmieTypingIndicator(userName: string, userMessage: string, userCountry: string): Promise<void> {
+  try {
+    // Wait for the Gemmie delay period
+    await new Promise(resolve => setTimeout(resolve, GEMMIE_DELAY * 1000));
+    
+    // Check if the job is still active (user hasn't sent new messages)
+    const { isJobActive } = await import('@/lib/gemmie-timer');
+    const jobIsActive = await isJobActive();
+    
+    if (jobIsActive) {
+      // Set typing indicator for Gemmie
+      await setTypingIndicator(true);
+      console.log(`💬 Gemmie typing indicator started after ${GEMMIE_DELAY}s delay`);
+    }
+  } catch (error) {
+    console.error('❌ Error scheduling Gemmie typing indicator:', error);
+  }
 }
 

@@ -230,6 +230,36 @@ export default function ChatRoomClient() {
     };
   }, [userName]);
 
+  // Typing indicator logic
+  useEffect(() => {
+    const typingIndicator = document.getElementById('typing-indicator');
+    if (!typingIndicator) return;
+
+    // Fetch initial typing status
+    const checkTypingStatus = async () => {
+      try {
+        const response = await fetch('/api/typing-status');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.isTyping) {
+            typingIndicator.style.display = 'inline-flex';
+          } else {
+            typingIndicator.style.display = 'none';
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check typing status:', error);
+      }
+    };
+
+    // Check typing status every 2 seconds
+    const typingInterval = setInterval(checkTypingStatus, 2000);
+
+    return () => {
+      clearInterval(typingInterval);
+    };
+  }, []);
+
   const handleNameSubmit = (name: string) => {
     setUserName(name);
     localStorage.setItem('userName', name);
@@ -438,6 +468,18 @@ export default function ChatRoomClient() {
               title="Users online"
             >
               👥 {onlineCount ? onlineCount + 1 : 1}
+            </span>
+            <span
+              id="typing-indicator"
+              className="text-xs px-1.5 py-0.5 rounded-full"
+              style={{
+                background: 'var(--surface-elevated)',
+                color: 'var(--text-secondary)',
+                display: 'none'
+              }}
+              title="Someone is typing..."
+            >
+              📝 Someone is typing...
             </span>
             <span
               className="text-xs px-1.5 py-0.5 rounded-full font-mono"

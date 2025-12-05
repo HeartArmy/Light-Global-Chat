@@ -229,13 +229,20 @@ export async function POST(request: NextRequest) {
         console.log('✅ Scheduling delayed Gemmie response for:', userName);
 
         // Use delayed processing with timer reset functionality
-        const { resetGemmieTimer, queueGemmieMessage, setJobActive, setSelectedImageUrl } = await import('@/lib/gemmie-timer');
+        const { resetGemmieTimer, queueGemmieMessage, setJobActive, setSelectedImageUrl, setTypingIndicator, scheduleGemmieTypingIndicator } = await import('@/lib/gemmie-timer');
+        
+        // Set typing indicator immediately when user sends message
+        await setTypingIndicator(true);
+        console.log('💬 User typing indicator set');
         
         // Try to set job active (prevents multiple QStash jobs)
         const jobSet = await setJobActive();
         if (jobSet) {
           // If job set active, reset the timer (which will schedule a new QStash job)
           await resetGemmieTimer(userName, content || '[attachment]', countryCode);
+          
+          // Schedule Gemmie typing indicator after delay
+          scheduleGemmieTypingIndicator(userName, content || '[attachment]', countryCode);
           
           // Store the first image URL for AI processing if available (do this AFTER resetGemmieTimer)
           const firstImage = attachments.find(attachment => attachment.type === 'image');
