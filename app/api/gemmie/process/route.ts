@@ -231,6 +231,7 @@ export async function POST(request: NextRequest) {
       .select('_id content userName timestamp')
       .lean();
 
+    // Check if this response is too similar to recent Gemmie messages
     const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
     
     if (similarityCheck.shouldSkip) {
