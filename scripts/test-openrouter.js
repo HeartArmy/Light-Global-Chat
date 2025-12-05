@@ -34,7 +34,7 @@ headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp:free',
+        model: 'amazon/nova-2-lite-v1:free',
         messages: [
           {
             role: 'user',
@@ -181,7 +181,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp:free',
+        model: 'amazon/nova-2-lite-v1:free',
         messages: [
           {
             role: 'user',

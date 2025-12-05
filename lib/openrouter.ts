@@ -141,7 +141,7 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp:free',
+        model: 'amazon/nova-2-lite-v1:free',
         messages: [
           {
             role: 'user',
@@ -259,7 +259,7 @@ export async function generateGemmieResponseForContext(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp:free',
+        model: 'amazon/nova-2-lite-v1:free',
         messages: [
           {
             role: 'user',
