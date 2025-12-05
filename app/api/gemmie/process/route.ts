@@ -411,9 +411,6 @@ Allowed indices: [1] or [2] only!`;
 
       const reviewPrompt = `You are reviewing Gemmie's recent messages to decide whether one of them should be edited based on any common typos.
 
-User's latest message:
-"${userName}: ${userMessage}"
-
 Recent Gemmie messages (1 = newest, 5 = oldest):
 ${messagesContext}
 
@@ -423,13 +420,22 @@ IMPORTANT RULES:
 - ALWAYS check for spelling errors, grammar mistakes, and typos FIRST, even without explicit user feedback
 - Common typos to fix: "everytime" → "every time", "alot" → "a lot", "dont" → "don't", "cant" → "can't", "wont" → "won't", "teh" → "the", "battallion" → "battalion" etc.
 - Intentional slang/shortcuts that are OK: "gonna", "wanna", "gimme", "cause" (as in "because"), "cos" (as in "because")
-- If editing is needed, choose the **single most relevant** Gemmie message (usually the most recent one).
-- For corrections: Fix typos, grammar mistakes. Make it look like a natural self-correction.
-- The edit should sound natural and human-like, as if Gemmie just noticed something and is improving her message.
-- Keep edits short and plausible as a real chat message.
+- ONLY fix typos and grammar mistakes - NEVER change the meaning, context, or intent of the message
+- DO NOT add new information or explanations
+- DO NOT incorporate user names or external context into the message
+- ONLY edit if there are clear typos or grammar errors that need fixing
 
-Examples:
-- If Gemmie made a typo like "alot": Fix it naturally like "actually, a lot" or just "a lot"
+Examples of CORRECT edits:
+- "everytime" → "every time" (typo fix)
+- "alot" → "a lot" (typo fix)
+- "dont" → "don't" (grammar fix)
+- "teh" → "the" (typo fix)
+
+Examples of INCORRECT edits:
+- Adding user names to the message
+- Including external context or user information
+- Changing the meaning or intent of the message
+- Adding new information not in original message
 
 Output ONLY valid JSON with this shape:
 
