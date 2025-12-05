@@ -248,7 +248,8 @@ export async function setTypingIndicator(isTyping: boolean): Promise<void> {
       // Trigger Pusher event for real-time update
       try {
         const pusher = (await import('@/lib/pusher')).getPusherInstance();
-        await pusher.trigger('chat-room', 'typing-start', {});
+        const result = await pusher.trigger('chat-room', 'typing-start', {});
+        console.log('✅ Pusher typing-start event triggered successfully:', result);
       } catch (pusherError) {
         console.error('❌ Failed to trigger typing-start event:', pusherError);
       }
@@ -259,7 +260,8 @@ export async function setTypingIndicator(isTyping: boolean): Promise<void> {
       // Trigger Pusher event for real-time update
       try {
         const pusher = (await import('@/lib/pusher')).getPusherInstance();
-        await pusher.trigger('chat-room', 'typing-stop', {});
+        const result = await pusher.trigger('chat-room', 'typing-stop', {});
+        console.log('✅ Pusher typing-stop event triggered successfully:', result);
       } catch (pusherError) {
         console.error('❌ Failed to trigger typing-stop event:', pusherError);
       }
@@ -293,13 +295,15 @@ export async function scheduleGemmieTypingIndicator(userName: string, userMessag
     await new Promise(resolve => setTimeout(resolve, GEMMIE_DELAY * 1000));
     
     // Check if the job is still active (user hasn't sent new messages)
-    const { isJobActive } = await import('@/lib/gemmie-timer');
     const jobIsActive = await isJobActive();
     
     if (jobIsActive) {
       // Set typing indicator for Gemmie
       await setTypingIndicator(true);
       console.log(`💬 Gemmie typing indicator started after ${GEMMIE_DELAY}s delay`);
+      
+      // Add a small delay before the actual response to simulate typing
+      // The actual typing delay will be handled in the process route
     }
   } catch (error) {
     console.error('❌ Error scheduling Gemmie typing indicator:', error);

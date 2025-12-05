@@ -194,16 +194,24 @@ export default function ChatRoomClient() {
 
     // Listen for typing indicator events
     channel.bind('typing-start', () => {
+      console.log('📡 Received typing-start event from Pusher');
       const typingIndicator = document.getElementById('typing-indicator');
       if (typingIndicator) {
         typingIndicator.style.display = 'flex';
+        console.log('✅ Set typing indicator to visible');
+      } else {
+        console.error('❌ Typing indicator element not found');
       }
     });
 
     channel.bind('typing-stop', () => {
+      console.log('📡 Received typing-stop event from Pusher');
       const typingIndicator = document.getElementById('typing-indicator');
       if (typingIndicator) {
         typingIndicator.style.display = 'none';
+        console.log('✅ Set typing indicator to hidden');
+      } else {
+        console.error('❌ Typing indicator element not found');
       }
     });
 
@@ -245,42 +253,8 @@ export default function ChatRoomClient() {
     };
   }, [userName]);
 
-  // Typing indicator logic
-  useEffect(() => {
-    const typingIndicator = document.getElementById('typing-indicator');
-    if (!typingIndicator) return;
-
-    // Function to show/hide typing indicator
-    const setTypingDisplay = (isTyping: boolean) => {
-      typingIndicator.style.display = isTyping ? 'flex' : 'none';
-    };
-
-    // Fetch initial typing status
-    const checkTypingStatus = async () => {
-      try {
-        const response = await fetch('/api/typing-status');
-        if (response.ok) {
-          const data = await response.json();
-          setTypingDisplay(data.isTyping);
-        }
-      } catch (error) {
-        console.error('Failed to check typing status:', error);
-      }
-    };
-
-    // Check typing status every 2 seconds
-    const typingInterval = setInterval(checkTypingStatus, 2000);
-
-    // Listen for typing events from Pusher (if we had them)
-    // For now, we'll rely on polling since we're using Redis + API polling
-
-    // Initial check
-    checkTypingStatus();
-
-    return () => {
-      clearInterval(typingInterval);
-    };
-  }, []);
+  // Typing indicator logic - handled by Pusher events
+  // The typing indicator is shown/hidden via typing-start/typing-stop events
 
   const handleNameSubmit = (name: string) => {
     setUserName(name);
@@ -321,6 +295,19 @@ export default function ChatRoomClient() {
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message');
+    }
+  };
+
+  // Handle user typing indicator
+  const handleUserTyping = async (isTyping: boolean) => {
+    try {
+      await fetch('/api/typing-status', {
+        method: isTyping ? 'POST' : 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isTyping }),
+      });
+    } catch (error) {
+      console.error('Failed to update typing status:', error);
     }
   };
 
@@ -622,6 +609,7 @@ export default function ChatRoomClient() {
         onSend={handleSendMessage}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
+        onTyping={handleUserTyping}
       />
 
       {/* Name Modal */}

@@ -25,15 +25,18 @@ interface MessageInputProps {
   onSend: (content: string, attachments: Attachment[], replyTo?: string) => void;
   replyingTo: Message | null;
   onCancelReply: () => void;
+  onTyping?: (isTyping: boolean) => void;
 }
 
-export default function MessageInput({ onSend, replyingTo, onCancelReply }: MessageInputProps) {
+export default function MessageInput({ onSend, replyingTo, onCancelReply, onTyping }: MessageInputProps) {
   const [content, setContent] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
   const [showPasteHint, setShowPasteHint] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isUserTyping, setIsUserTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
@@ -56,6 +59,47 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [content]);
+
+  // Handle typing indicator
+  useEffect(() => {
+    return () => {
+      // Clear timeout on unmount
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleTypingStart = () => {
+    if (!isUserTyping) {
+      setIsUserTyping(true);
+      onTyping?.(true);
+    }
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set timeout to clear typing indicator after user stops typing
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isUserTyping) {
+        setIsUserTyping(false);
+        onTyping?.(false);
+      }
+    }, 1000); // 1 second after user stops typing
+  };
+
+  const handleTypingStop = () => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    if (isUserTyping) {
+      setIsUserTyping(false);
+      onTyping?.(false);
+    }
+  };
 
   // Handle paste events for images
   useEffect(() => {
@@ -152,6 +196,9 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
     onSend(trimmedContent, attachments, replyingTo?._id);
     setContent('');
     setAttachments([]);
+    
+    // Clear typing indicator when sending
+    handleTypingStop();
   };
 
   // Reusable function to handle file uploads
@@ -456,11 +503,33 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
           <textarea
             ref={textareaRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => {
+              setContent(e.target.value);
+              handleTypingStart();
+            }}
             onKeyDown={handleKeyDown}
+            onPaste={(e) => {
+              handleTypingStart();
+            }}
+            onFocus={(e) => {
+              handleTypingStart();
+              if (!isOverLimit) {
+                e.target.style.borderColor = 'var(--accent)';
+              }
+            }}
+            onBlur={(e) => {
+              // Only stop typing if not pasting or switching to file input
+              setTimeout(() => {
+                if (!document.activeElement?.matches('input[type="file"]')) {
+                  handleTypingStop();
+                }
+              }, 100);
+              
+              e.target.style.borderColor = isOverLimit ? 'var(--error)' : 'var(--border)';
+            }}
             placeholder={
-              isMobile 
-                ? "Type a message... (tap 📎 to add files)" 
+              isMobile
+                ? "Type a message... (tap 📎 to add files)"
                 : "Type a message... (Cmd+V to paste images)"
             }
             rows={1}
@@ -472,14 +541,6 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply }: Mess
               color: 'var(--text-primary)',
               maxHeight: '80px',
               outline: 'none',
-            }}
-            onFocus={(e) => {
-              if (!isOverLimit) {
-                e.target.style.borderColor = 'var(--accent)';
-              }
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = isOverLimit ? 'var(--error)' : 'var(--border)';
             }}
           />
           {charCount > 4500 && (

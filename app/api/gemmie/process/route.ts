@@ -310,14 +310,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
     }
 
-    // Send to chat
-    console.log('📤 Sending Gemmie message to chat...');
-    await sendGemmieMessage(response);
-
-    // Clear typing indicator when Gemmie sends response
+    // Clear typing indicator before sending message
     const { setTypingIndicator } = await import('@/lib/gemmie-timer');
     await setTypingIndicator(false);
     console.log('💬 Gemmie typing indicator cleared');
+
+    // Send to chat
+    console.log('📤 Sending Gemmie message to chat...');
+    await sendGemmieMessage(response);
 
     // Trigger Pusher event for real-time update
     const pusher = getPusherInstance();
