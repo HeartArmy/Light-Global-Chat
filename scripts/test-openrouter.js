@@ -34,7 +34,7 @@ headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        model: 'tngtech/deepseek-r1t2-chimera:free',
         messages: [
           {
             role: 'user',
@@ -181,7 +181,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        model: 'tngtech/deepseek-r1t2-chimera:free',
         messages: [
           {
             role: 'user',

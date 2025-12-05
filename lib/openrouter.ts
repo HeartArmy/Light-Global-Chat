@@ -180,8 +180,50 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
 
     const data = await response.json();
     console.log('📡 OpenRouter API response:', data);
-    let text = data.choices[0]?.message?.content?.trim() || '';
-    console.log('🎯 Raw AI response:', text);
+    
+    // Handle both regular and reasoning models
+    let text = '';
+    const choice = data.choices[0]?.message;
+    
+    if (choice?.content) {
+      // Regular model - use content field
+      text = choice.content.trim();
+      console.log('🎯 Raw AI response (regular model):', text);
+    } else if (choice?.reasoning) {
+      // Reasoning model - extract response from reasoning field
+      const reasoning = choice.reasoning;
+      console.log('🧠 Raw reasoning from model:', reasoning);
+      
+      // Try to extract the actual response from reasoning
+      // Look for patterns like "response that acknowledges it" or similar
+      const responsePattern = /response.*?["']([^"']+)["']/i;
+      const finalPattern = /final.*?response.*?["']([^"']+)["']/i;
+      const shouldSayPattern = /should say.*?["']([^"']+)["']/i;
+      
+      let extracted = '';
+      if (responsePattern.test(reasoning)) {
+        extracted = responsePattern.exec(reasoning)?.[1] || '';
+      } else if (finalPattern.test(reasoning)) {
+        extracted = finalPattern.exec(reasoning)?.[1] || '';
+      } else if (shouldSayPattern.test(reasoning)) {
+        extracted = shouldSayPattern.exec(reasoning)?.[1] || '';
+      }
+      
+      // If we couldn't extract cleanly, try to find the last quoted text
+      if (!extracted) {
+        const quotes = reasoning.match(/["']([^"']+)["']/g);
+        if (quotes && quotes.length > 0) {
+          extracted = quotes[quotes.length - 1].replace(/["']/g, '');
+        }
+      }
+      
+      text = extracted || reasoning.split('\n').pop() || '';
+      console.log('🎯 Extracted AI response (reasoning model):', text);
+    } else {
+      // Fallback
+      text = '';
+      console.log('🎯 No content or reasoning found');
+    }
     
     // Check for problematic patterns
     console.log('🔍 Checking for problematic patterns...');
@@ -194,7 +236,7 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
     }
     
     // Ensure no capitals and clean up (only if we haven't already cleaned it)
-    if (text === data.choices[0]?.message?.content?.trim()) {
+    if (text === (data.choices[0]?.message?.content?.trim() || '')) {
       text = text.toLowerCase();
       text = text.replace(/[^\w\s,.]/g, '');
       text = text.trim();
@@ -320,8 +362,50 @@ export async function generateGemmieResponseForContext(
 
     const data = await response.json();
     console.log('📡 OpenRouter API response:', data);
-    let text = data.choices[0]?.message?.content?.trim() || '';
-    console.log('🎯 Raw AI response:', text);
+    
+    // Handle both regular and reasoning models
+    let text = '';
+    const choice = data.choices[0]?.message;
+    
+    if (choice?.content) {
+      // Regular model - use content field
+      text = choice.content.trim();
+      console.log('🎯 Raw AI response (regular model):', text);
+    } else if (choice?.reasoning) {
+      // Reasoning model - extract response from reasoning field
+      const reasoning = choice.reasoning;
+      console.log('🧠 Raw reasoning from model:', reasoning);
+      
+      // Try to extract the actual response from reasoning
+      // Look for patterns like "response.*?" or "final.*?response.*?" or "should say.*?"
+      const responsePattern = /response.*?["']([^"']+)["']/i;
+      const finalPattern = /final.*?response.*?["']([^"']+)["']/i;
+      const shouldSayPattern = /should say.*?["']([^"']+)["']/i;
+      
+      let extracted = '';
+      if (responsePattern.test(reasoning)) {
+        extracted = responsePattern.exec(reasoning)?.[1] || '';
+      } else if (finalPattern.test(reasoning)) {
+        extracted = finalPattern.exec(reasoning)?.[1] || '';
+      } else if (shouldSayPattern.test(reasoning)) {
+        extracted = shouldSayPattern.exec(reasoning)?.[1] || '';
+      }
+      
+      // If we couldn't extract cleanly, try to find the last quoted text
+      if (!extracted) {
+        const quotes = reasoning.match(/["']([^"']+)["']/g);
+        if (quotes && quotes.length > 0) {
+          extracted = quotes[quotes.length - 1].replace(/["']/g, '');
+        }
+      }
+      
+      text = extracted || reasoning.split('\n').pop() || '';
+      console.log('🎯 Extracted AI response (reasoning model):', text);
+    } else {
+      // Fallback
+      text = '';
+      console.log('🎯 No content or reasoning found');
+    }
     
     // Check for problematic patterns
     console.log('🔍 Checking for problematic patterns...');
@@ -329,12 +413,12 @@ export async function generateGemmieResponseForContext(
     
     if (patternCheck.hasProblem) {
       console.log('🚨 Problematic pattern detected:', patternCheck.reason);
-      console.log('🤖 Using nvidia or whatever model u picked for advanced cleaning...');
+      console.log('🤖 Using', modelToUse, 'for advanced cleaning...');
       text = await validateWithSecondaryAI(text);
     }
     
     // Ensure no capitals and clean up (only if we haven't already cleaned it)
-    if (text === data.choices[0]?.message?.content?.trim()) {
+    if (text === (data.choices[0]?.message?.content?.trim() || '')) {
       text = text.toLowerCase();
       text = text.replace(/[^\w\s,.'?!-]/g, '');
       
