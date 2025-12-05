@@ -128,16 +128,27 @@ export async function DELETE(
 
     await connectDB();
 
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    // Handle both ObjectId and timestamp-based IDs (for Gemmie messages)
+    let message;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      // Regular ObjectId format
+      message = await Message.findById(new mongoose.Types.ObjectId(id));
+    } else if (/^\d+$/.test(id)) {
+      // Timestamp-based ID (Gemmie messages)
+      message = await Message.findOne({ timestamp: new Date(parseInt(id)) });
+    } else {
       return NextResponse.json(
-        { error: 'Invalid message ID', code: 'INVALID_INPUT' },
+        { error: 'Invalid message ID format', code: 'INVALID_INPUT' },
         { status: 400 }
       );
     }
 
-    // Find message
-    const message = await Message.findById(new mongoose.Types.ObjectId(id));
+    if (!message) {
+      return NextResponse.json(
+        { error: 'Message not found', code: 'NOT_FOUND' },
+        { status: 404 }
+      );
+    }
 
     if (!message) {
       return NextResponse.json(
