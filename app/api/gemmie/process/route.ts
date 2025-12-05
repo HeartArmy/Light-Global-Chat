@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
 
     // Clear typing indicator before sending message
     const { setTypingIndicator } = await import('@/lib/gemmie-timer');
-    await setTypingIndicator(false);
+    await setTypingIndicator(false, 'gemmie');
     console.log('💬 Gemmie typing indicator cleared');
 
     // Send to chat

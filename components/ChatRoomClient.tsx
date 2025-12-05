@@ -193,23 +193,39 @@ export default function ChatRoomClient() {
     });
 
     // Listen for typing indicator events
-    channel.bind('typing-start', () => {
-      console.log('📡 Received typing-start event from Pusher');
+    channel.bind('typing-start', (data: any) => {
+      console.log('📡 Received typing-start event from Pusher:', data);
+      // Don't show typing indicator for current user
+      if (data && data.userName === userName) {
+        console.log('👤 Skipping typing indicator for current user:', userName);
+        return;
+      }
       const typingIndicator = document.getElementById('typing-indicator');
       if (typingIndicator) {
-        typingIndicator.style.display = 'flex';
-        console.log('✅ Set typing indicator to visible');
+        // Smoothly show typing indicator with animation
+        typingIndicator.style.opacity = '1';
+        typingIndicator.style.transform = 'translateY(0)';
+        typingIndicator.style.pointerEvents = 'auto';
+        console.log('✅ Set typing indicator to visible with animation');
       } else {
         console.error('❌ Typing indicator element not found');
       }
     });
 
-    channel.bind('typing-stop', () => {
-      console.log('📡 Received typing-stop event from Pusher');
+    channel.bind('typing-stop', (data: any) => {
+      console.log('📡 Received typing-stop event from Pusher:', data);
+      // Don't hide typing indicator if it's for current user (they don't see it)
+      if (data && data.userName === userName) {
+        console.log('👤 Skipping typing indicator hide for current user:', userName);
+        return;
+      }
       const typingIndicator = document.getElementById('typing-indicator');
       if (typingIndicator) {
-        typingIndicator.style.display = 'none';
-        console.log('✅ Set typing indicator to hidden');
+        // Smoothly hide typing indicator with animation
+        typingIndicator.style.opacity = '0';
+        typingIndicator.style.transform = 'translateY(-10px)';
+        typingIndicator.style.pointerEvents = 'none';
+        console.log('✅ Set typing indicator to hidden with animation');
       } else {
         console.error('❌ Typing indicator element not found');
       }
@@ -304,7 +320,7 @@ export default function ChatRoomClient() {
       await fetch('/api/typing-status', {
         method: isTyping ? 'POST' : 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isTyping }),
+        body: JSON.stringify({ isTyping, userName }),
       });
     } catch (error) {
       console.error('Failed to update typing status:', error);
@@ -588,11 +604,17 @@ export default function ChatRoomClient() {
       {/* Typing Indicator */}
       <div
         id="typing-indicator"
-        className="px-4 py-2"
+        className="px-4 py-2 transition-all duration-300 ease-in-out"
         style={{
-          display: 'none',
+          opacity: 0,
+          transform: 'translateY(-10px)',
+          pointerEvents: 'none',
           color: 'var(--text-secondary)',
-          fontSize: '12px'
+          fontSize: '12px',
+          background: 'rgba(0, 0, 0, 0.05)',
+          backdropFilter: 'blur(2px)',
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
         }}
         title="Someone is typing..."
       >

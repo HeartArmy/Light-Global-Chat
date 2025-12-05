@@ -239,7 +239,7 @@ export async function shouldTriggerGemmieResponse(): Promise<boolean> {
  * Sets the typing indicator status
  * @param isTyping Whether someone is typing
  */
-export async function setTypingIndicator(isTyping: boolean): Promise<void> {
+export async function setTypingIndicator(isTyping: boolean, userName?: string): Promise<void> {
   try {
     if (isTyping) {
       await redis.set(TYPING_INDICATOR_KEY, 'typing', { ex: 10 }); // TTL 10 seconds
@@ -248,7 +248,7 @@ export async function setTypingIndicator(isTyping: boolean): Promise<void> {
       // Trigger Pusher event for real-time update
       try {
         const pusher = (await import('@/lib/pusher')).getPusherInstance();
-        const result = await pusher.trigger('chat-room', 'typing-start', {});
+        const result = await pusher.trigger('chat-room', 'typing-start', { userName });
         console.log('✅ Pusher typing-start event triggered successfully:', result);
       } catch (pusherError) {
         console.error('❌ Failed to trigger typing-start event:', pusherError);
@@ -260,7 +260,7 @@ export async function setTypingIndicator(isTyping: boolean): Promise<void> {
       // Trigger Pusher event for real-time update
       try {
         const pusher = (await import('@/lib/pusher')).getPusherInstance();
-        const result = await pusher.trigger('chat-room', 'typing-stop', {});
+        const result = await pusher.trigger('chat-room', 'typing-stop', { userName });
         console.log('✅ Pusher typing-stop event triggered successfully:', result);
       } catch (pusherError) {
         console.error('❌ Failed to trigger typing-stop event:', pusherError);
@@ -299,7 +299,7 @@ export async function scheduleGemmieTypingIndicator(userName: string, userMessag
     
     if (jobIsActive) {
       // Set typing indicator for Gemmie
-      await setTypingIndicator(true);
+      await setTypingIndicator(true, 'gemmie');
       console.log(`💬 Gemmie typing indicator started after ${GEMMIE_DELAY}s delay`);
       
       // Add a small delay before the actual response to simulate typing

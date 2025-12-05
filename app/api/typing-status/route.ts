@@ -17,14 +17,14 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { isTyping } = body;
+    const { isTyping, userName } = body;
     
     if (typeof isTyping !== 'boolean') {
       return NextResponse.json({ error: 'isTyping must be a boolean' }, { status: 400 });
     }
     
     const { setTypingIndicator } = await import('@/lib/gemmie-timer');
-    await setTypingIndicator(isTyping);
+    await setTypingIndicator(isTyping, userName);
     
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -34,10 +34,13 @@ export async function POST(request: Request) {
 }
 
 // DELETE - Clear typing indicator
-export async function DELETE() {
+export async function DELETE(request: Request) {
   try {
+    const body = await request.json();
+    const { userName } = body;
+    
     const { setTypingIndicator } = await import('@/lib/gemmie-timer');
-    await setTypingIndicator(false);
+    await setTypingIndicator(false, userName);
     
     return NextResponse.json({ success: true });
   } catch (error) {
