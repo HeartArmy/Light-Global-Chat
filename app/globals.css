@@ -285,3 +285,31 @@ button:focus {
     box-shadow: 0 0 4px currentColor !important;
   }
 }
+
+/* Typing indicator animation */
+@keyframes typingDots {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.typing-dots {
+  display: inline-block;
+}
+
+.typing-dots::after {
+  content: '';
+  animation: typingDots 1.4s infinite;
+}
+
+.typing-dots::before {
+  content: '';
+  animation: typingDots 1.4s infinite 0.2s;
+}
+
+.typing-dots span {
+  animation: typingDots 1.4s infinite 0.4s;
+}

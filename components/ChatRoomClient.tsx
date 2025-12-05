@@ -470,18 +470,6 @@ export default function ChatRoomClient() {
               👥 {onlineCount ? onlineCount + 1 : 1}
             </span>
             <span
-              id="typing-indicator"
-              className="text-xs px-1.5 py-0.5 rounded-full"
-              style={{
-                background: 'var(--surface-elevated)',
-                color: 'var(--text-secondary)',
-                display: 'none'
-              }}
-              title="Someone is typing..."
-            >
-              📝 Someone is typing...
-            </span>
-            <span
               className="text-xs px-1.5 py-0.5 rounded-full font-mono"
               style={{
                 background: 'var(--surface-elevated)',
@@ -587,6 +575,25 @@ export default function ChatRoomClient() {
         onDelete={handleDeleteMessage}
         onLoadMore={handleLoadMore}
       />
+
+      {/* Typing Indicator */}
+      <div
+        id="typing-indicator"
+        className="px-4 py-2"
+        style={{
+          display: 'none',
+          color: 'var(--text-secondary)',
+          fontSize: '12px'
+        }}
+        title="Someone is typing..."
+      >
+        <span className="animate-pulse">📝 Someone is typing</span>
+        <span className="typing-dots">
+          <span>.</span>
+          <span>.</span>
+          <span>.</span>
+        </span>
+      </div>
 
       {/* Input */}
       <MessageInput
