@@ -229,11 +229,7 @@ export async function POST(request: NextRequest) {
         console.log('✅ Scheduling delayed Gemmie response for:', userName);
 
         // Use delayed processing with timer reset functionality
-        const { resetGemmieTimer, queueGemmieMessage, setJobActive, setSelectedImageUrl, cancelPendingGemmieJobs } = await import('@/lib/gemmie-timer');
-        
-        // Cancel any orphan jobs before starting new processing
-        console.log('🧹 Checking for and cancelling any orphan Gemmie jobs...');
-        await cancelPendingGemmieJobs();
+        const { resetGemmieTimer, queueGemmieMessage, setJobActive, setSelectedImageUrl } = await import('@/lib/gemmie-timer');
         
         // Try to set job active (prevents multiple QStash jobs)
         const jobSet = await setJobActive();

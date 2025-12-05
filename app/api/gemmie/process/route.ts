@@ -56,6 +56,11 @@ IMPORTANT ANALYSIS RULES:
 - DO NOT skip responses that are appropriate greetings or basic interactions with different users
 - DO NOT skip responses if there's been a significant time gap (30+ minutes) since the user's last message - this indicates a new session
 - DO NOT skip responses if the user's current message is significantly different in topic or context from their previous messages
+- DO NOT skip responses if the user is asking about a different subject/topic (e.g., switching from "blue" to "red")
+- DO NOT skip responses if the user's message indicates a new question or different context
+- DO NOT skip responses if the user is spelling out a different word or concept
+- USE COMMON SENSE: If a human would consider this a reasonable response in this context, do NOT skip it
+- THINK LIKE GEMMIE: Would Gemmie reasonably respond to this user message in this situation?
 
 EXAMPLE SCENARIOS TO AVOID:
 User: "what is this color"
@@ -88,6 +93,23 @@ User Alice: "what's up?" [12:00 PM]
 Gemmie: "not much, you?" (GOOD)
 User Alice: "need help" [12:01 PM - 1 minute later]
 Gemmie: "sure, what's up?" (GOOD - different topic/context, should NOT be skipped)
+
+User Bob: "what color is this?" [2:00 PM]
+User Bob: "b"
+User Bob: "l"
+User Bob: "u"
+User Bob: "e"
+Gemmie: "blue?" (GOOD - first response to color question)
+User Bob: "what about this?" [2:05 PM]
+User Bob: "r"
+User Bob: "e"
+User Bob: "d"
+Gemmie: "red?" (GOOD - different color, different question, should NOT be skipped)
+
+User Charlie: "how are you?" [3:00 PM]
+Gemmie: "i'm good thanks" (GOOD)
+User Charlie: "how are you?" [3:01 PM - 1 minute later]
+Gemmie: "doing great!" (BAD - same question, repetitive response, should be skipped)
 
 Respond ONLY with a JSON object:
 {"shouldSkip": true/false, "explanation": "brief reason"}
@@ -174,18 +196,13 @@ export async function POST(request: NextRequest) {
     await connectDB();
     
     // Check if this is an orphan job by verifying job activity
-    const { isJobActive, cleanupOrphanJobs } = await import('@/lib/gemmie-timer');
+    const { isJobActive } = await import('@/lib/gemmie-timer');
     const jobIsActive = await isJobActive();
     
     if (!jobIsActive) {
-      console.log('⚠️ Job active flag not set - this might be an orphan job. Performing cleanup...');
-      const { cancelPendingGemmieJobs } = await import('@/lib/gemmie-timer');
-      await cancelPendingGemmieJobs();
+      console.log('⚠️ Job active flag not set - this might be an orphan job. Skipping processing...');
       return NextResponse.json({ success: true, skipped: true, reason: 'orphan-job' });
     }
-    
-    // Also perform automatic cleanup of any old orphan jobs
-    await cleanupOrphanJobs();
     
     // Clear the job scheduled key to allow new messages to trigger QStash jobs
     // This is important so that if resetGemmieTimer is called later for a rescheduled job,

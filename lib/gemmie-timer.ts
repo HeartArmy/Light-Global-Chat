@@ -11,7 +11,7 @@ const JOB_ACTIVE_KEY = 'gemmie:job-active';
 // Key for storing the URL of the single image selected for AI processing in the current burst
 const GEMMIE_SELECTED_IMAGE_URL_KEY = 'gemmie:selected-image-url';
 // Time in seconds for the delay before Gemmie responds (random between 10-15 seconds to match job window)
-const GEMMIE_DELAY = 5; // Fixed short thinking delay before AI (typing added after)
+const GEMMIE_DELAY = 7; // Fixed short thinking delay before AI (typing added after)
 
 /**
  * Resets the Gemmie response timer when a user sends a message
@@ -30,61 +30,11 @@ export async function resetGemmieTimer(userName: string, userMessage: string, us
   await redis.del(GEMMIE_SELECTED_IMAGE_URL_KEY);
   console.log('🗑️ Cleared previously selected image URL for new message burst.');
 
-  // Check if there's already a scheduled job and cancel it
-  const jobScheduled = await redis.get(JOB_SCHEDULED_KEY);
-  if (jobScheduled) {
-    try {
-      const response = await fetch(`https://qstash.upstash.com/v2/messages/${jobScheduled}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${process.env.QSTASH_TOKEN!}`,
-        },
-      });
-      if (response.ok) {
-        console.log(`✅ Cancelled previous QStash job: ${jobScheduled}`);
-      } else {
-        console.error(`❌ Failed to cancel QStash job ${jobScheduled}: ${response.status}`);
-      }
-    } catch (error) {
-      console.error(`❌ Error cancelling previous QStash job ${jobScheduled}:`, error);
-    }
-    await redis.del(JOB_SCHEDULED_KEY);
-  }
   
   // Schedule the new delayed response using QStash
   await scheduleDelayedResponse(userName, userMessage, userCountry);
   
   console.log('✅ Gemmie timer reset and response scheduled');
-}
-
-/**
- * Cancels any pending QStash jobs for Gemmie responses
- * Useful for cleaning up orphaned jobs
- */
-export async function cancelPendingGemmieJobs(): Promise<void> {
-  console.log('🗑️ Cancelling any pending Gemmie QStash jobs...');
-  
-  const jobScheduled = await redis.get(JOB_SCHEDULED_KEY);
-  if (jobScheduled) {
-    try {
-      const response = await fetch(`https://qstash.upstash.com/v2/messages/${jobScheduled}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${process.env.QSTASH_TOKEN!}`,
-        },
-      });
-      if (response.ok) {
-        console.log(`✅ Cancelled pending QStash job: ${jobScheduled}`);
-      } else {
-        console.error(`❌ Failed to cancel QStash job ${jobScheduled}: ${response.status}`);
-      }
-    } catch (error) {
-      console.error(`❌ Error cancelling QStash job ${jobScheduled}:`, error);
-    }
-    await redis.del(JOB_SCHEDULED_KEY);
-  } else {
-    console.log('ℹ️ No pending QStash jobs found');
-  }
 }
 
 /**
@@ -283,61 +233,3 @@ export async function shouldTriggerGemmieResponse(): Promise<boolean> {
   return timePassed >= GEMMIE_DELAY;
 }
 
-/**
- * Automatically cleans up any orphaned QStash jobs that are older than expected
- * This can be called periodically to ensure no stale jobs remain
- */
-export async function cleanupOrphanJobs(): Promise<void> {
-  console.log('🧹 Performing automatic orphan job cleanup...');
-  
-  const jobScheduled = await redis.get(JOB_SCHEDULED_KEY);
-  if (jobScheduled) {
-    try {
-      // Check the job status from QStash
-      const response = await fetch(`https://qstash.upstash.com/v2/messages/${jobScheduled}`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${process.env.QSTASH_TOKEN!}`,
-        },
-      });
-      
-      if (response.ok) {
-        const jobData = await response.json();
-        console.log('📋 Orphan job status:', jobData);
-        
-        // If job is still scheduled but very old (more than 2x our delay), cancel it
-        const now = Math.floor(Date.now() / 1000);
-        const jobAge = now - Math.floor(new Date(jobData.scheduledFor).getTime() / 1000);
-        const maxAge = GEMMIE_DELAY * 2 + 30; // Allow some buffer
-        
-        if (jobAge > maxAge) {
-          console.log(`⏰ Job is ${jobAge}s old (max ${maxAge}s), cancelling as orphan...`);
-          await fetch(`https://qstash.upstash.com/v2/messages/${jobScheduled}`, {
-            method: 'DELETE',
-            headers: {
-              Authorization: `Bearer ${process.env.QSTASH_TOKEN!}`,
-            },
-          });
-          await redis.del(JOB_SCHEDULED_KEY);
-          console.log('✅ Cancelled old orphan job');
-        } else {
-          console.log(`ℹ️ Job is ${jobAge}s old, still within acceptable age`);
-        }
-      } else {
-        // If we can't get job status, assume it's orphaned and cancel
-        console.log('❓ Cannot verify job status, cancelling as potential orphan...');
-        await fetch(`https://qstash.upstash.com/v2/messages/${jobScheduled}`, {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${process.env.QSTASH_TOKEN!}`,
-          },
-        });
-        await redis.del(JOB_SCHEDULED_KEY);
-      }
-    } catch (error) {
-      console.error('❌ Error during orphan job cleanup:', error);
-    }
-  } else {
-    console.log('ℹ️ No scheduled jobs found during cleanup');
-  }
-}
