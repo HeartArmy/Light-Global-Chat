@@ -34,7 +34,7 @@ headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'x-ai/grok-4.1-fast',
+        model: 'google/gemma-3-27b-it:free',
         messages: [
           {
             role: 'user',
@@ -181,7 +181,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'x-ai/grok-4.1-fast',
+        model: 'google/gemma-3-27b-it:free',
         messages: [
           {
             role: 'user',

@@ -141,7 +141,7 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'x-ai/grok-4.1-fast',
+        model: 'google/gemma-3-27b-it:free',
         messages: [
           {
             role: 'user',
@@ -259,7 +259,7 @@ export async function generateGemmieResponseForContext(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'x-ai/grok-4.1-fast',
+        model: 'google/gemma-3-27b-it:free',
         messages: [
           {
             role: 'user',
