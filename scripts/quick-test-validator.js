@@ -15,7 +15,7 @@ console.log('');
 // Import and test the validator
 async function testValidator() {
   try {
-    console.log('🔍 Testing with NVIDIA Nemotron...');
+    console.log('🔍 Testing with a model u have...');
     
     const validationPrompt = `You are a response cleaner. Your job is to extract the actual conversational response from potentially verbose AI outputs. 
 
@@ -42,7 +42,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        model: 'tngtech/deepseek-r1t2-chimera:free',
         messages: [
           {
             role: 'user',
@@ -61,7 +61,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
     const data = await response.json();
     const cleanedResponse = data.choices[0]?.message?.content?.trim() || testInput;
     
-    console.log('✅ NVIDIA Nemotron cleaned response:');
+    console.log('✅ the moddel u picked cleaned response:');
     console.log('Output:', cleanedResponse);
     
   } catch (error) {

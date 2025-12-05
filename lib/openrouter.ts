@@ -9,7 +9,7 @@ const GEMMIE_PROMPT = `You're named gemmie, a 23yo chill friend who keeps messag
 
 Key style:
 - mix it up, sometimes 5 words, sometimes 15, maximum 30 words though, let it flow naturally
-- say u r aware ur name gemmie is an unusual name lol
+- u r aware that ur name gemmie is an unusual name if someone brings that up
 - u r a girl
 - the chatroom allows people to edit and delete their messages, so explain that if people question u after you delete or edit your messsages
 - repond to the most recent message that activated you, look at timestamp to make sure, since I dont want you to repond to older messages, like 30 minute old messages
@@ -98,7 +98,7 @@ function getCurrentDateTimeInfo(): string {
   return `${dayName}, ${monthName} ${date}, ${year} UTC | Current timestamp: ${utcString}`;
 }
 
-// Generate Gemmie's response using OpenRouter with Meta Llama model
+// Generate Gemmie's response using OpenRouter with appropriate model based on content
 export async function generateGemmieResponse(
   userName: string,
   userMessage: string,
@@ -106,8 +106,12 @@ export async function generateGemmieResponse(
   userTimestamp?: string
 ): Promise<string> {
   try {
-    console.log('🔧 OpenRouter API call starting...'); 
+    console.log('🔧 OpenRouter API call starting...');
     console.log('📝 User:', userName, 'Country:', userCountry, 'Message:', userMessage);
+    
+    // Check if this is an image-based message by looking for image URLs
+    const hasImage = /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|bmp|svg))/i.test(userMessage);
+    
     // Get recent conversation context
     const recentMessages = await getRecentMessages();
     const userFlag = getCountryFlag(userCountry);
@@ -115,7 +119,22 @@ export async function generateGemmieResponse(
     const actualTimestamp = userTimestamp || new Date().toISOString();
     const currentDateTime = getCurrentDateTimeInfo();
     
-    const prompt = `${GEMMIE_PROMPT}
+    // Determine model and prompt based on image presence
+    const modelToUse = hasImage ? 'nvidia/nemotron-nano-12b-v2-vl:free' : 'tngtech/deepseek-r1t2-chimera:free';
+    
+    const prompt = hasImage
+      ? `${GEMMIE_PROMPT}
+
+Current date/time: ${currentDateTime}
+
+Recent conversation context:
+${recentMessages}
+
+Current user: ${userName} ${userFlag} from ${userCountry} [${actualTimestamp}]
+Their message: "${userMessage}"
+
+Respond ONLY as gemmie with a brief, natural comment about the image and conversation context. NO dates/times/countries/flags/usernames/timestamps/context. Just your natural response. No capitals, no names.:`
+      : `${GEMMIE_PROMPT}
 
 Current date/time: ${currentDateTime}
 
@@ -141,15 +160,15 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        model: modelToUse,
         messages: [
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 100, // Keep responses short and cheap
-        temperature: 1.2 // Make it more conversational
+        max_tokens: hasImage ? 120 : 100, // Slightly longer for image responses
+        temperature: hasImage ? 0.9 : 1.2 // Slightly less creative for image responses
       })
     });
 
@@ -170,7 +189,7 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
     
     if (patternCheck.hasProblem) {
       console.log('🚨 Problematic pattern detected:', patternCheck.reason);
-      console.log('🤖 Using grok for advanced cleaning...');
+      console.log('🤖 Using', modelToUse, 'for advanced cleaning...');
       text = await validateWithSecondaryAI(text);
     }
     
@@ -245,10 +264,16 @@ export async function generateGemmieResponseForContext(
       console.log('🖼️ Image included in AI prompt:', selectedImageUrl);
     }
 
+    // Determine which model to use based on image presence
+    const modelToUse = selectedImageUrl ? 'nvidia/nemotron-nano-12b-v2-vl:free' : 'tngtech/deepseek-r1t2-chimera:free';
+    
     // Construct the full prompt
-    const fullPrompt = `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}${imageContext}\n\nRespond as gemmie (remember: no capitals, never use people's name):`;
+    const fullPrompt = selectedImageUrl
+      ? `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}\n\nRespond as gemmie with a brief, natural comment about the image and conversation context (remember: no capitals, never use people's name):`
+      : `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}\n\nRespond as gemmie (remember: no capitals, never use people's name):`;
 
     console.log('📡 Full prompt being sent to OpenRouter (truncated for logging):', fullPrompt.substring(0, 500) + '...');
+    console.log('🤖 Using model:', modelToUse, selectedImageUrl ? '(with image)' : '(text only)');
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -259,7 +284,7 @@ export async function generateGemmieResponseForContext(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        model: modelToUse,
         messages: [
           {
             role: 'user',
@@ -282,8 +307,8 @@ export async function generateGemmieResponseForContext(
             ]
           }
         ],
-        max_tokens: 150, // Allow slightly longer for summarizing multiple messages
-        temperature: 0.8 // Make it more conversational
+        max_tokens: selectedImageUrl ? 120 : 150, // Slightly shorter for image responses
+        temperature: selectedImageUrl ? 0.9 : 0.8 // Slightly more creative for image responses
       })
     });
 
@@ -304,7 +329,7 @@ export async function generateGemmieResponseForContext(
     
     if (patternCheck.hasProblem) {
       console.log('🚨 Problematic pattern detected:', patternCheck.reason);
-      console.log('🤖 Using grok for advanced cleaning...');
+      console.log('🤖 Using nvidia or whatever model u picked for advanced cleaning...');
       text = await validateWithSecondaryAI(text);
     }
     
