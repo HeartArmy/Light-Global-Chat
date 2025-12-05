@@ -16,44 +16,84 @@ function getCountryFlag(countryCode: string): string {
 }
 
 // Check if response is too similar to recent messages using AI
-async function checkResponseSimilarity(newResponse: string, recentMessages: any[]): Promise<{ shouldSkip: boolean; similarityScore: number; similarMessage?: string }> {
+async function checkResponseSimilarity(newResponse: string, recentMessages: any[]): Promise<{ shouldSkip: boolean; similarMessage?: string }> {
   if (recentMessages.length === 0) {
-    return { shouldSkip: false, similarityScore: 0 };
+    return { shouldSkip: false };
   }
 
   // Get the most recent message to compare against
   const mostRecentMessage = recentMessages[0].content;
   
-  // Create context showing the conversation flow
-  const contextMessages = recentMessages.slice(0, 5).map((msg, index) =>
-    `${index + 1}. ${msg.userName}: "${msg.content}" (${new Date(msg.timestamp).toISOString()})`
-  ).join('\n');
+  // Create comprehensive context showing the full conversation flow with country flags and timestamps
+  const contextMessages = recentMessages.slice(0, 10).map((msg, index) => {
+    const flag = msg.userCountry ? getCountryFlag(msg.userCountry) : '🌍';
+    return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
+  }).join('\n');
 
-  const similarityPrompt = `You are checking if Gemmie's new response is too similar to her OWN recent responses. This mechanism exists because Gemmie is activated whenever ANY user sends a message, so when multiple users send messages in short succession, Gemmie might respond multiple times with similar content if not filtered.
+  const similarityPrompt = `You are checking if Gemmie's new response is a duplicate of her OWN previous responses. This mechanism exists because Gemmie is activated whenever ANY user sends a message, so when multiple users send messages in short succession, Gemmie might respond multiple times with similar content if not filtered.
 
 BACKGROUND: This chatroom has a delayed response system where each user message can trigger Gemmie's response after a short delay. During message bursts (multiple messages in quick succession), this system might generate several Gemmie responses in sequence, potentially leading to repetitive content if not checked.
 
 NEW RESPONSE FROM GEMMIE:
 "${newResponse}"
 
-FULL CONVERSATION CONTEXT (for understanding the flow, but only compare Gemmie's messages):
+FULL CONVERSATION CONTEXT (last 10 messages for understanding the flow):
 ${contextMessages}
 
 IMPORTANT ANALYSIS RULES:
-- You are ONLY checking for similarity between Gemmie's new response and her OWN previous messages
+- You are ONLY checking for duplication between Gemmie's new response and her OWN previous messages
 - IGNORE other users' messages for similarity comparison - they are just for context
 - Look for repeated phrases, same intent, or very similar structure specifically in Gemmie's messages
+- Check if Gemmie is answering the SAME question or topic repeatedly
+- Look for patterns where Gemmie responds to incremental user messages with similar answers
 - Minor word changes or punctuation differences don't count as different enough
 - If multiple users are having similar conversations, Gemmie should vary her responses more
 - If both messages are very short (under 10 words), be more strict about similarity
 - If both messages are longer, allow some variation in expression
 - Consider the context: if users are sending many messages quickly, Gemmie should avoid repetitive responses
+- CRITICAL: Check if the new response is answering the same question/topic as previous responses
+- DO NOT skip responses when different users are having separate conversations
+- DO NOT skip responses that are appropriate greetings or basic interactions with different users
+- DO NOT skip responses if there's been a significant time gap (30+ minutes) since the user's last message - this indicates a new session
+- DO NOT skip responses if the user's current message is significantly different in topic or context from their previous messages
+
+EXAMPLE SCENARIOS TO AVOID:
+User: "what is this color"
+User: "b"
+User: "l"
+User: "u"
+User: "e"
+Gemmie: "blue, this time u got it right lol" (GOOD - first response)
+Gemmie: "Blue now huh, I see what you're doing there" (BAD - repetitive)
+Gemmie: "blue? waht's with the spelling quiz lol u a bot or something" (BAD - repetitive)
+Gemmie: "u know u can type whole words right" (BAD - repetitive)
+
+EXAMPLE SCENARIOS TO ALLOW:
+User Sam: "hi"
+Gemmie: "hello back" (GOOD)
+User Sarah: "hi"
+Gemmie: "hey back" (GOOD - different user, should NOT be skipped)
+
+User John: "how are you?"
+Gemmie: "i'm good thanks" (GOOD)
+User Mike: "how are you?"
+Gemmie: "doing great!" (GOOD - different user, should NOT be skipped)
+
+User Sam: "hi" [10:00 AM]
+Gemmie: "hey there!" (GOOD)
+User Sam: "hi" [1:00 PM - 3 hours later]
+Gemmie: "hello back!" (GOOD - new session, significant time gap, should NOT be skipped)
+
+User Alice: "what's up?" [12:00 PM]
+Gemmie: "not much, you?" (GOOD)
+User Alice: "need help" [12:01 PM - 1 minute later]
+Gemmie: "sure, what's up?" (GOOD - different topic/context, should NOT be skipped)
 
 Respond ONLY with a JSON object:
-{"shouldSkip": true/false, "similarityScore": 0-100, "explanation": "brief reason"}
+{"shouldSkip": true/false, "explanation": "brief reason"}
 
-shouldSkip = true if Gemmie's new response is too similar to her OWN previous messages (95%+ similarity)
-similarityScore = how similar Gemmie's new response is to her OWN previous messages (0-100 scale)`;
+shouldSkip = true if Gemmie's new response is a duplicate of her OWN previous messages
+shouldSkip = false if it's a new, unique response`;
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -65,9 +105,9 @@ similarityScore = how similar Gemmie's new response is to her OWN previous messa
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        model: 'tngtech/deepseek-r1t2-chimera:free',
         messages: [{ role: 'user', content: similarityPrompt }],
-        max_tokens: 150,
+        max_tokens: 32000,
         temperature: 0.1
       })
     });
@@ -82,7 +122,6 @@ similarityScore = how similar Gemmie's new response is to her OWN previous messa
           const parsed = JSON.parse(jsonMatch[0]);
           return {
             shouldSkip: parsed.shouldSkip || false,
-            similarityScore: parsed.similarityScore || 0,
             similarMessage: mostRecentMessage
           };
         }
@@ -94,7 +133,7 @@ similarityScore = how similar Gemmie's new response is to her OWN previous messa
     console.error('Error in similarity check:', error);
   }
 
-  return { shouldSkip: false, similarityScore: 0 };
+  return { shouldSkip: false };
 }
 
 // This API route handles the delayed Gemmie response
@@ -133,6 +172,20 @@ export async function POST(request: NextRequest) {
   try {
     // Connect to database early for similarity checks
     await connectDB();
+    
+    // Check if this is an orphan job by verifying job activity
+    const { isJobActive, cleanupOrphanJobs } = await import('@/lib/gemmie-timer');
+    const jobIsActive = await isJobActive();
+    
+    if (!jobIsActive) {
+      console.log('⚠️ Job active flag not set - this might be an orphan job. Performing cleanup...');
+      const { cancelPendingGemmieJobs } = await import('@/lib/gemmie-timer');
+      await cancelPendingGemmieJobs();
+      return NextResponse.json({ success: true, skipped: true, reason: 'orphan-job' });
+    }
+    
+    // Also perform automatic cleanup of any old orphan jobs
+    await cleanupOrphanJobs();
     
     // Clear the job scheduled key to allow new messages to trigger QStash jobs
     // This is important so that if resetGemmieTimer is called later for a rescheduled job,
@@ -218,7 +271,7 @@ export async function POST(request: NextRequest) {
     })
       .sort({ timestamp: -1 })
       .limit(10)
-      .select('_id content userName timestamp')
+      .select('_id content userName userCountry timestamp')
       .lean();
     
     // Get only Gemmie messages for similarity comparison
@@ -228,14 +281,14 @@ export async function POST(request: NextRequest) {
     })
       .sort({ timestamp: -1 })
       .limit(10)
-      .select('_id content userName timestamp')
+      .select('_id content userName userCountry timestamp')
       .lean();
 
     // Check if this response is too similar to recent Gemmie messages
     const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
     
     if (similarityCheck.shouldSkip) {
-      console.log(`⚠️ Response too similar to recent message (${similarityCheck.similarityScore}%), skipping send`);
+      console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
       console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
       return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
     }
