@@ -141,7 +141,7 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        model: 'google/gemini-2.0-flash-exp:free',
         messages: [
           {
             role: 'user',
@@ -259,7 +259,7 @@ export async function generateGemmieResponseForContext(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        model: 'google/gemini-2.0-flash-exp:free',
         messages: [
           {
             role: 'user',
