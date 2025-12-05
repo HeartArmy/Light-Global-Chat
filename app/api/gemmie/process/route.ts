@@ -65,7 +65,7 @@ similarityScore = how similar Gemmie's new response is to her OWN previous messa
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'google/gemma-3-27b-it:free',
+        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
         messages: [{ role: 'user', content: similarityPrompt }],
         max_tokens: 150,
         temperature: 0.1
@@ -296,7 +296,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'google/gemma-3-27b-it:free',
+            model: 'nvidia/nemotron-nano-12b-v2-vl:free',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 200,
             temperature: 0.1
@@ -452,7 +452,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'google/gemma-3-27b-it:free',
+            model: 'nvidia/nemotron-nano-12b-v2-vl:free',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 200,
             temperature: 0.1
