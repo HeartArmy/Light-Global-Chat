@@ -167,7 +167,7 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
             content: prompt
           }
         ],
-        max_tokens: hasImage ? 120 : 100, // Slightly longer for image responses
+        max_tokens: hasImage ? 32000 : 32000, // Increased to allow reasoning + response
         temperature: hasImage ? 0.9 : 1.2 // Slightly less creative for image responses
       })
     });
@@ -189,40 +189,10 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
       // Regular model - use content field
       text = choice.content.trim();
       console.log('🎯 Raw AI response (regular model):', text);
-    } else if (choice?.reasoning) {
-      // Reasoning model - extract response from reasoning field
-      const reasoning = choice.reasoning;
-      console.log('🧠 Raw reasoning from model:', reasoning);
-      
-      // Try to extract the actual response from reasoning
-      // Look for patterns like "response that acknowledges it" or similar
-      const responsePattern = /response.*?["']([^"']+)["']/i;
-      const finalPattern = /final.*?response.*?["']([^"']+)["']/i;
-      const shouldSayPattern = /should say.*?["']([^"']+)["']/i;
-      
-      let extracted = '';
-      if (responsePattern.test(reasoning)) {
-        extracted = responsePattern.exec(reasoning)?.[1] || '';
-      } else if (finalPattern.test(reasoning)) {
-        extracted = finalPattern.exec(reasoning)?.[1] || '';
-      } else if (shouldSayPattern.test(reasoning)) {
-        extracted = shouldSayPattern.exec(reasoning)?.[1] || '';
-      }
-      
-      // If we couldn't extract cleanly, try to find the last quoted text
-      if (!extracted) {
-        const quotes = reasoning.match(/["']([^"']+)["']/g);
-        if (quotes && quotes.length > 0) {
-          extracted = quotes[quotes.length - 1].replace(/["']/g, '');
-        }
-      }
-      
-      text = extracted || reasoning.split('\n').pop() || '';
-      console.log('🎯 Extracted AI response (reasoning model):', text);
     } else {
-      // Fallback
+      // Fallback - no content field available
       text = '';
-      console.log('🎯 No content or reasoning found');
+      console.log('🎯 No content field found');
     }
     
     // Check for problematic patterns
@@ -349,7 +319,7 @@ export async function generateGemmieResponseForContext(
             ]
           }
         ],
-        max_tokens: selectedImageUrl ? 120 : 150, // Slightly shorter for image responses
+        max_tokens: selectedImageUrl ? 32000 : 32000, // Increased to allow reasoning + response
         temperature: selectedImageUrl ? 0.9 : 0.8 // Slightly more creative for image responses
       })
     });
@@ -371,40 +341,10 @@ export async function generateGemmieResponseForContext(
       // Regular model - use content field
       text = choice.content.trim();
       console.log('🎯 Raw AI response (regular model):', text);
-    } else if (choice?.reasoning) {
-      // Reasoning model - extract response from reasoning field
-      const reasoning = choice.reasoning;
-      console.log('🧠 Raw reasoning from model:', reasoning);
-      
-      // Try to extract the actual response from reasoning
-      // Look for patterns like "response.*?" or "final.*?response.*?" or "should say.*?"
-      const responsePattern = /response.*?["']([^"']+)["']/i;
-      const finalPattern = /final.*?response.*?["']([^"']+)["']/i;
-      const shouldSayPattern = /should say.*?["']([^"']+)["']/i;
-      
-      let extracted = '';
-      if (responsePattern.test(reasoning)) {
-        extracted = responsePattern.exec(reasoning)?.[1] || '';
-      } else if (finalPattern.test(reasoning)) {
-        extracted = finalPattern.exec(reasoning)?.[1] || '';
-      } else if (shouldSayPattern.test(reasoning)) {
-        extracted = shouldSayPattern.exec(reasoning)?.[1] || '';
-      }
-      
-      // If we couldn't extract cleanly, try to find the last quoted text
-      if (!extracted) {
-        const quotes = reasoning.match(/["']([^"']+)["']/g);
-        if (quotes && quotes.length > 0) {
-          extracted = quotes[quotes.length - 1].replace(/["']/g, '');
-        }
-      }
-      
-      text = extracted || reasoning.split('\n').pop() || '';
-      console.log('🎯 Extracted AI response (reasoning model):', text);
     } else {
-      // Fallback
+      // Fallback - no content field available
       text = '';
-      console.log('🎯 No content or reasoning found');
+      console.log('🎯 No content field found');
     }
     
     // Check for problematic patterns

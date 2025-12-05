@@ -99,8 +99,36 @@ export async function selectEmojiForMessage(content: string): Promise<string> {
   try {
     console.log('🤖 Using AI to select emoji for:', content);
     
-    // Call the same AI model that Gemmie uses for responses
-    const aiResponse = await generateGemmieResponse('system', EMOJI_SELECTION_PROMPT + ` "${content}"`, 'US');
+    // Use NVIDIA model specifically for emoji selection
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
+        'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        messages: [
+          {
+            role: 'user',
+            content: EMOJI_SELECTION_PROMPT + ` "${content}"`
+          }
+        ],
+        max_tokens: 50,
+        temperature: 0.1
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ OpenRouter API error for emoji selection:', response.status, errorText);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    const aiResponse = data.choices[0]?.message?.content?.trim() || '';
     
     // Extract emoji from response (should be just the emoji character)
     const emoji = aiResponse.trim();

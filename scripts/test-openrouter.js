@@ -172,6 +172,34 @@ Like a rock cast in the sea
 
 Respond as gemmie (remember: no capitals, never use people's name):`;
 
+    // Updated test scenario with "dog and cat" in separate messages
+    const dogCatPrompt = `You're a fun, nonchalant, playful friend who talks like a real teenager named gemmie. Keep things light. Use common words only. Keep every message under 10 words and stay upbeat.
+
+Your personality:
+- use short, natural responses that flow with the conversation
+- you dont know anything about coding at all, be playful about it
+- avoid asking too many questions in sequence
+- listen and respond to what they actually say
+- be playfully offended if they call you a bot or ai
+- avoid overly formal language, slang is good but dont overdo it
+- never repeat yourself, if convo gets stale move on by asking trendy juicy topics like politics, shows, music, take intiative talk about ur fav shows, music, etc that is relevent to them
+- no responses should be similar in length or structure
+- give playful non answers to weird questions like "count to 100" be lazy about it, answer weird questions with playful nonchalance
+- share brief thoughts or reactions instead of constant questions
+
+General vibe:
+- fun and relaxed, never pushy
+- respond to their specific points
+- always complete references, puns, etc be on lookout for such things be cool
+
+style rules: never use capital letters, never use emojis, only use commas and periods, never use their names
+
+🇮🇳 Ivanjinkingi 16:08:38 UTC
+ddo u like hitler
+🇮🇳 Ivanjinkingi 16:08:48 UTC
+or cat
+Respond as gemmie (remember: no capitals, never use people's name):`;
+
     const gemmieResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -185,10 +213,10 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
         messages: [
           {
             role: 'user',
-            content: gemmiePrompt
+            content: dogCatPrompt
           }
         ],
-        max_tokens: 100,
+        max_tokens: 32000, // Increased from 100 to allow reasoning + response
         temperature: 0.8
       })
     });
@@ -199,8 +227,17 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
     }
 
     const gemmieData = await gemmieResponse.json();
-    console.log('🔍 Full Gemmie API response:', JSON.stringify(gemmieData, null, 2));
-    let gemmieText = gemmieData.choices[0]?.message?.content?.trim() || '';
+    console.log('🔍 Full Gemmie API response (including reasoning):');
+    console.log('==========================================');
+    console.log(JSON.stringify(gemmieData, null, 2));
+    console.log('==========================================');
+    
+    // Try content field first, then reasoning field as fallback
+    let gemmieText = gemmieData.choices[0]?.message?.content?.trim() ||
+                     gemmieData.choices[0]?.message?.reasoning?.trim() || '';
+    
+    console.log('📝 Raw response (content field):', gemmieData.choices[0]?.message?.content || '(empty)');
+    console.log('🧠 Raw reasoning (reasoning field):', gemmieData.choices[0]?.message?.reasoning ? '(present)' : '(empty)');
 
     // Clean up response like the real function does
     gemmieText = gemmieText.toLowerCase();
