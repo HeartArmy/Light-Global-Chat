@@ -494,7 +494,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
                 border: '1px solid var(--border)',
               }}
             >
-              📋 Loading!
+              📋 Please Wait!
             </div>
           )}
         </div>
