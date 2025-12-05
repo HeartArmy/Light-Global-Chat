@@ -192,6 +192,21 @@ export default function ChatRoomClient() {
       );
     });
 
+    // Listen for typing indicator events
+    channel.bind('typing-start', () => {
+      const typingIndicator = document.getElementById('typing-indicator');
+      if (typingIndicator) {
+        typingIndicator.style.display = 'flex';
+      }
+    });
+
+    channel.bind('typing-stop', () => {
+      const typingIndicator = document.getElementById('typing-indicator');
+      if (typingIndicator) {
+        typingIndicator.style.display = 'none';
+      }
+    });
+
     // Subscribe to presence channel for online count
     const presenceChannel = pusher.subscribe('presence-chat-room');
 
@@ -235,17 +250,18 @@ export default function ChatRoomClient() {
     const typingIndicator = document.getElementById('typing-indicator');
     if (!typingIndicator) return;
 
+    // Function to show/hide typing indicator
+    const setTypingDisplay = (isTyping: boolean) => {
+      typingIndicator.style.display = isTyping ? 'flex' : 'none';
+    };
+
     // Fetch initial typing status
     const checkTypingStatus = async () => {
       try {
         const response = await fetch('/api/typing-status');
         if (response.ok) {
           const data = await response.json();
-          if (data.isTyping) {
-            typingIndicator.style.display = 'inline-flex';
-          } else {
-            typingIndicator.style.display = 'none';
-          }
+          setTypingDisplay(data.isTyping);
         }
       } catch (error) {
         console.error('Failed to check typing status:', error);
@@ -254,6 +270,12 @@ export default function ChatRoomClient() {
 
     // Check typing status every 2 seconds
     const typingInterval = setInterval(checkTypingStatus, 2000);
+
+    // Listen for typing events from Pusher (if we had them)
+    // For now, we'll rely on polling since we're using Redis + API polling
+
+    // Initial check
+    checkTypingStatus();
 
     return () => {
       clearInterval(typingInterval);

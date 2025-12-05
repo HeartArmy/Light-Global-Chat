@@ -244,9 +244,25 @@ export async function setTypingIndicator(isTyping: boolean): Promise<void> {
     if (isTyping) {
       await redis.set(TYPING_INDICATOR_KEY, 'typing', { ex: 10 }); // TTL 10 seconds
       console.log('💬 Someone is typing...');
+      
+      // Trigger Pusher event for real-time update
+      try {
+        const pusher = (await import('@/lib/pusher')).getPusherInstance();
+        await pusher.trigger('chat-room', 'typing-start', {});
+      } catch (pusherError) {
+        console.error('❌ Failed to trigger typing-start event:', pusherError);
+      }
     } else {
       await redis.del(TYPING_INDICATOR_KEY);
       console.log('💬 Typing indicator cleared');
+      
+      // Trigger Pusher event for real-time update
+      try {
+        const pusher = (await import('@/lib/pusher')).getPusherInstance();
+        await pusher.trigger('chat-room', 'typing-stop', {});
+      } catch (pusherError) {
+        console.error('❌ Failed to trigger typing-stop event:', pusherError);
+      }
     }
   } catch (error) {
     console.error('❌ Error setting typing indicator:', error);
