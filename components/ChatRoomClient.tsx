@@ -207,6 +207,17 @@ export default function ChatRoomClient() {
         typingIndicator.style.transform = 'translateY(0)';
         typingIndicator.style.pointerEvents = 'auto';
         console.log('✅ Set typing indicator to visible with animation');
+        
+        // Safety timeout: hide typing indicator after 10 seconds
+        setTimeout(() => {
+          const currentOpacity = typingIndicator.style.opacity;
+          if (currentOpacity === '1') {
+            console.log('⏰ Typing indicator auto-hidden after 10 seconds (safety timeout)');
+            typingIndicator.style.opacity = '0';
+            typingIndicator.style.transform = 'translateY(-10px)';
+            typingIndicator.style.pointerEvents = 'none';
+          }
+        }, 10000); // 10 seconds
       } else {
         console.error('❌ Typing indicator element not found');
       }
@@ -271,6 +282,18 @@ export default function ChatRoomClient() {
 
   // Typing indicator logic - handled by Pusher events
   // The typing indicator is shown/hidden via typing-start/typing-stop events
+  
+  // Safety timeout to hide typing indicator after 10 seconds
+  useEffect(() => {
+    let typingTimeout: NodeJS.Timeout | null = null;
+    
+    // Clear timeout when component unmounts
+    return () => {
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
+    };
+  }, []);
 
   const handleNameSubmit = (name: string) => {
     setUserName(name);
