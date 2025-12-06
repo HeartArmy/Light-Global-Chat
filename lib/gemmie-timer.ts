@@ -292,7 +292,7 @@ export async function isSomeoneTyping(): Promise<boolean> {
 export async function scheduleGemmieTypingIndicator(userName: string, userMessage: string, userCountry: string): Promise<void> {
   try {
     // Wait for the Gemmie delay period
-    await new Promise(resolve => setTimeout(resolve, GEMMIE_DELAY * 1000));
+    await new Promise(resolve => setTimeout(resolve, 10 * 1000));
     
     // Check if the job is still active (user hasn't sent new messages)
     const jobIsActive = await isJobActive();
