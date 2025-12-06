@@ -494,7 +494,8 @@ IMPORTANT RULES:
 - You can ONLY edit Gemmie's most recent message (index 1) or the second most recent message (index 2)
 - Do NOT edit messages from index 3 or higher (older messages)
 - ALWAYS check for spelling errors, grammar mistakes, and typos FIRST, even without explicit user feedback
-- Common typos to fix: "everytime" → "every time", "alot" → "a lot", "dont" → "don't", "cant" → "can't", "wont" → "won't", "teh" → "the", "battallion" → "battalion" etc.
+- Common typos to fix: "battallion" -> "battalion", "teh" -> "the" etc.
+- common abbreviations are fine -> "everytime" instead of "every time", "alot" instead of "a lot", "dont" instead of "don't", "whats" instead of "what is", "cant" instead of "can't", "wont" instead of "won't", these are all fine
 - Intentional slang/shortcuts that are OK: "gonna", "wanna", "gimme", "cause" (as in "because"), "cos" (as in "because")
 - ONLY fix typos and grammar mistakes - NEVER change the meaning, context, or intent of the message
 - DO NOT add new information or explanations
