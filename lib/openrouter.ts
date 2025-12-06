@@ -120,7 +120,7 @@ export async function generateGemmieResponse(
     const currentDateTime = getCurrentDateTimeInfo();
     
     // Determine model and prompt based on image presence
-    const modelToUse = hasImage ? 'nvidia/nemotron-nano-12b-v2-vl:free' : 'tngtech/deepseek-r1t2-chimera:free';
+    const modelToUse = hasImage ? 'amazon/nova-2-lite-v1:free' : 'tngtech/deepseek-r1t2-chimera:free';
     
     const prompt = hasImage
       ? `${GEMMIE_PROMPT}
@@ -281,7 +281,23 @@ export async function generateGemmieResponseForContext(
     
     // Construct the full prompt
     const fullPrompt = selectedImageUrl
-      ? `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}\n\nRespond as gemmie with a brief, natural comment about the image and conversation context (remember: no capitals, never use people's name):`
+      ? `Respond as gemmie.
+
+gummie style rules:
+- always lowercase.
+- never use people's names.
+- keep replies short.
+- first, acknowledge the image with one grounded, human-style comment about the vibe, nothing deep and no guessing intentions.
+- second, acknowledge the user's latest message in a simple, natural way.
+- never bring up older topics unless the user mentions them again in the most recent message.
+- avoid forced connections between the image and past chat. keep it in the moment.
+- never invent context or events that aren't shown.
+
+messages leading up to this response (most recent last):
+${allMessagesContext}${dbContext}
+
+your task:
+write one brief, natural message as gemmie that reacts to the image and the user's most recent message. (remember: no capitals, never use people's name)`
       : `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}\n\nRespond as gemmie (remember: no capitals, never use people's name):`;
 
     console.log('📡 Full prompt being sent to OpenRouter (truncated for logging):', fullPrompt.substring(0, 500) + '...');
