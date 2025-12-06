@@ -217,7 +217,7 @@ export default function ChatRoomClient() {
             typingIndicator.style.transform = 'translateY(-10px)';
             typingIndicator.style.pointerEvents = 'none';
           }
-        }, 10000); // 10 seconds
+        }, 20000); // 20 seconds
       } else {
         console.error('❌ Typing indicator element not found');
       }
