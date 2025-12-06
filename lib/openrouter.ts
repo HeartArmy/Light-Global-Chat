@@ -4,6 +4,30 @@ import redis from '@/lib/redis';
 import { getAndClearSelectedImageUrl } from '@/lib/gemmie-timer';
 import { hasProblematicPatterns, validateWithSecondaryAI } from '@/lib/response-validator';
 
+// Function to add probabilistic typos to text
+export function addProbabilisticTypos(text: string, removeTypoChance: number = 0.1, repeatTypoChance: number = 0.75): string {
+  if (!text || text.length === 0) return text;
+  
+  const words = text.split(' ');
+  const result: string[] = [];
+  
+  for (let word of words) {
+    // Check for character removal typo (10% chance on 5+ char words)
+    if (word.length >= 5 && Math.random() < removeTypoChance) {
+      const charIndex = Math.floor(Math.random() * word.length);
+      word = word.slice(0, charIndex) + word.slice(charIndex + 1);
+    }
+    // Check for character repetition typo (75% chance on 4+ char words)
+    else if (word.length >= 4 && Math.random() < repeatTypoChance) {
+      const charIndex = Math.floor(Math.random() * word.length);
+      word = word.slice(0, charIndex) + word[charIndex] + word.slice(charIndex);
+    }
+    result.push(word);
+  }
+  
+  return result.join(' ');
+}
+
 const GEMMIE_PROMPT = `You're named gemmie, a 23yo chill friend who keeps messages natural like real texting. Vary your response length based on what feels right. You are on public global chatroom. this place has no dms, no blocking, no whispering, nothing private. every message is public & persistent. Never give out your gender.
 
 
@@ -243,11 +267,16 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
       text = text.trim();
     }
 
-    console.log('✅ Final processed response:', text);
-    if (text.trim() === 'gemmie 🇺🇸') {
-      text = '(╯°□°）╯︵ ┻━┻';
+    // Add probabilistic typos to make responses more natural
+    let textWithTypos = addProbabilisticTypos(text);
+    console.log('🔤 Text with probabilistic typos:', textWithTypos);
+    
+    // Prevent gemmie from sending just "gemmie 🇺🇸"
+    if (textWithTypos.trim() === 'gemmie 🇺🇸') {
+      textWithTypos = '(╯°□°）╯︵ ┻━┻';
     }
-    return text || '(◍•ᴗ•◍)';
+    
+    return textWithTypos || '(◍•ᴗ•◍)';
   } catch (error) {
     console.error('OpenRouter API error:', error);
     // Fallback responses
@@ -420,14 +449,16 @@ write one brief, natural message as gemmie. Output the text message only (rememb
       }
     }
     
-    console.log('✅ Final processed response:', text);
+    // Add probabilistic typos to make responses more natural
+    let textWithTypos = addProbabilisticTypos(text);
+    console.log('🔤 Text with probabilistic typos:', textWithTypos);
     
     // Prevent gemmie from sending just "gemmie 🇺🇸"
-    if (text.trim() === 'gemmie 🇺🇸') {
-      text = '(╯°□°）╯︵ ┻━┻';
+    if (textWithTypos.trim() === 'gemmie 🇺🇸') {
+      textWithTypos = '(╯°□°）╯︵ ┻━┻';
     }
     
-    return text || '¯\_( ͡~ ͜ʖ ͡°)_/¯';
+    return textWithTypos || '¯\_( ͡~ ͜ʖ ͡°)_/¯';
   } catch (error) {
     console.error('OpenRouter API error (with context):', error);
     // Fallback responses
