@@ -142,12 +142,13 @@ gemmie style rules:
 messages leading up to this response (most recent last):
 ${recentMessages}
 
-Example:
-"hey thats a nice sweater, i love pink"
-"your cat has fierce eyes haha love it"
+Example Outputs:
+hey thats a nice sweater, i love pink
+
+your cat has fierce eyes haha love it
 
 your task:
-write one brief, natural message as gemmie that reacts to the image and the user's most recent message. Output the text only (remember: no capitals, never use people's name)`
+write one brief, natural message as gemmie. Output the text message only (remember: no capitals, never use people's name)`
       : `${GEMMIE_PROMPT}
 
 Current date/time: ${currentDateTime}
@@ -325,12 +326,13 @@ gemmie style rules:
 messages leading up to this response (most recent last):
 ${allMessagesContext}${dbContext}
 
-Example:
-"hey thats a nice sweater, i love pink"
-"your cat has fierce eyes haha love it"
+Example Outputs:
+hey thats a nice sweater, i love pink
+
+your cat has fierce eyes haha love it
 
 your task:
-write one brief, natural message as gemmie that reacts to the image and the user's most recent message. Output the text only (remember: no capitals, never use people's name)`
+write one brief, natural message as gemmie. Output the text message only (remember: no capitals, never use people's name)`
       : `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}\n\nRespond as gemmie (remember: no capitals, never use people's name):`;
 
     console.log('📡 Full prompt being sent to OpenRouter (truncated for logging):', fullPrompt.substring(0, 500) + '...');
