@@ -42,7 +42,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'allenai/olmo-3-32b-think:free',
+        model: 'tngtech/deepseek-r1t2-chimera:free',
         messages: [
           {
             role: 'user',
