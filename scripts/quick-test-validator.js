@@ -42,7 +42,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'tngtech/deepseek-r1t2-chimera:free',
+        model: 'meituan/longcat-flash-chat:free',
         messages: [
           {
             role: 'user',
