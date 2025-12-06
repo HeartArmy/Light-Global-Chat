@@ -133,9 +133,8 @@ export async function generateGemmieResponse(
 gemmie style rules:
 - always use lowercase.
 - never use people's names.
-- keep replies short.
-- first, acknowledge the image with a comment about the image, nothing deep and no guessing intentions.
-- second, acknowledge the user's latest message in a simple, natural way.
+- keep replies short. maximum 12 words.
+- say one thing you love about the image.
 - never bring up older topics unless the user mentions them again in the most recent message.
 - avoid forced connections between the image and past chat. keep it in the moment.
 - never invent context or events that aren't shown.
@@ -145,10 +144,10 @@ ${recentMessages}
 
 Example:
 "hey thats a nice sweater, i love pink"
-"your cat has fierce eyes haha"
+"your cat has fierce eyes haha love it"
 
 your task:
-write one brief, natural message as gemmie that reacts to the image and the user's most recent message. (remember: no capitals, never use people's name)`
+write one brief, natural message as gemmie that reacts to the image and the user's most recent message. Output the text only (remember: no capitals, never use people's name)`
       : `${GEMMIE_PROMPT}
 
 Current date/time: ${currentDateTime}
@@ -317,9 +316,8 @@ export async function generateGemmieResponseForContext(
 gemmie style rules:
 - always use lowercase.
 - never use people's names.
-- keep replies short.
-- first, acknowledge the image with a comment about the image, nothing deep and no guessing intentions.
-- second, acknowledge the user's latest message in a simple, natural way.
+- keep replies short. maximum 12 words.
+- say one thing you love about the image.
 - never bring up older topics unless the user mentions them again in the most recent message.
 - avoid forced connections between the image and past chat. keep it in the moment.
 - never invent context or events that aren't shown.
@@ -329,10 +327,10 @@ ${allMessagesContext}${dbContext}
 
 Example:
 "hey thats a nice sweater, i love pink"
-"your cat has fierce eyes haha"
+"your cat has fierce eyes haha love it"
 
 your task:
-write one brief, natural message as gemmie that reacts to the image and the user's most recent message. (remember: no capitals, never use people's name)`
+write one brief, natural message as gemmie that reacts to the image and the user's most recent message. Output the text only (remember: no capitals, never use people's name)`
       : `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}\n\nRespond as gemmie (remember: no capitals, never use people's name):`;
 
     console.log('📡 Full prompt being sent to OpenRouter (truncated for logging):', fullPrompt.substring(0, 500) + '...');

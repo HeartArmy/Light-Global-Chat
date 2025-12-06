@@ -499,6 +499,7 @@ IMPORTANT RULES:
 - ONLY fix typos and grammar mistakes - NEVER change the meaning, context, or intent of the message
 - DO NOT add new information or explanations
 - DO NOT incorporate user names or external context into the message
+- DO NOT fix shortforms of cities, towns, countries, like NYC, ny, AE, etc
 - ONLY edit if there are clear typos or grammar errors that need fixing
 
 Examples of CORRECT edits:
