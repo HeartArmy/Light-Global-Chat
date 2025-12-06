@@ -143,8 +143,8 @@ async function scheduleDelayedResponse(userName: string, userMessage: string, us
  */
 export async function setJobActive(): Promise<boolean> {
   try {
-    // Set the job active key with TTL (should be longer than GEMMIE_DELAY)
-    const result = await redis.set(JOB_ACTIVE_KEY, 'active', { ex: GEMMIE_DELAY + 10, nx: true });
+    // Set the job active key with TTL (should be longer than GEMMIE_DELAY to account for QStash delays)
+    const result = await redis.set(JOB_ACTIVE_KEY, 'active', { ex: GEMMIE_DELAY + 120, nx: true }); // 120 seconds buffer for QStash delays
     if (result === 'OK') {
       console.log('🚀 Gemmie job marked as active.');
       return true;
@@ -292,7 +292,7 @@ export async function isSomeoneTyping(): Promise<boolean> {
 export async function scheduleGemmieTypingIndicator(userName: string, userMessage: string, userCountry: string): Promise<void> {
   try {
     // Wait for the Gemmie delay period
-    await new Promise(resolve => setTimeout(resolve, 10 * 1000));
+    await new Promise(resolve => setTimeout(resolve, GEMMIE_DELAY * 1000));
     
     // Check if the job is still active (user hasn't sent new messages)
     const jobIsActive = await isJobActive();
