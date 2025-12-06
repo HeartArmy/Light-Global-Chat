@@ -6,7 +6,7 @@ import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import DeletedMessageByGemmie from '@/models/DeletedMessageByGemmie';
 import EditedMessageByGemmie from '@/models/EditedMessageByGemmie';
-import mongoose from 'mongoose';
+import mongoose from 'mongoose'; 
 
 // Get country flag
 function getCountryFlag(countryCode: string): string {
