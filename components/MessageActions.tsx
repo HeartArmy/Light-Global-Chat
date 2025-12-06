@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Message } from '@/types';
+import { Message } from '@/types'; 
 
 const EmojiPicker = dynamic(() => import('./EmojiPicker'), {
   loading: () => <div className="text-caption">Loading...</div>,
