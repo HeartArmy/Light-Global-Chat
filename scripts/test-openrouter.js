@@ -34,7 +34,7 @@ headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meituan/longcat-flash-chat:free',
+        model: 'allenai/olmo-3-32b-think:free',
         messages: [
           {
             role: 'user',
@@ -209,7 +209,7 @@ Respond as gemmie (remember: no capitals, never use people's name):`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meituan/longcat-flash-chat:free',
+        model: 'allenai/olmo-3-32b-think:free',
         messages: [
           {
             role: 'user',

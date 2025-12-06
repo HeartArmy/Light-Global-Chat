@@ -42,7 +42,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meituan/longcat-flash-chat:free',
+        model: 'allenai/olmo-3-32b-think:free',
         messages: [
           {
             role: 'user',

@@ -127,7 +127,7 @@ shouldSkip = false if it's a new, unique response`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meituan/longcat-flash-chat:free',
+        model: 'allenai/olmo-3-32b-think:free',
         messages: [{ role: 'user', content: similarityPrompt }],
         max_tokens: 32000,
         temperature: 0.1
@@ -536,7 +536,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'meituan/longcat-flash-chat:free',
+            model: 'allenai/olmo-3-32b-think:free',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 32000,
             temperature: 0.1
