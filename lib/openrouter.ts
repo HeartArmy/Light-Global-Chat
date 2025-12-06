@@ -125,7 +125,7 @@ export async function generateGemmieResponse(
     const currentDateTime = getCurrentDateTimeInfo();
     
     // Determine model and prompt based on image presence
-    const modelToUse = selectedImageUrl ? 'amazon/nova-2-lite-v1:free' : 'tngtech/deepseek-r1t2-chimera:free';
+    const modelToUse = selectedImageUrl ? 'nvidia/nemotron-nano-12b-v2-vl:free' : 'tngtech/deepseek-r1t2-chimera:free';
     
     const prompt = selectedImageUrl
       ? `Respond as gemmie.
@@ -308,7 +308,7 @@ export async function generateGemmieResponseForContext(
     }
 
     // Determine which model to use based on image presence
-    const modelToUse = selectedImageUrl ? 'amazon/nova-2-lite-v1:free' : 'tngtech/deepseek-r1t2-chimera:free';
+    const modelToUse = selectedImageUrl ? 'nvidia/nemotron-nano-12b-v2-vl:free' : 'tngtech/deepseek-r1t2-chimera:free';
     
     // Construct the full prompt
     const fullPrompt = selectedImageUrl
