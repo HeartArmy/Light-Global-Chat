@@ -361,6 +361,30 @@ export async function POST(request: NextRequest) {
 
     await pusher.trigger('chat-room', 'new-message', gemmieMessage);
     console.log('✅ Delayed Gemmie response sent for the initial message(s).');
+    
+    // Check for new messages that arrived during processing and schedule next job immediately
+    // This allows the next job to start while editing happens concurrently
+    const { getAndClearGemmieQueue: getQueueAgain, resetGemmieTimer: rescheduleJob, queueGemmieMessage } = await import('@/lib/gemmie-timer');
+    const newlyQueuedMessages = await getQueueAgain();
+    
+    if (newlyQueuedMessages.length > 0) {
+      console.log(`📥 Found ${newlyQueuedMessages.length} new message(s) in queue after sending message. Scheduling next job immediately.`);
+      
+      const nextMessageToProcess = newlyQueuedMessages[0]; // Process the oldest one next
+      console.log('🔄 Scheduling next QStash job for:', nextMessageToProcess.userName);
+      
+      // Schedule the next job immediately after sending the current message
+      await rescheduleJob(nextMessageToProcess.userName, nextMessageToProcess.userMessage, nextMessageToProcess.userCountry);
+      
+      // Re-queue the remaining messages (if any)
+      const remainingMessages = newlyQueuedMessages.slice(1);
+      for (const remainingMsg of remainingMessages) {
+        await queueGemmieMessage(remainingMsg.userName, remainingMsg.userMessage, remainingMsg.userCountry);
+        console.log(`📝 Re-queued remaining message from: ${remainingMsg.userName}`);
+      }
+      
+      console.log('✅ Next QStash job scheduled immediately. Editing will happen concurrently.');
+    }
 
     // Check Gemmie's recent messages for repetition and delete if needed
     console.log('🔍 Checking Gemmie messages for repetition...');
@@ -671,35 +695,11 @@ Allowed indices: [1] or [2] only!`;
 
 
     // --- Check for new messages that arrived during processing ---
-    // Add a small delay to ensure Pusher events are processed before checking queue
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // This section is now handled earlier, right after sending the message
+    // to allow concurrent editing and new message generation
     
-    const { getAndClearGemmieQueue: getQueueAgain, resetGemmieTimer: rescheduleJob, queueGemmieMessage } = await import('@/lib/gemmie-timer');
-    const newlyQueuedMessages = await getQueueAgain();
-    
-    let shouldClearJobActive = true; // Assume we'll clear the flag
-
-    if (newlyQueuedMessages.length > 0) {
-      console.log(`📥 Found ${newlyQueuedMessages.length} new message(s) in queue after processing. Rescheduling for the next one.`);
-      
-      const nextMessageToProcess = newlyQueuedMessages[0]; // Process the oldest one next
-      console.log('🔄 Scheduling next QStash job for:', nextMessageToProcess.userName);
-
-      // Reschedule for the next message
-      await rescheduleJob(nextMessageToProcess.userName, nextMessageToProcess.userMessage, nextMessageToProcess.userCountry);
-      
-      // Re-queue the remaining messages (if any)
-      const remainingMessages = newlyQueuedMessages.slice(1);
-      for (const remainingMsg of remainingMessages) {
-        await queueGemmieMessage(remainingMsg.userName, remainingMsg.userMessage, remainingMsg.userCountry);
-        console.log(`📝 Re-queued remaining message from: ${remainingMsg.userName}`);
-      }
-      
-      console.log('✅ Next QStash job scheduled and remaining messages re-queued. gemmie:job-active remains set.');
-      shouldClearJobActive = false; // Do not clear the flag, a new job is scheduled
-    } else {
-      console.log('🧹 No new messages found in queue after processing.');
-    }
+    // Set shouldClearJobActive to true since we already handled queue checking earlier
+    const shouldClearJobActive = true;
 
     if (shouldClearJobActive) {
       const { clearJobActive, clearJobScheduled } = await import('@/lib/gemmie-timer');
