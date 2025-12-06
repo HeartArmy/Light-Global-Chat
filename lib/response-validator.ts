@@ -131,14 +131,14 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+        model: 'tngtech/deepseek-r1t2-chimera:free',
         messages: [
           {
             role: 'user',
             content: validationPrompt
           }
         ],
-        max_tokens: 100,
+        max_tokens: 32000,
         temperature: 0.1 // Low temperature for consistent cleaning
       })
     });
