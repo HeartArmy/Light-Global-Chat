@@ -535,9 +535,9 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+            model: 'tngtech/deepseek-r1t2-chimera:free',
             messages: [{ role: 'user', content: reviewPrompt }],
-            max_tokens: 200,
+            max_tokens: 32000,
             temperature: 0.1
           })
         });
