@@ -200,8 +200,29 @@ export async function POST(request: NextRequest) {
     const jobIsActive = await isJobActive();
     
     if (!jobIsActive) {
-      console.log('⚠️ Job active flag not set - this might be an orphan job. Skipping processing...');
-      return NextResponse.json({ success: true, skipped: true, reason: 'orphan-job' });
+      console.log('⚠️ Job active flag not set - checking if this is a legitimate orphan job...');
+      
+      // Check if there are any recent messages that might indicate this is a valid job
+      // that just lost its flag due to TTL expiration
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      const recentMessages = await Message.find({
+        timestamp: { $gte: tenMinutesAgo }
+      }).sort({ timestamp: -1 }).limit(5).lean();
+      
+      // If there are recent messages from non-Gemmie users, this might be a valid job
+      const hasRecentUserMessages = recentMessages.some(msg =>
+        msg.userName.toLowerCase() !== 'gemmie'
+      );
+      
+      if (hasRecentUserMessages) {
+        console.log('ℹ️ Recent user messages found, treating as valid job despite missing flag');
+        // Set the flag again since this appears to be a valid job
+        const { setJobActive } = await import('@/lib/gemmie-timer');
+        await setJobActive();
+      } else {
+        console.log('⚠️ No recent user messages found, treating as true orphan job. Skipping processing...');
+        return NextResponse.json({ success: true, skipped: true, reason: 'orphan-job' });
+      }
     }
     
     // Clear the job scheduled key to allow new messages to trigger QStash jobs
@@ -210,6 +231,10 @@ export async function POST(request: NextRequest) {
     const redisClient = await import('@/lib/redis');
     await redisClient.default.del('gemmie:job-scheduled');
     console.log('🔓 Cleared gemmie:job-scheduled key. New messages can now schedule QStash jobs.');
+    
+    // Log current job state for debugging
+    const jobActiveStatus = await redisClient.default.get('gemmie:job-active');
+    console.log(`📋 Job state at start: job-active=${jobActiveStatus}`);
 
     let parsedBody;
     try {
@@ -677,9 +702,14 @@ Allowed indices: [1] or [2] only!`;
     }
 
     if (shouldClearJobActive) {
-      const { clearJobActive } = await import('@/lib/gemmie-timer');
+      const { clearJobActive, clearJobScheduled } = await import('@/lib/gemmie-timer');
       await clearJobActive();
-      console.log('🔓 Cleared job active flag as queue is now empty.');
+      await clearJobScheduled();
+      console.log('🔓 Cleared job active flag and job scheduled key as queue is now empty.');
+      
+      // Log final job state
+      const finalJobStatus = await (await import('@/lib/redis')).default.get('gemmie:job-active');
+      console.log(`📋 Job state after clearing: job-active=${finalJobStatus}`);
     }
 
     return NextResponse.json({ success: true });
@@ -693,25 +723,30 @@ Allowed indices: [1] or [2] only!`;
     // the main logic could decide to reschedule or clear it normally.
     // This is a fallback for unexpected errors.
     try {
-      // Check if we are in an error state that wasn't handled by the main logic
-      // This is a bit tricky to do perfectly without more state.
-      // For now, this is a general cleanup for any error path that might leave the lock.
-      // If the main logic successfully rescheduled, this clearJobActive would be problematic.
-      // However, if an error occurs *before* `shouldClearJobActive` is determined,
-      // this is good safety.
-      const { clearJobActive, getAndClearGemmieQueue: checkQueueForErrorHandling } = await import('@/lib/gemmie-timer');
-      
-      // Only clear if an error occurred and we want to ensure the lock is released
-      // This logic might need refinement if errors can happen after rescheduling.
-      // For safety, if an error occurs, we try to release the lock.
-      // The main logic handles the "happy path" or rescheduling path.
-      console.log('🔧 Finally block: Checking if job active flag needs cleanup due to error.');
+      const { clearJobActive } = await import('@/lib/gemmie-timer');
       const redis = (await import('@/lib/redis')).default;
       const JOB_ACTIVE_KEY = 'gemmie:job-active';
       const isActive = await redis.get(JOB_ACTIVE_KEY);
+      
       if (isActive === 'active') {
-        await clearJobActive();
-        console.log('🔓 Cleared job active flag in finally block (error path).');
+        // Double-check that we should clear by seeing if there are queued messages
+        const { getAndClearGemmieQueue } = await import('@/lib/gemmie-timer');
+        const queuedMessages = await getAndClearGemmieQueue();
+        
+        if (queuedMessages.length === 0) {
+          // No queued messages, safe to clear
+          await clearJobActive();
+          const { clearJobScheduled } = await import('@/lib/gemmie-timer');
+          await clearJobScheduled();
+          console.log('🔓 Cleared job active flag and job scheduled key in finally block (no queued messages).');
+        } else {
+          // Put messages back in queue and don't clear flag
+          const { queueGemmieMessage } = await import('@/lib/gemmie-timer');
+          for (const msg of queuedMessages) {
+            await queueGemmieMessage(msg.userName, msg.userMessage, msg.userCountry);
+          }
+          console.log(`⚠️ Found ${queuedMessages.length} queued messages in finally block, keeping job active flag set.`);
+        }
       } else {
         console.log('ℹ️ Job active flag already cleared by main logic.');
       }

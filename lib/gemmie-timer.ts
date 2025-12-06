@@ -14,6 +14,8 @@ const GEMMIE_SELECTED_IMAGE_URL_KEY = 'gemmie:selected-image-url';
 const TYPING_INDICATOR_KEY = 'typing:indicator';
 // Time in seconds for the delay before Gemmie responds (random between 10-15 seconds to match job window)
 const GEMMIE_DELAY = 7; // Fixed short thinking delay before AI (typing added after)
+// TTL for job active flag should be longer than the entire processing time
+const JOB_ACTIVE_TTL = 300; // 5 minutes - covers full processing including cleanup
 
 /**
  * Resets the Gemmie response timer when a user sends a message
@@ -32,6 +34,12 @@ export async function resetGemmieTimer(userName: string, userMessage: string, us
   await redis.del(GEMMIE_SELECTED_IMAGE_URL_KEY);
   console.log('🗑️ Cleared previously selected image URL for new message burst.');
 
+  // Clear any existing scheduled job before scheduling a new one
+  const existingJobId = await redis.get(JOB_SCHEDULED_KEY);
+  if (existingJobId) {
+    console.log('🗑️ Clearing existing QStash job ID:', existingJobId);
+    await redis.del(JOB_SCHEDULED_KEY);
+  }
   
   // Schedule the new delayed response using QStash
   await scheduleDelayedResponse(userName, userMessage, userCountry);
@@ -100,6 +108,13 @@ async function scheduleDelayedResponse(userName: string, userMessage: string, us
   const qstash = await import('@/lib/qstash');
   console.log('🚀 Attempting to schedule QStash message for:', userName, 'with delay:', GEMMIE_DELAY, 's');
 
+  // Check if a job is already scheduled to prevent duplicates
+  const existingJobId = await redis.get(JOB_SCHEDULED_KEY);
+  if (existingJobId) {
+    console.log('⚠️ QStash job already scheduled, skipping new schedule. Existing ID:', existingJobId);
+    return;
+  }
+
   // Get the absolute URL for the delayed processing endpoint
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const endpoint = `${baseUrl}/api/gemmie/process`;
@@ -113,7 +128,7 @@ async function scheduleDelayedResponse(userName: string, userMessage: string, us
   console.log('📦 QStash payload:', JSON.stringify(payload));
 
   try {
-    // Send message to QStash with 15 second delay
+    // Send message to QStash with delay
     const response = await qstash.default.publishJSON({
       url: endpoint,
       body: payload,
@@ -123,7 +138,7 @@ async function scheduleDelayedResponse(userName: string, userMessage: string, us
 
     if (response && response.messageId) {
       // Store the message ID so we can potentially track/cancel it later if needed
-      await redis.set(JOB_SCHEDULED_KEY, response.messageId);
+      await redis.set(JOB_SCHEDULED_KEY, response.messageId, { ex: JOB_ACTIVE_TTL });
       console.log('📍 Stored QStash message ID in Redis:', response.messageId);
     } else {
       console.error('❌ QStash response did not contain a messageId:', response);
@@ -143,8 +158,8 @@ async function scheduleDelayedResponse(userName: string, userMessage: string, us
  */
 export async function setJobActive(): Promise<boolean> {
   try {
-    // Set the job active key with TTL (should be longer than GEMMIE_DELAY to account for QStash delays)
-    const result = await redis.set(JOB_ACTIVE_KEY, 'active', { ex: GEMMIE_DELAY + 120, nx: true }); // 120 seconds buffer for QStash delays
+    // Set the job active key with TTL (should cover full processing time)
+    const result = await redis.set(JOB_ACTIVE_KEY, 'active', { ex: JOB_ACTIVE_TTL, nx: true });
     if (result === 'OK') {
       console.log('🚀 Gemmie job marked as active.');
       return true;
@@ -180,6 +195,18 @@ export async function clearJobActive(): Promise<void> {
     console.log('🔓 Cleared Gemmie job active flag.');
   } catch (error) {
     console.error('❌ Error clearing job active flag:', error);
+  }
+}
+
+/**
+ * Clears the QStash job scheduled key
+ */
+export async function clearJobScheduled(): Promise<void> {
+  try {
+    await redis.del(JOB_SCHEDULED_KEY);
+    console.log('🔓 Cleared QStash job scheduled key.');
+  } catch (error) {
+    console.error('❌ Error clearing job scheduled key:', error);
   }
 }
 
