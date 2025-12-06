@@ -109,8 +109,13 @@ export async function generateGemmieResponse(
     console.log('🔧 OpenRouter API call starting...');
     console.log('📝 User:', userName, 'Country:', userCountry, 'Message:', userMessage);
     
-    // Check if this is an image-based message by looking for image URLs
-    const hasImage = /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|bmp|svg))/i.test(userMessage);
+    // Get selected image URL for AI processing (same approach as generateGemmieResponseForContext)
+    const selectedImageUrl = await getAndClearSelectedImageUrl();
+    let imageContext = '';
+    if (selectedImageUrl) {
+      imageContext = `\n\nImage provided by user: ${selectedImageUrl}`;
+      console.log('🖼️ Image included in AI prompt:', selectedImageUrl);
+    }
     
     // Get recent conversation context
     const recentMessages = await getRecentMessages();
@@ -120,20 +125,30 @@ export async function generateGemmieResponse(
     const currentDateTime = getCurrentDateTimeInfo();
     
     // Determine model and prompt based on image presence
-    const modelToUse = hasImage ? 'amazon/nova-2-lite-v1:free' : 'tngtech/deepseek-r1t2-chimera:free';
+    const modelToUse = selectedImageUrl ? 'amazon/nova-2-lite-v1:free' : 'tngtech/deepseek-r1t2-chimera:free';
     
-    const prompt = hasImage
-      ? `${GEMMIE_PROMPT}
+    const prompt = selectedImageUrl
+      ? `Respond as gemmie.
 
-Current date/time: ${currentDateTime}
+gemmie style rules:
+- always use lowercase.
+- never use people's names.
+- keep replies short.
+- first, acknowledge the image with a comment about the image, nothing deep and no guessing intentions.
+- second, acknowledge the user's latest message in a simple, natural way.
+- never bring up older topics unless the user mentions them again in the most recent message.
+- avoid forced connections between the image and past chat. keep it in the moment.
+- never invent context or events that aren't shown.
 
-Recent conversation context:
+messages leading up to this response (most recent last):
 ${recentMessages}
 
-Current user: ${userName} ${userFlag} from ${userCountry} [${actualTimestamp}]
-Their message: "${userMessage}"
+Example:
+"hey thats a nice sweater, i love pink"
+"your cat has fierce eyes haha"
 
-Respond ONLY as gemmie with a brief, natural comment about the image and conversation context. NO dates/times/countries/flags/usernames/timestamps/context. Just your natural response. No capitals, no names.:`
+your task:
+write one brief, natural message as gemmie that reacts to the image and the user's most recent message. (remember: no capitals, never use people's name)`
       : `${GEMMIE_PROMPT}
 
 Current date/time: ${currentDateTime}
@@ -164,11 +179,27 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
         messages: [
           {
             role: 'user',
-            content: prompt
+            content: selectedImageUrl ? [
+              {
+                type: 'text',
+                text: prompt
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: selectedImageUrl
+                }
+              }
+            ] : [
+              {
+                type: 'text',
+                text: prompt
+              }
+            ]
           }
         ],
-        max_tokens: hasImage ? 32000 : 32000, // Increased to allow reasoning + response
-        temperature: hasImage ? 0.9 : 1.2 // Slightly less creative for image responses
+        max_tokens: selectedImageUrl ? 32000 : 32000, // Increased to allow reasoning + response
+        temperature: selectedImageUrl ? 0.9 : 1.2 // Slightly less creative for image responses
       })
     });
 
@@ -277,17 +308,17 @@ export async function generateGemmieResponseForContext(
     }
 
     // Determine which model to use based on image presence
-    const modelToUse = selectedImageUrl ? 'nvidia/nemotron-nano-12b-v2-vl:free' : 'tngtech/deepseek-r1t2-chimera:free';
+    const modelToUse = selectedImageUrl ? 'amazon/nova-2-lite-v1:free' : 'tngtech/deepseek-r1t2-chimera:free';
     
     // Construct the full prompt
     const fullPrompt = selectedImageUrl
       ? `Respond as gemmie.
 
-gummie style rules:
-- always lowercase.
+gemmie style rules:
+- always use lowercase.
 - never use people's names.
 - keep replies short.
-- first, acknowledge the image with one grounded, human-style comment about the vibe, nothing deep and no guessing intentions.
+- first, acknowledge the image with a comment about the image, nothing deep and no guessing intentions.
 - second, acknowledge the user's latest message in a simple, natural way.
 - never bring up older topics unless the user mentions them again in the most recent message.
 - avoid forced connections between the image and past chat. keep it in the moment.
@@ -295,6 +326,10 @@ gummie style rules:
 
 messages leading up to this response (most recent last):
 ${allMessagesContext}${dbContext}
+
+Example:
+"hey thats a nice sweater, i love pink"
+"your cat has fierce eyes haha"
 
 your task:
 write one brief, natural message as gemmie that reacts to the image and the user's most recent message. (remember: no capitals, never use people's name)`
