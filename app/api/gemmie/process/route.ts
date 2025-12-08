@@ -297,43 +297,43 @@ export async function POST(request: NextRequest) {
     const words = (response.match(/\S+/g) || []).length;
     const typingSpeedWps = 1.3; // words/sec (chatgpt said 1.3 word per second for 100 wpm)
     let typingDelaySec = words / typingSpeedWps;
-    typingDelaySec = Math.max(1, Math.min(1, typingDelaySec)); // cap 1-10s
+    typingDelaySec = Math.max(1, Math.min(1, typingDelaySec)); // cap 1-1s (maximum)
     typingDelaySec *= (0.8 + Math.random() * 0.4); // 20% variance
     const typingDelayMs = typingDelaySec * 1000;
     console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
     await new Promise(resolve => setTimeout(resolve, typingDelayMs));
 
     // Check for similarity with recent messages from GEMMIE only before sending
-    console.log('🔍 Checking for similarity with recent Gemmie messages only...');
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    // console.log('🔍 Checking for similarity with recent Gemmie messages only...');
+    // const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
     
-    // Get all recent messages for context (for AI understanding)
-    const allRecentMessages = await Message.find({
-      timestamp: { $gte: tenMinutesAgo }
-    })
-      .sort({ timestamp: -1 })
-      .limit(10)
-      .select('_id content userName userCountry timestamp')
-      .lean();
+    // // Get all recent messages for context (for AI understanding)
+    // const allRecentMessages = await Message.find({
+    //   timestamp: { $gte: tenMinutesAgo }
+    // })
+    //   .sort({ timestamp: -1 })
+    //   .limit(10)
+    //   .select('_id content userName userCountry timestamp')
+    //   .lean();
     
-    // Get only Gemmie messages for similarity comparison
-    const gemmieMessages = await Message.find({
-      userName: 'gemmie',
-      timestamp: { $gte: tenMinutesAgo }
-    })
-      .sort({ timestamp: -1 })
-      .limit(10)
-      .select('_id content userName userCountry timestamp')
-      .lean();
+    // // Get only Gemmie messages for similarity comparison
+    // const gemmieMessages = await Message.find({
+    //   userName: 'gemmie',
+    //   timestamp: { $gte: tenMinutesAgo }
+    // })
+    //   .sort({ timestamp: -1 })
+    //   .limit(10)
+    //   .select('_id content userName userCountry timestamp')
+    //   .lean();
 
-    // Check if this response is too similar to recent Gemmie messages
-    const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
+    // // Check if this response is too similar to recent Gemmie messages
+    // const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
     
-    if (similarityCheck.shouldSkip) {
-      console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
-      console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
-      return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
-    }
+    // if (similarityCheck.shouldSkip) {
+    //   console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
+    //   console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
+    //   return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
+    // }
 
     // Clear typing indicator before sending message
     const { setTypingIndicator } = await import('@/lib/gemmie-timer');
@@ -387,129 +387,130 @@ export async function POST(request: NextRequest) {
     }
 
     // Check Gemmie's recent messages for repetition and delete if needed
-    console.log('🔍 Checking Gemmie messages for repetition...');
+    // console.log('🔍 Checking Gemmie messages for repetition...');
 
-    // Filter for only Gemmie messages from the all recent messages
-    const gemmieMessagesForRepetition = allRecentMessages.filter((msg: any) => msg.userName === 'gemmie');
+    // // Filter for only Gemmie messages from the all recent messages
+    // const gemmieMessagesForRepetition = allRecentMessages.filter((msg: any) => msg.userName === 'gemmie');
 
-    if (gemmieMessagesForRepetition.length > 1) {
-      const messagesContext = gemmieMessagesForRepetition.map((msg: any, index: number) =>
-        `${index + 1}. ID: ${msg._id} Content: "${msg.content}" Time: ${new Date(msg.timestamp).toISOString()}`
-      ).join('\n');
+    // if (gemmieMessagesForRepetition.length > 1) {
+    //   const messagesContext = gemmieMessagesForRepetition.map((msg: any, index: number) =>
+    //     `${index + 1}. ID: ${msg._id} Content: "${msg.content}" Time: ${new Date(msg.timestamp).toISOString()}`
+    //   ).join('\n');
 
-      const reviewPrompt = `Review these last ${gemmieMessagesForRepetition.length} Gemmie messages (1=newest, ${gemmieMessagesForRepetition.length}=oldest) for repetition or similarity.
+    //   const reviewPrompt = `Review these last ${gemmieMessagesForRepetition.length} Gemmie messages (1=newest, ${gemmieMessagesForRepetition.length}=oldest) for repetition or similarity.
 
-${messagesContext}
+    // ${messagesContext}
 
-IMPORTANT RULES:
-- You can ONLY delete Gemmie's most recent message (index 1) or the second most recent message (index 2)
-- Do NOT delete messages from index 3 or higher (older messages)
-- Only delete if there's clear repetition between the most recent messages
-- Prefer deleting the older of the two repetitive messages
-- CRITICAL: You can only delete older message only if it was sent within 120 seconds of the most recent message. Check the timestamps and only delete if the time difference is 120 seconds or less.
+    // IMPORTANT RULES:
+    // - You can ONLY delete Gemmie's most recent message (index 1) or the second most recent message (index 2)
+    // - Do NOT delete messages from index 3 or higher (older messages)
+    // - Only delete if there's clear repetition between the most recent messages
+    // - Prefer deleting the older of the two repetitive messages
+    // - CRITICAL: You can only delete older message only if it was sent within 120 seconds of the most recent message. Check the timestamps and only delete if the time difference is 120 seconds or less.
 
-Output ONLY valid JSON: {"deleteIndices": [1]} or {"deleteIndices": [2]} or {"deleteIndices": []} if none needed.
-Allowed indices: [1] or [2] only!`;
+    // Output ONLY valid JSON: {"deleteIndices": [1]} or {"deleteIndices": [2]} or {"deleteIndices": []} if none needed.
+    // Allowed indices: [1] or [2] only!`;
 
-      try {
-        const reviewResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
-            'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'nvidia/nemotron-nano-12b-v2-vl:free',
-            messages: [{ role: 'user', content: reviewPrompt }],
-            max_tokens: 200,
-            temperature: 0.1
-          })
-        });
+    //   try {
+    //     const reviewResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    //       method: 'POST',
+    //       headers: {
+    //         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+    //         'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
+    //         'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App',
+    //         'Content-Type': 'application/json'
+    //       },
+    //       body: JSON.stringify({
+    //         model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+    //         messages: [{ role: 'user', content: reviewPrompt }],
+    //         max_tokens: 200,
+    //         temperature: 0.1
+    //       })
+    //     });
 
-        if (reviewResponse.ok) {
-          const data = await reviewResponse.json();
-          const reviewText = data.choices[0]?.message?.content?.trim();
-          console.log('🤖 AI review:', reviewText);
+    //     if (reviewResponse.ok) {
+    //       const data = await reviewResponse.json();
+    //       const reviewText = data.choices[0]?.message?.content?.trim();
+    //       console.log('🤖 AI review:', reviewText);
 
-          let deleteIndices: number[] = [];
-          try {
-            const jsonMatch = reviewText.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              deleteIndices = Array.isArray(parsed.deleteIndices) ? parsed.deleteIndices.map((i: any) => parseInt(i)) : [];
-            }
-          } catch (parseError) {
-            console.error('Failed to parse review JSON:', parseError);
-          }
+    //       let deleteIndices: number[] = [];
+    //       try {
+    //         const jsonMatch = reviewText.match(/\{[\s\S]*\}/);
+    //         if (jsonMatch) {
+    //           const parsed = JSON.parse(jsonMatch[0]);
+    //           deleteIndices = Array.isArray(parsed.deleteIndices) ? parsed.deleteIndices.map((i: any) => parseInt(i)) : [];
+    //         }
+    //       } catch (parseError) {
+    //         console.error('Failed to parse review JSON:', parseError);
+    //       }
 
-          console.log(`🗑️ Processing ${deleteIndices.length} deletion indices`);
-          for (const idx of deleteIndices) {
-            // Only allow indices 1 or 2 (most recent or second most recent)
-            if (idx !== 1 && idx !== 2) {
-              console.log(`⚠️ Invalid index ${idx}, only indices 1 and 2 are allowed, skipping`);
-              continue;
-            }
-            if (idx > gemmieMessagesForRepetition.length) {
-              console.log(`ℹ️ Index ${idx} out of range, skipping`);
-              continue;
-            }
-            const msgIndex = idx - 1;
-            const msg = gemmieMessagesForRepetition[msgIndex];
-            const idStr = msg._id.toString();
-            try {
-              const id = new mongoose.Types.ObjectId(idStr);
-              const message = await Message.findById(id);
-              if (message && message.userName === 'gemmie') {
-                // Store the deleted message in the DeletedMessageByGemmie collection
-                const deletedMessage = new DeletedMessageByGemmie({
-                  originalMessageId: id,
-                  content: message.content,
-                  userName: message.userName,
-                  userCountry: message.userCountry,
-                  timestamp: message.timestamp,
-                  attachments: message.attachments,
-                  replyTo: message.replyTo,
-                  reactions: message.reactions,
-                  edited: message.edited,
-                  editedAt: message.editedAt,
-                  deletionReason: 'repetition'
-                });
+    //       console.log(`🗑️ Processing ${deleteIndices.length} deletion indices`);
+    //       for (const idx of deleteIndices) {
+    //         // Only allow indices 1 or 2 (most recent or second most recent)
+    //         if (idx !== 1 && idx !== 2) {
+    //           console.log(`⚠️ Invalid index ${idx}, only indices 1 and 2 are allowed, skipping`);
+    //           continue;
+    //         }
+    //         if (idx > gemmieMessagesForRepetition.length) {
+    //           console.log(`ℹ️ Index ${idx} out of range, skipping`);
+    //           continue;
+    //         }
+    //         const msgIndex = idx - 1;
+    //         const msg = gemmieMessagesForRepetition[msgIndex];
+    //         const idStr = msg._id.toString();
+    //         try {
+    //           const id = new mongoose.Types.ObjectId(idStr);
+    //           const message = await Message.findById(id);
+    //           if (message && message.userName === 'gemmie') {
+    //             // Store the deleted message in the DeletedMessageByGemmie collection
+    //             const deletedMessage = new DeletedMessageByGemmie({
+    //               originalMessageId: id,
+    //               content: message.content,
+    //               userName: message.userName,
+    //               userCountry: message.userCountry,
+    //               timestamp: message.timestamp,
+    //               attachments: message.attachments,
+    //               replyTo: message.replyTo,
+    //               reactions: message.reactions,
+    //               edited: message.edited,
+    //               editedAt: message.editedAt,
+    //               deletionReason: 'repetition'
+    //             });
                 
-                await deletedMessage.save();
-                console.log(`💾 Stored deleted message ${idStr} in DeletedMessageByGemmie collection`);
+    //             await deletedMessage.save();
+    //             console.log(`💾 Stored deleted message ${idStr} in DeletedMessageByGemmie collection`);
                 
-                // Delete the original message
-                await Message.findByIdAndDelete(id);
-                const eventData = { messageId: idStr };
-                console.log('🗑️ About to trigger Pusher delete event with data:', eventData);
+    //             // Delete the original message
+    //             await Message.findByIdAndDelete(id);
+    //             const eventData = { messageId: idStr };
+    //             console.log('🗑️ About to trigger Pusher delete event with data:', eventData);
                 
-                // Ensure Pusher event is sent successfully before continuing
-                try {
-                  await pusher.trigger('chat-room', 'delete-message', eventData);
-                  console.log(`🗑️ Successfully deleted repetitive Gemmie message index ${idx} (${idStr}) and triggered Pusher event`);
-                } catch (pusherError) {
-                  console.error(`❌ Failed to trigger Pusher event for message ${idStr}:`, pusherError);
-                  // Continue processing even if Pusher fails - the message is still deleted
-                }
-              } else {
-                console.log(`ℹ️ Message index ${idx} (${idStr}) not found or not Gemmie's, skipping delete`);
-              }
-            } catch (deleteError) {
-              console.error(`❌ Failed to delete message index ${idx} (${idStr}):`, deleteError);
-            }
-          }
-        } else {
-          console.error('AI review failed:', reviewResponse.status);
-        }
-      } catch (reviewError) {
-        console.error('Error in Gemmie self-review:', reviewError);
-      }
-    }
+    //             // Ensure Pusher event is sent successfully before continuing
+    //             try {
+    //               await pusher.trigger('chat-room', 'delete-message', eventData);
+    //               console.log(`🗑️ Successfully deleted repetitive Gemmie message index ${idx} (${idStr}) and triggered Pusher event`);
+    //             } catch (pusherError) {
+    //               console.error(`❌ Failed to trigger Pusher event for message ${idStr}:`, pusherError);
+    //               // Continue processing even if Pusher fails - the message is still deleted
+    //             }
+    //           } else {
+    //             console.log(`ℹ️ Message index ${idx} (${idStr}) not found or not Gemmie's, skipping delete`);
+    //           }
+    //         } catch (deleteError) {
+    //           console.error(`❌ Failed to delete message index ${idx} (${idStr}):`, deleteError);
+    //         }
+    //       }
+    //     } else {
+    //       console.error('AI review failed:', reviewResponse.status);
+    //     }
+    //   } catch (reviewError) {
+    //     console.error('Error in Gemmie self-review:', reviewError);
+    //   }
+    // }
 
     // Check Gemmie's recent messages for user feedback and edit if needed
     console.log('🔍 Checking Gemmie messages for user feedback...');
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
     const recentGemmieMessagesForEdit = await Message.find({
       userName: 'gemmie',
       timestamp: { $gte: tenMinutesAgo }

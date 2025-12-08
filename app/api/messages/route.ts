@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
 
     // If message is from someone other than arham or gemmie, check if should trigger Gemmie response
     console.log('🤖 Checking if should trigger Gemmie for user:', userName);
-    if (userName.toLowerCase() !== 'arham' && userName.toLowerCase() !== 'gemmie') {
+    if (userName.toLowerCase() !== 'arham1' && userName.toLowerCase() !== 'gemmie') {
       const { getGemmieStatus } = await import('@/lib/gemmie-status');
       const isGemmieEnabled = await getGemmieStatus();
 
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
         console.log('🔇 Gemmie is disabled, skipping response');
       }
     } else {
-      console.log('⏭️ Skipping Gemmie response (user is arham or gemmie)');
+      console.log('⏭️ Skipping Gemmie response (user is arham1 or gemmie)');
     }
 
     // Save message creation to MongoDB logs

@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     
     // Check if user is arham or gemmie (don't react to their messages)
     if (message.userName.toLowerCase() === 'arham' || message.userName.toLowerCase() === 'gemmie') {
-      console.log('⏭️ Skipping reaction for arham or gemmie message:', messageId);
+      console.log('⏭️ Skipping reaction for arham1 or gemmie message:', messageId);
       return NextResponse.json({ success: false, reason: 'skip_user' });
     }
     
