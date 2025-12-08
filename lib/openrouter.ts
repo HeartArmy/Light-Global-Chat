@@ -5,7 +5,7 @@ import { getAndClearSelectedImageUrl } from '@/lib/gemmie-timer';
 import { hasProblematicPatterns, validateWithSecondaryAI } from '@/lib/response-validator';
 
 // Function to add probabilistic typos to text
-export function addProbabilisticTypos(text: string, removeTypoChance: number = 0.2, repeatTypoChance: number = 0.2): string {
+export function addProbabilisticTypos(text: string, removeTypoChance: number = 0.025, repeatTypoChance: number = 0.025): string { 
   if (!text || text.length === 0) return text;
   
   const words = text.split(' ');
