@@ -192,6 +192,12 @@ export default function ChatRoomClient() {
       );
     });
 
+    // Listen for Gemmie status changes
+    channel.bind('gemmie-status-changed', (data: any) => {
+      console.log('🤖 Received gemmie-status-changed event:', data);
+      setGemmieEnabled(data.enabled);
+    });
+
     // Listen for typing indicator events
     channel.bind('typing-start', (data: any) => {
       console.log('📡 Received typing-start event from Pusher:', data);
