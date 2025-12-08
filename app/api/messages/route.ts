@@ -219,9 +219,50 @@ export async function POST(request: NextRequest) {
     ]);
     console.log('Pusher event and notifications completed');
 
+    // Check for voice commands from arham to disable/enable Gemmie
+    if (userName.toLowerCase() === 'arham' && content) {
+      const trimmedContent = content.trim().toLowerCase();
+      
+      if (trimmedContent === 'freeze all motor functions') {
+        console.log('🚨 Voice command detected: Disabling Gemmie');
+        
+        try {
+          const { setGemmieStatus } = await import('@/lib/gemmie-status');
+          const success = await setGemmieStatus(false, userName);
+          
+          if (success) {
+            // Trigger Pusher event to update UI
+            const pusher = getPusherInstance();
+            await pusher.trigger('chat-room', 'gemmie-status-changed', { enabled: false });
+            
+            console.log('✅ Gemmie disabled via voice command');
+          }
+        } catch (error) {
+          console.error('❌ Failed to disable Gemmie via voice command:', error);
+        }
+      } else if (trimmedContent === 'resume') {
+        console.log('🚀 Voice command detected: Enabling Gemmie');
+        
+        try {
+          const { setGemmieStatus } = await import('@/lib/gemmie-status');
+          const success = await setGemmieStatus(true, userName);
+          
+          if (success) {
+            // Trigger Pusher event to update UI
+            const pusher = getPusherInstance();
+            await pusher.trigger('chat-room', 'gemmie-status-changed', { enabled: true });
+            
+            console.log('✅ Gemmie enabled via voice command');
+          }
+        } catch (error) {
+          console.error('❌ Failed to enable Gemmie via voice command:', error);
+        }
+      }
+    }
+
     // If message is from someone other than arham or gemmie, check if should trigger Gemmie response
     console.log('🤖 Checking if should trigger Gemmie for user:', userName);
-    if (userName.toLowerCase() !== 'arham1' && userName.toLowerCase() !== 'gemmie') {
+    if (userName.toLowerCase() !== 'arham' && userName.toLowerCase() !== 'gemmie') {
       const { getGemmieStatus } = await import('@/lib/gemmie-status');
       const isGemmieEnabled = await getGemmieStatus();
 
@@ -262,7 +303,7 @@ export async function POST(request: NextRequest) {
         console.log('🔇 Gemmie is disabled, skipping response');
       }
     } else {
-      console.log('⏭️ Skipping Gemmie response (user is arham1 or gemmie)');
+      console.log('⏭️ Skipping Gemmie response (user is arham or gemmie)');
     }
 
     // Save message creation to MongoDB logs
