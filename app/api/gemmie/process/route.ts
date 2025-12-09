@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Receiver } from '@upstash/qstash';
-import { generateGemmieResponse, generateGemmieResponseForContext, sendGemmieMessage } from '@/lib/openrouter';
+import { generateGemmieResponse, generateGemmieResponseForContext, sendGemmieMessage, addProbabilisticTypos } from '@/lib/openrouter';
 import { getPusherInstance } from '@/lib/pusher';
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
@@ -293,8 +293,19 @@ export async function POST(request: NextRequest) {
     );
     console.log('💬 Generated response:', response);
 
+    // Track if typos were added for conditional editing
+    const originalResponse = response;
+    const responseWithTypos = addProbabilisticTypos(response);
+    const hasTypos = responseWithTypos !== response;
+    
+    if (hasTypos) {
+      console.log('🔤 Typos detected, message will go through editing logic');
+    } else {
+      console.log('✅ No typos added, skipping editing logic');
+    }
+
     // Simulate realistic typing delay based on response length
-    const words = (response.match(/\S+/g) || []).length;
+    const words = (responseWithTypos.match(/\S+/g) || []).length;
     const typingSpeedWps = 1.3; // words/sec (chatgpt said 1.3 word per second for 100 wpm)
     let typingDelaySec = words / typingSpeedWps;
     typingDelaySec = Math.max(1, Math.min(1, typingDelaySec)); // cap 1-1s (maximum)
@@ -342,13 +353,13 @@ export async function POST(request: NextRequest) {
 
     // Send to chat
     console.log('📤 Sending Gemmie message to chat...');
-    await sendGemmieMessage(response);
+    await sendGemmieMessage(responseWithTypos);
 
     // Trigger Pusher event for real-time update
     const pusher = getPusherInstance();
     const gemmieMessage = {
       _id: new Date().getTime().toString(), // Temporary ID
-      content: response,
+      content: responseWithTypos,
       userName: 'gemmie',
       userCountry: 'US', // Default country for Gemmie
       timestamp: new Date(),
@@ -508,19 +519,21 @@ export async function POST(request: NextRequest) {
     //   }
     // }
 
-    // Check Gemmie's recent messages for user feedback and edit if needed
-    console.log('🔍 Checking Gemmie messages for user feedback...');
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const recentGemmieMessagesForEdit = await Message.find({
-      userName: 'gemmie',
-      timestamp: { $gte: tenMinutesAgo }
-    })
-      .sort({ timestamp: -1 })
-      .limit(5)
-      .select('_id content timestamp')
-      .lean();
+    // Check Gemmie's recent messages for typos and edit if needed
+    // Only run this logic if typos were actually added to the response
+    if (hasTypos) {
+      console.log('🔍 Checking Gemmie messages for typos (typos detected)...');
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      const recentGemmieMessagesForEdit = await Message.find({
+        userName: 'gemmie',
+        timestamp: { $gte: tenMinutesAgo }
+      })
+        .sort({ timestamp: -1 })
+        .limit(5)
+        .select('_id content timestamp')
+        .lean();
 
-    if (recentGemmieMessagesForEdit.length > 0) {
+      if (recentGemmieMessagesForEdit.length > 0) {
       console.log(`📝 Edit check: Found ${recentGemmieMessagesForEdit.length} recent Gemmie messages to review`);
       console.log(`📝 User message: "${userName}: ${userMessage}"`);
       
@@ -692,6 +705,9 @@ Allowed indices: [1] or [2] only!`;
       } catch (reviewError) {
         console.error('❌ Error in Gemmie self-edit review:', reviewError);
       }
+      }
+    } else {
+      console.log('✅ Skipping editing logic - no typos detected in response');
     }
 
 
