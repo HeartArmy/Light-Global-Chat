@@ -123,7 +123,7 @@ shouldSkip = false if it's a new, unique response`;
       headers: {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
-        'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App',
+        'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App', 
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
