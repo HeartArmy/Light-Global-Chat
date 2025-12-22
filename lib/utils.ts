@@ -48,7 +48,12 @@ export function formatFileSize(bytes: number): string {
 }
 
 // Get country flag from country code
-export function getCountryFlag(countryCode: string): string {
+export function getCountryFlag(countryCode: string, userName?: string): string {
+  // Always show USA flag for gemmie
+  if (userName?.toLowerCase() === 'gemmie') {
+    return '🇺🇸';
+  }
+  
   if (!countryCode || countryCode.length !== 2) {
     return '🌐';
   }

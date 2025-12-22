@@ -182,7 +182,7 @@ export default function MessageItem({
           {/* User Info */}
           <div className="flex items-center gap-1.5 mb-1 px-0.5">
             <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
-              {getCountryFlag(message.userCountry)} {message.userName}
+              {getCountryFlag(message.userCountry, message.userName)} {message.userName}
             </span>
             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
               {formatTimestamp(message.timestamp)}

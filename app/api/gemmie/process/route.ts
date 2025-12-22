@@ -9,7 +9,12 @@ import EditedMessageByGemmie from '@/models/EditedMessageByGemmie';
 import mongoose from 'mongoose'; 
 
 // Get country flag
-function getCountryFlag(countryCode: string): string {
+function getCountryFlag(countryCode: string, userName?: string): string {
+  // Always show USA flag for gemmie
+  if (userName?.toLowerCase() === 'gemmie') {
+    return '🇺🇸';
+  }
+  
   if (!countryCode || countryCode === 'XX') return '🌍';
   const codePoints = countryCode.toUpperCase().split('').map(c => c.charCodeAt(0) + 127397);
   return String.fromCodePoint(...codePoints);
@@ -26,7 +31,7 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
   
   // Create comprehensive context showing the full conversation flow with country flags and timestamps
   const contextMessages = recentMessages.slice(0, 10).map((msg, index) => {
-    const flag = msg.userCountry ? getCountryFlag(msg.userCountry) : '🌍';
+    const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
     return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
   }).join('\n');
 
@@ -279,7 +284,7 @@ export async function POST(request: NextRequest) {
 
     // Format messages for context with timestamp and country flag
     const formatMessageWithContext = (msg: any) => {
-      const flag = msg.userCountry ? getCountryFlag(msg.userCountry) : '🌍';
+      const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
       return `${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp * 1000).toISOString()}]: ${msg.userMessage}`;
     };
 

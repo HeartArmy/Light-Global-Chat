@@ -66,13 +66,18 @@ async function sendTelegramNotification(
     return;
   }
 
-  const getCountryFlag = (code: string) => {
+  const getCountryFlag = (code: string, userName?: string) => {
+    // Always show USA flag for gemmie
+    if (userName?.toLowerCase() === 'gemmie') {
+      return '🇺🇸';
+    }
+    
     if (code === 'XX' || !code) return '🌍';
     const codePoints = code.toUpperCase().split('').map(c => c.charCodeAt(0) + 127397);
     return String.fromCodePoint(...codePoints);
   };
 
-  const flag = getCountryFlag(countryCode);
+  const flag = getCountryFlag(countryCode, userName);
   const formattedTime = timestamp.toUTCString();
 
   const message = `🌐 *New Message in Global Chat*\n\n` +
@@ -142,7 +147,7 @@ export async function sendNewMessageNotification(
   //   return String.fromCodePoint(...codePoints);
   // };
 
-  // const flag = getCountryFlag(countryCode);
+  // const flag = getCountryFlag(countryCode, userName);
   // const formattedTime = timestamp.toUTCString();
   // const localTime = timestamp.toLocaleString('en-US', { 
   //   weekday: 'short', 

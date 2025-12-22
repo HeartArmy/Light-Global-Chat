@@ -84,7 +84,7 @@ async function getRecentMessages(): Promise<string> {
 
     // Format messages for context (newest first, so reverse)
     const context = messages.reverse().map(msg => {
-      const flag = getCountryFlag(msg.userCountry);
+      const flag = getCountryFlag(msg.userCountry, msg.userName);
       // Only include text content, ignore attachments
       const content = msg.content || '[attachment]';
       return `${msg.userName} ${flag} from ${msg.userCountry} [${msg.timestamp}]: ${content}`;
@@ -98,7 +98,12 @@ async function getRecentMessages(): Promise<string> {
 }
 
 // Get country flag
-function getCountryFlag(countryCode: string): string {
+function getCountryFlag(countryCode: string, userName?: string): string {
+  // Always show USA flag for gemmie
+  if (userName?.toLowerCase() === 'gemmie') {
+    return '🇺🇸';
+  }
+  
   if (!countryCode || countryCode === 'XX') return '🌍';
   const codePoints = countryCode.toUpperCase().split('').map(c => c.charCodeAt(0) + 127397);
   return String.fromCodePoint(...codePoints);
@@ -143,7 +148,7 @@ export async function generateGemmieResponse(
     
     // Get recent conversation context
     const recentMessages = await getRecentMessages();
-    const userFlag = getCountryFlag(userCountry);
+    const userFlag = getCountryFlag(userCountry, userName);
     
     const actualTimestamp = userTimestamp || new Date().toISOString();
     const currentDateTime = getCurrentDateTimeInfo();
