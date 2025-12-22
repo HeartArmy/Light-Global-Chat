@@ -453,7 +453,7 @@ export default function ChatRoomClient() {
   }, []);
 
   const handleToggleGemmie = async () => {
-    if (userName !== 'arham') return;
+    if (userName !== 'arham' && userName !== 'gemmie') return;
 
     try {
       const response = await fetch('/api/gemmie-status', {

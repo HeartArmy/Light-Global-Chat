@@ -9,7 +9,7 @@ export async function GET() {
   return NextResponse.json({ enabled });
 }
 
-// POST - Toggle Gemmie status (only for arham)
+// POST - Toggle Gemmie status (only for arham and gemmie)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
