@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     const message = await Message.create({
       content: content || '',
       userName,
-      userCountry: countryCode,
+      userCountry: userName.toLowerCase() === 'gemmie' ? 'US' : countryCode,
       attachments,
       replyTo: replyTo || null,
       timestamp: new Date(),
