@@ -40,6 +40,7 @@ NEW RESPONSE FROM GEMMIE:
 FULL CONVERSATION CONTEXT (last 10 messages for understanding the flow):
 ${contextMessages}
 
+
 IMPORTANT ANALYSIS RULES:
 - You are ONLY checking for duplication between Gemmie's new response and her OWN previous messages
 - IGNORE other users' messages for similarity comparison - they are just for context
@@ -286,9 +287,9 @@ export async function POST(request: NextRequest) {
 
     // Generate response using all messages as context
     const response = await generateGemmieResponseForContext(
-      userName, 
-      contextString, 
-      userCountry, 
+      userName,
+      contextString,
+      userCountry,
       allMessagesForContext
     );
     console.log('💬 Generated response:', response);
