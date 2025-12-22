@@ -571,8 +571,8 @@ export default function ChatRoomClient() {
             </a>
           </div>
 
-          {/* Gemmie Toggle - Only for arham */}
-          {userName === 'arham' && (
+          {/* Gemmie Toggle - Only for arham and gemmie */}
+          {(userName === 'arham' || userName === 'gemmie') && (
             <button
               onClick={handleToggleGemmie}
               className="px-2.5 py-1.5 text-xs rounded-sm transition-all duration-fast"

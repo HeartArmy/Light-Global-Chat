@@ -22,7 +22,7 @@ export async function getGemmieStatus(): Promise<boolean> {
 
 export async function setGemmieStatus(enabled: boolean, userName: string): Promise<boolean> {
   try {
-    if (userName !== 'arham') {
+    if (userName !== 'arham' && userName !== 'gemmie') {
       console.log('❌ Unauthorized attempt to change Gemmie status by:', userName);
       return false;
     }
