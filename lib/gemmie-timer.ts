@@ -12,6 +12,8 @@ const JOB_ACTIVE_KEY = 'gemmie:job-active';
 const GEMMIE_SELECTED_IMAGE_URL_KEY = 'gemmie:selected-image-url';
 // Key for tracking typing indicator status
 const TYPING_INDICATOR_KEY = 'typing:indicator';
+// Key for tracking processed messages to prevent duplicates
+const GEMMIE_PROCESSED_MESSAGES_KEY = 'gemmie:processed-messages';
 // Time in seconds for the delay before Gemmie responds (random between 10-15 seconds to match job window)
 const GEMMIE_DELAY = 7; // Fixed short thinking delay before AI (typing added after)
 // TTL for job active flag should be longer than the entire processing time
@@ -335,5 +337,46 @@ export async function scheduleGemmieTypingIndicator(userName: string, userMessag
   } catch (error) {
     console.error('❌ Error scheduling Gemmie typing indicator:', error);
   }
+}
+
+/**
+ * Marks a message as processed by Gemmie to prevent duplicate responses
+ * @param messageHash A unique hash identifying the message content and context
+ */
+export async function markMessageAsProcessed(messageHash: string): Promise<void> {
+  try {
+    await redis.setex(`${GEMMIE_PROCESSED_MESSAGES_KEY}:${messageHash}`, 600, '1'); // 10 minutes TTL
+    console.log(`📍 Marked message as processed: ${messageHash}`);
+  } catch (error) {
+    console.error('❌ Error marking message as processed:', error);
+  }
+}
+
+/**
+ * Checks if a message has already been processed by Gemmie
+ * @param messageHash A unique hash identifying the message content and context
+ * @returns true if already processed, false otherwise
+ */
+export async function isMessageAlreadyProcessed(messageHash: string): Promise<boolean> {
+  try {
+    const exists = await redis.exists(`${GEMMIE_PROCESSED_MESSAGES_KEY}:${messageHash}`);
+    return exists === 1;
+  } catch (error) {
+    console.error('❌ Error checking if message is processed:', error);
+    return false;
+  }
+}
+
+/**
+ * Creates a hash for a message to track if it's been processed
+ * @param userName The username who sent the message
+ * @param userMessage The message content
+ * @param timestamp The message timestamp
+ * @returns A hash string
+ */
+export function createMessageHash(userName: string, userMessage: string, timestamp: number): string {
+  // Create a simple hash from user, message, and timestamp (rounded to minute)
+  const timestampMinute = Math.floor(timestamp / 60);
+  return `${userName}:${userMessage}:${timestampMinute}`;
 }
 

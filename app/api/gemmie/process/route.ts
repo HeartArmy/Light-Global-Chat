@@ -268,17 +268,46 @@ export async function POST(request: NextRequest) {
       throw new Error('Missing required fields in request body: userName, userMessage, or userCountry');
     }
 
+    // Message Age Check - Prevent processing old messages
+    const MAX_MESSAGE_AGE_SECONDS = 20;
+    const messageAge = Math.floor(Date.now() / 1000) - parsedBody.timestamp;
+    if (messageAge > MAX_MESSAGE_AGE_SECONDS) {
+      console.log(`⚠️ Message too old (${messageAge}s), skipping`);
+      return NextResponse.json({ success: true, skipped: true, reason: 'message-too-old' });
+    }
+
+    // Message Hash Check - Prevent duplicate processing
+    const { createMessageHash, isMessageAlreadyProcessed, markMessageAsProcessed } = await import('@/lib/gemmie-timer');
+    const messageHash = createMessageHash(userName, userMessage, parsedBody.timestamp);
+    
+    if (await isMessageAlreadyProcessed(messageHash)) {
+      console.log(`⚠️ Message already processed (hash: ${messageHash}), skipping`);
+      return NextResponse.json({ success: true, skipped: true, reason: 'already-processed' });
+    }
+    
+    // Mark this message as processed
+    await markMessageAsProcessed(messageHash);
+
     console.log('🤖 Starting delayed Gemmie response process for:', userName);
 
     // Get queued messages that were present before this QStash job started processing.
     const { getAndClearGemmieQueue } = await import('@/lib/gemmie-timer');
     const queuedMessagesAtStart = await getAndClearGemmieQueue();
-
-    // Prepare all messages for context (current message + messages already in queue)
+    
+    // CRITICAL FIX: Process only recent queued messages, ignore old ones
+    const MAX_QUEUED_MESSAGE_AGE_SECONDS = 15; // Only process messages from last 15 seconds
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const recentQueuedMessages = queuedMessagesAtStart.filter(msg =>
+      currentTimestamp - msg.timestamp <= MAX_QUEUED_MESSAGE_AGE_SECONDS
+    );
+    
+    // Prepare messages for context (current message + only recent queued messages)
     const allMessagesForContext = [
-      { userName, userMessage, userCountry, timestamp: Math.floor(Date.now() / 1000) },
-      ...queuedMessagesAtStart // These are already objects with userName, userMessage, userCountry, timestamp
+      { userName, userMessage, userCountry, timestamp: currentTimestamp },
+      ...recentQueuedMessages
     ];
+    
+    console.log(`🧠 Processing ${allMessagesForContext.length} messages (${recentQueuedMessages.length} recent queued, ${queuedMessagesAtStart.length - recentQueuedMessages.length} old messages ignored)`);
 
     console.log(`🧠 Generating AI response based on ${allMessagesForContext.length} messages...`);
 
