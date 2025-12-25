@@ -284,7 +284,7 @@ export async function setTypingIndicator(isTyping: boolean, userName?: string): 
       }
     } else {
       await redis.del(TYPING_INDICATOR_KEY);
-      console.log('💬 Typing indicator cleared');
+      // console.log('💬 Typing indicator cleared');
       
       // Trigger Pusher event for real-time update
       try {
