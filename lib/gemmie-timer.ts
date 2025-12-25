@@ -290,7 +290,7 @@ export async function setTypingIndicator(isTyping: boolean, userName?: string): 
       try {
         const pusher = (await import('@/lib/pusher')).getPusherInstance();
         const result = await pusher.trigger('chat-room', 'typing-stop', { userName });
-        console.log('✅ Pusher typing-stop event triggered successfully:', result);
+        // console.log('✅ Pusher typing-stop event triggered successfully:', result);
       } catch (pusherError) {
         console.error('❌ Failed to trigger typing-stop event:', pusherError);
       }
