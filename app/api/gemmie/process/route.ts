@@ -210,9 +210,9 @@ export async function POST(request: NextRequest) {
       
       // Check if there are any recent messages that might indicate this is a valid job
       // that just lost its flag due to TTL expiration
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      const fortyFiveSecondsAgo = new Date(Date.now() - 45 * 1000);
       const recentMessages = await Message.find({
-        timestamp: { $gte: tenMinutesAgo }
+        timestamp: { $gte: fortyFiveSecondsAgo }
       }).sort({ timestamp: -1 }).limit(5).lean();
       
       // If there are recent messages from non-Gemmie users, this might be a valid job
@@ -322,11 +322,11 @@ export async function POST(request: NextRequest) {
 
     // Check for similarity with recent messages from GEMMIE only before sending
     // console.log('🔍 Checking for similarity with recent Gemmie messages only...');
-    // const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    // const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
     
     // // Get all recent messages for context (for AI understanding)
     // const allRecentMessages = await Message.find({
-    //   timestamp: { $gte: tenMinutesAgo }
+    //   timestamp: { $gte: twoMinutesAgo }
     // })
     //   .sort({ timestamp: -1 })
     //   .limit(10)
@@ -336,7 +336,7 @@ export async function POST(request: NextRequest) {
     // // Get only Gemmie messages for similarity comparison
     // const gemmieMessages = await Message.find({
     //   userName: 'gemmie',
-    //   timestamp: { $gte: tenMinutesAgo }
+    //   timestamp: { $gte: twoMinutesAgo }
     // })
     //   .sort({ timestamp: -1 })
     //   .limit(10)
@@ -529,10 +529,10 @@ export async function POST(request: NextRequest) {
     // Only run this logic if typos were actually added to the response
     if (hasTypos) {
       console.log('🔍 Checking Gemmie messages for typos (typos detected)...');
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
       const recentGemmieMessagesForEdit = await Message.find({
         userName: 'gemmie',
-        timestamp: { $gte: tenMinutesAgo }
+        timestamp: { $gte: twoMinutesAgo }
       })
         .sort({ timestamp: -1 })
         .limit(5)
