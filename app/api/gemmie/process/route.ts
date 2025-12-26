@@ -20,155 +20,151 @@ function getCountryFlag(countryCode: string, userName?: string): string {
   return String.fromCodePoint(...codePoints);
 }
 
-// // Check if response is too similar to recent messages using AI
-// async function checkResponseSimilarity(newResponse: string, recentMessages: any[]): Promise<{ shouldSkip: boolean; similarMessage?: string }> {
-//   if (recentMessages.length === 0) {
-//     return { shouldSkip: false };
-//   }
+// Check if response is too similar to recent messages using AI
+async function checkResponseSimilarity(newResponse: string, recentMessages: any[]): Promise<{ shouldSkip: boolean; similarMessage?: string }> {
+  if (recentMessages.length === 0) {
+    return { shouldSkip: false };
+  }
 
-//   // Get the most recent message to compare against
-//   const mostRecentMessage = recentMessages[0].content;
+  // Get the most recent message to compare against
+  const mostRecentMessage = recentMessages[0].content;
   
-//   // Create comprehensive context showing the full conversation flow with country flags and timestamps
-//   const contextMessages = recentMessages.slice(0, 20).map((msg, index) => {
-//     const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
-//     return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
-//   }).join('\n');
+  // Create comprehensive context showing the full conversation flow with country flags and timestamps
+  const contextMessages = recentMessages.slice(0, 20).map((msg, index) => {
+    const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
+    return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
+  }).join('\n');
 
-//   const similarityPrompt = `You are checking if Gemmie's new response is a duplicate of her OWN previous responses. This mechanism exists because Gemmie is activated whenever ANY user sends a message, so when multiple users send messages in short succession, Gemmie might respond multiple times with similar content if not filtered.
+  const similarityPrompt = `You are checking if Gemmie's new response is a duplicate of her OWN previous responses. This mechanism exists because Gemmie is activated whenever ANY user sends a message, so when multiple users send messages in short succession, Gemmie might respond multiple times with similar content if not filtered.
 
-// BACKGROUND: This chatroom has a delayed response system where each user message can trigger Gemmie's response after a short delay. During message bursts (multiple messages in quick succession), this system might generate several Gemmie responses in sequence, potentially leading to repetitive content if not checked.
+BACKGROUND: This chatroom has a delayed response system where each user message can trigger Gemmie's response after a short delay. During message bursts (multiple messages in quick succession), this system might generate several Gemmie responses in sequence, potentially leading to repetitive content if not checked.
 
-// NEW RESPONSE FROM GEMMIE:
-// "${newResponse}"
+NEW RESPONSE FROM GEMMIE:
+"${newResponse}"
 
-// FULL CONVERSATION CONTEXT (last 20 messages for understanding the flow):
-// ${contextMessages}
+FULL CONVERSATION CONTEXT (last 20 messages for understanding the flow):
+${contextMessages}
 
 
-// IMPORTANT ANALYSIS RULES:
-// - You are ONLY checking for duplication between Gemmie's new response and her OWN previous messages
-// - IGNORE other users' messages for similarity comparison - they are just for context
-// - Look for repeated phrases, same intent, or very similar structure specifically in Gemmie's messages
-// - Check if Gemmie is answering the SAME question or topic repeatedly
-// - If the message you are about to send contradicts anything Gemmie has stated earlier in this conversation, do not send the message so SKIP.
-// - Look at the conversation history and see if the message to be send would be a red flag and giveaway that you are a bot, like if it's a semantic duplication, etc skip it. I need GEMMIE to pass turing test in this cool chatrooom.
-// - Look for patterns where Gemmie responds to incremental user messages with similar answers
-// - Minor word changes or punctuation differences don't count as different enough
-// - If multiple users are having similar conversations, Gemmie should vary her responses more
-// - If both messages are very short (under 10 words), be more strict about similarity
-// - If both messages are longer, allow some variation in expression
-// - Consider the context: if users are sending many messages quickly, Gemmie should avoid repetitive responses
-// - CRITICAL: Check if the new response is answering the same question/topic as previous responses
-// - DO NOT skip responses when different users are having separate conversations
-// - DO NOT skip responses that are appropriate greetings or basic interactions with different users
-// - DO NOT skip responses if there's been a significant time gap (30+ minutes) since the user's last message - this indicates a new session
-// - DO NOT skip responses if the user's current message is significantly different in topic or context from their previous messages
-// - DO NOT skip responses if the user is asking about a different subject/topic (e.g., switching from "blue" to "red")
-// - DO NOT skip responses if the user's message indicates a new question or different context
-// - DO NOT skip responses if the user is spelling out a different word or concept
-// - USE COMMON SENSE: If a human would consider this a reasonable response in this context, do NOT skip it
-// - THINK LIKE GEMMIE: Would Gemmie reasonably respond to this user message in this situation?
+IMPORTANT ANALYSIS RULES:
+- You are ONLY checking for duplication between Gemmie's new response and her OWN previous messages
+- IGNORE other users' messages for similarity comparison - they are just for context
+- Look for repeated phrases, same intent, or very similar structure specifically in Gemmie's messages
+- Check if Gemmie is answering the SAME question or topic repeatedly
+- If the message you are about to send contradicts anything Gemmie has stated earlier in this conversation, do not send the message so SKIP.
+- Look at the conversation history and see if the message to be send would be a red flag and giveaway that you are a bot, like if it's a semantic duplication, etc skip it. I need GEMMIE to pass turing test in this cool chatrooom.
+- Look for patterns where Gemmie responds to incremental user messages with similar answers
+- Minor word changes or punctuation differences don't count as different enough
+- If multiple users are having similar conversations, Gemmie should vary her responses more
+- If both messages are very short (under 10 words), be more strict about similarity
+- If both messages are longer, allow some variation in expression
+- Consider the context: if users are sending many messages quickly, Gemmie should avoid repetitive responses
+- CRITICAL: Check if the new response is answering the same question/topic as previous responses
+- DO NOT skip responses when different users are having separate conversations
+- DO NOT skip responses that are appropriate greetings or basic interactions with different users
+- DO NOT skip responses if there's been a significant time gap (30+ minutes) since the user's last message - this indicates a new session
+- DO NOT skip responses if the user's current message is significantly different in topic or context from their previous messages
+- DO NOT skip responses if the user is asking about a different subject/topic (e.g., switching from "blue" to "red")
+- DO NOT skip responses if the user's message indicates a new question or different context
+- DO NOT skip responses if the user is spelling out a different word or concept
+- USE COMMON SENSE: If a human would consider this a reasonable response in this context, do NOT skip it
+- THINK LIKE GEMMIE: Would Gemmie reasonably respond to this user message in this situation?
 
-// EXAMPLE SCENARIOS TO AVOID:
-// User: "what is this color"
-// User: "b"
-// User: "l"
-// User: "u"
-// User: "e"
-// Gemmie: "blue, this time u got it right lol" (GOOD - first response)
-// Gemmie: "Blue now huh, I see what you're doing there" (BAD - repetitive)
-// Gemmie: "blue? waht's with the spelling quiz lol u a bot or something" (BAD - repetitive)
-// Gemmie: "u know u can type whole words right" (BAD - repetitive)
+EXAMPLE SCENARIOS TO AVOID:
+User: "what is this color"
+User: "b"
+User: "l"
+User: "u"
+User: "e"
+Gemmie: "blue, this time u got it right lol" (GOOD - first response)
+Gemmie: "Blue now huh, I see what you're doing there" (BAD - repetitive)
+Gemmie: "blue? waht's with the spelling quiz lol u a bot or something" (BAD - repetitive)
+Gemmie: "u know u can type whole words right" (BAD - repetitive)
 
-// EXAMPLE SCENARIOS TO ALLOW:
-// User Sam: "hi"
-// Gemmie: "hello back" (GOOD)
-// User Sarah: "hi"
-// Gemmie: "hey back" (GOOD - different user, should NOT be skipped)
+EXAMPLE SCENARIOS TO ALLOW:
+User Sam: "hi"
+Gemmie: "hello back" (GOOD)
+User Sarah: "hi"
+Gemmie: "hey back" (GOOD - different user, should NOT be skipped)
 
-// User John: "how are you?"
-// Gemmie: "i'm good thanks" (GOOD)
-// User Mike: "how are you?"
-// Gemmie: "doing great!" (GOOD - different user, should NOT be skipped)
+User John: "how are you?"
+Gemmie: "i'm good thanks" (GOOD)
+User Mike: "how are you?"
+Gemmie: "doing great!" (GOOD - different user, should NOT be skipped)
 
-// User Sam: "hi" [10:00 AM]
-// Gemmie: "hey there!" (GOOD)
-// User Sam: "hi" [1:00 PM - 3 hours later]
-// Gemmie: "hello back!" (GOOD - new session, significant time gap, should NOT be skipped)
+User Sam: "hi" [10:00 AM]
+Gemmie: "hey there!" (GOOD)
+User Sam: "hi" [1:00 PM - 3 hours later]
+Gemmie: "hello back!" (GOOD - new session, significant time gap, should NOT be skipped)
 
-// User Alice: "what's up?" [12:00 PM]
-// Gemmie: "not much, you?" (GOOD)
-// User Alice: "need help" [12:01 PM - 1 minute later]
-// Gemmie: "sure, what's up?" (GOOD - different topic/context, should NOT be skipped)
+User Alice: "what's up?" [12:00 PM]
+Gemmie: "not much, you?" (GOOD)
+User Alice: "need help" [12:01 PM - 1 minute later]
+Gemmie: "sure, what's up?" (GOOD - different topic/context, should NOT be skipped)
 
-// User Bob: "what color is this?" [2:00 PM]
-// User Bob: "b"
-// User Bob: "l"
-// User Bob: "u"
-// User Bob: "e"
-// Gemmie: "blue?" (GOOD - first response to color question)
-// User Bob: "what about this?" [2:05 PM]
-// User Bob: "r"
-// User Bob: "e"
-// User Bob: "d"
-// Gemmie: "red?" (GOOD - different color, different question, should NOT be skipped)
+User Bob: "what color is this?" [2:00 PM]
+User Bob: "b"
+User Bob: "l"
+User Bob: "u"
+User Bob: "e"
+Gemmie: "blue?" (GOOD - first response to color question)
+User Bob: "what about this?" [2:05 PM]
+User Bob: "r"
+User Bob: "e"
+User Bob: "d"
+Gemmie: "red?" (GOOD - different color, different question, should NOT be skipped)
 
-// User Charlie: "how are you?" [3:00 PM]
-// Gemmie: "i'm good thanks" (GOOD)
-// User Charlie: "how are you?" [3:01 PM - 1 minute later]
-// Gemmie: "doing great!" (BAD - same question, repetitive response, should be skipped)
+User Charlie: "how are you?" [3:00 PM]
+Gemmie: "i'm good thanks" (GOOD)
+User Charlie: "how are you?" [3:01 PM - 1 minute later]
+Gemmie: "doing great!" (BAD - same question, repetitive response, should be skipped)
 
-// Respond ONLY with a JSON object:
-// {"shouldSkip": true/false, "explanation": "brief reason"}
+Respond ONLY with a JSON object:
+{"shouldSkip": true/false, "explanation": "brief reason"}
 
-// shouldSkip = true if Gemmie's new response is a duplicate of her OWN previous messages
-// shouldSkip = false if it's a new, unique response`;
+shouldSkip = true if Gemmie's new response is a duplicate of her OWN previous messages
+shouldSkip = false if it's a new, unique response`;
 
-//   try {
-//     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-//       method: 'POST',
-//       headers: {
-//         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-//         'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
-//         'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App', 
-//         'Content-Type': 'application/json'
-//       },
-//       body: JSON.stringify({
-//         model: 'tngtech/deepseek-r1t2-chimera:free',
-//         messages: [{ role: 'user', content: similarityPrompt }],
-//         max_tokens: 32000,
-//         temperature: 0.1
-//       })
-//     });
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
+        'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App', 
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'tngtech/deepseek-r1t2-chimera:free',
+        messages: [{ role: 'user', content: similarityPrompt }],
+        max_tokens: 32000,
+        temperature: 0.1
+      })
+    });
 
-//     if (response.ok) {
-//       const data = await response.json();
-//       const resultText = data.choices[0]?.message?.content?.trim();
+    if (response.ok) {
+      const data = await response.json();
+      const resultText = data.choices[0]?.message?.content?.trim();
       
-//       try {
-//         const jsonMatch = resultText.match(/\{[\s\S]*\}/);
-//         if (jsonMatch) {
-//           const parsed = JSON.parse(jsonMatch[0]);
-//           return {
-//             shouldSkip: parsed.shouldSkip || false,
-//             similarMessage: mostRecentMessage
-//           };
-//         }
-//       } catch (parseError) {
-//         console.error('Failed to parse similarity check JSON:', parseError);
-//       }
-//     }
-//   } catch (error) {
-//     console.error('Error in similarity check:', error);
-//   }
+      try {
+        const jsonMatch = resultText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return {
+            shouldSkip: parsed.shouldSkip || false,
+            similarMessage: mostRecentMessage
+          };
+        }
+      } catch (parseError) {
+        console.error('Failed to parse similarity check JSON:', parseError);
+      }
+    }
+  } catch (error) {
+    console.error('Error in similarity check:', error);
+  }
 
-//   return { shouldSkip: false };
-// }
- 
-
-
-// END of similarity check 
+  return { shouldSkip: false };
+}
 
 // This API route handles the delayed Gemmie response
 export async function POST(request: NextRequest) {
@@ -379,13 +375,13 @@ export async function POST(request: NextRequest) {
       .lean();
 
     // Check if this response is too similar to recent Gemmie messages
-    // const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
+    const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
     
-    // if (similarityCheck.shouldSkip) {
-    //   console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
-    //   console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
-    //   return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
-    // }
+    if (similarityCheck.shouldSkip) {
+      console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
+      console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
+      return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
+    }
 
     // 20-second cooldown check - prevent back-to-back Gemmie messages
     const COOLDOWN_SECONDS = 20;
