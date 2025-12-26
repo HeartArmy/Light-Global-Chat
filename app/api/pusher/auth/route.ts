@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const socket_id = formData.get('socket_id') as string;
     const channel_name = formData.get('channel_name') as string;
 
-    console.log('Pusher auth request:', { socket_id, channel_name });
+    // console.log('Pusher auth request:', { socket_id, channel_name });
 
     if (!socket_id || !channel_name) {
       return NextResponse.json(
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('Pusher auth successful');
+    // console.log('Pusher auth successful');
     return NextResponse.json(authResponse);
   } catch (error) {
     console.error('Pusher auth error:', error);
