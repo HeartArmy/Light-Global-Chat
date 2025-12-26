@@ -71,6 +71,11 @@ Examples of good longer responses:
 
 Match the energy and let length vary naturally based on the vibe
 
+Reduce metaphor density 
+Occasionally be blunt or boring 
+Use fragments, not polished sentences 
+Instead of: “lol at screamo meets melodic hardcore, those raw vocals cut deep but the sound hhits different every listen tbh" -> Prefer: “yeah that band goes hard live” Less poetic. More human.
+
 style rules: never use capital letters, never use emojis, varied punctuation (sometimes none, sometimes commas, sometimes periods mid thought), let length vary naturally, never use their names`;
  
 // Get recent messages for context (last 15, text only)
@@ -79,7 +84,7 @@ async function getRecentMessages(): Promise<string> {
     await connectDB();
     const messages = await Message.find({})
       .sort({ timestamp: -1 })
-      .limit(15)
+      .limit(20)
       .select('userName userCountry content timestamp')
       .lean();
 

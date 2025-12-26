@@ -30,7 +30,7 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
   const mostRecentMessage = recentMessages[0].content;
   
   // Create comprehensive context showing the full conversation flow with country flags and timestamps
-  const contextMessages = recentMessages.slice(0, 10).map((msg, index) => {
+  const contextMessages = recentMessages.slice(0, 20).map((msg, index) => {
     const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
     return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
   }).join('\n');
@@ -42,7 +42,7 @@ BACKGROUND: This chatroom has a delayed response system where each user message 
 NEW RESPONSE FROM GEMMIE:
 "${newResponse}"
 
-FULL CONVERSATION CONTEXT (last 10 messages for understanding the flow):
+FULL CONVERSATION CONTEXT (last 20 messages for understanding the flow):
 ${contextMessages}
 
 
@@ -51,6 +51,8 @@ IMPORTANT ANALYSIS RULES:
 - IGNORE other users' messages for similarity comparison - they are just for context
 - Look for repeated phrases, same intent, or very similar structure specifically in Gemmie's messages
 - Check if Gemmie is answering the SAME question or topic repeatedly
+- If the message you are about to send contradicts anything Gemmie has stated earlier in this conversation, do not send the message so SKIP.
+- Look at the conversation history and see if the message to be send would be a red flag and giveaway that you are a bot, like if it's a semantic duplication, etc skip it. I need GEMMIE to pass turing test in this cool chatrooom.
 - Look for patterns where Gemmie responds to incremental user messages with similar answers
 - Minor word changes or punctuation differences don't count as different enough
 - If multiple users are having similar conversations, Gemmie should vary her responses more
@@ -358,7 +360,7 @@ export async function POST(request: NextRequest) {
       timestamp: { $gte: twoMinutesAgo }
     })
       .sort({ timestamp: -1 })
-      .limit(10)
+      .limit(20)
       .select('_id content userName userCountry timestamp')
       .lean();
     
@@ -368,7 +370,7 @@ export async function POST(request: NextRequest) {
       timestamp: { $gte: twoMinutesAgo }
     })
       .sort({ timestamp: -1 })
-      .limit(10)
+      .limit(20)
       .select('_id content userName userCountry timestamp')
       .lean();
 
@@ -379,6 +381,30 @@ export async function POST(request: NextRequest) {
       console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
       console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
       return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
+    }
+
+    // 20-second cooldown check - prevent back-to-back Gemmie messages
+    const COOLDOWN_SECONDS = 20;
+    const twentySecondsAgo = new Date(Date.now() - COOLDOWN_SECONDS * 1000);
+    const mostRecentGemmieMessage = await Message.findOne({
+      userName: 'gemmie',
+      timestamp: { $gte: twentySecondsAgo }
+    })
+      .sort({ timestamp: -1 })
+      .select('timestamp')
+      .lean();
+    
+    if (mostRecentGemmieMessage) {
+      const secondsSinceLastMessage = (Date.now() - new Date(mostRecentGemmieMessage.timestamp).getTime()) / 1000;
+      console.log(`⏰ Cooldown check: Last Gemmie message was ${secondsSinceLastMessage.toFixed(1)}s ago (cooldown: ${COOLDOWN_SECONDS}s)`);
+      
+      if (secondsSinceLastMessage < COOLDOWN_SECONDS) {
+        const remainingCooldown = COOLDOWN_SECONDS - secondsSinceLastMessage;
+        console.log(`⚠️ Gemmie is in cooldown (${remainingCooldown.toFixed(1)}s remaining), skipping message send`);
+        return NextResponse.json({ success: true, skipped: true, reason: 'cooldown' });
+      }
+    } else {
+      console.log('✅ No recent Gemmie messages found, cooldown check passed');
     }
 
     // Clear typing indicator before sending message
