@@ -194,7 +194,7 @@ function MessageItem({
           </div>
         )}
 
-        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[72%] md:max-w-[63%]`}>
+        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-full md:max-w-[63%]`}>
           {/* User Info */}
           <div className="flex items-center gap-1.5 mb-1 px-0.5">
             <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
@@ -398,14 +398,17 @@ function MessageItem({
         )}
       </div>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation - Fixed positioning to always appear in viewport */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 bg-black/50 backdrop-blur-sm">
           <div
-            className="p-5 rounded-md max-w-xs"
+            className="p-5 rounded-md max-w-xs w-full"
             style={{
               background: 'var(--surface-elevated)',
               border: '1px solid var(--border)',
+              // Ensure modal stays within viewport on mobile
+              maxHeight: '80vh',
+              overflowY: 'auto',
             }}
           >
             <h3 className="text-xl mb-2.5" style={{ color: 'var(--text-primary)' }}>
