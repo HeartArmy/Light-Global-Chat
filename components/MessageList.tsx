@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Message } from '@/types';
 import { default as MessageItem } from './MessageItem';
+import ScrollToBottom from './ScrollToBottom';
 
 interface MessageListProps {
   messages: Message[];
@@ -163,6 +164,9 @@ export default function MessageList({
           );
         })
       )}
+
+      {/* Scroll to Bottom Arrow */}
+      <ScrollToBottom containerRef={listRef} />
     </div>
   );
 }
