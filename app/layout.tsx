@@ -108,6 +108,8 @@ export default function RootLayout({
         <ErrorBoundary>
           <ThemeProvider>{children}</ThemeProvider>
         </ErrorBoundary>
+        {/* Portal container for modals */}
+        <div id="modal-root" />
         <Analytics />
       </body>
     </html>

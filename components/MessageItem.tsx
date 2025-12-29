@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, memo } from 'react';
+import { createPortal } from 'react-dom';
 import { Message, Reaction } from '@/types';
 import MessageActions from './MessageActions';
 import MediaViewer from './ImageViewer'; // Renamed from ImageViewer
@@ -143,10 +144,22 @@ function MessageItem({
 
   // Long press for actions on mobile
   let longPressTimer: NodeJS.Timeout | null = null;
-  const handleTouchStart = () => {
-    longPressTimer = setTimeout(() => {
-      showActionsWithTimeout();
-    }, 500);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Check if the touch target is an interactive element (link, button, etc.)
+    const target = e.target as HTMLElement;
+    const isInteractiveElement =
+      target.tagName === 'A' ||
+      target.tagName === 'BUTTON' ||
+      target.closest('a') ||
+      target.closest('button') ||
+      target.closest('[role="button"]');
+    
+    // Only start long press timer for non-interactive elements
+    if (!isInteractiveElement) {
+      longPressTimer = setTimeout(() => {
+        showActionsWithTimeout();
+      }, 500);
+    }
   };
 
   const handleTouchEnd = () => {
@@ -161,10 +174,7 @@ function MessageItem({
       onMouseEnter={showActionsWithTimeout}
       onMouseLeave={hideActions}
       onTouchStart={(e) => {
-        // Use long press for actions on mobile
-        longPressTimer = setTimeout(() => {
-          showActionsWithTimeout();
-        }, 500);
+        handleTouchStart(e);
         swipeHandlers.onTouchStart(e);
       }}
       onTouchEnd={(e) => {
@@ -398,51 +408,52 @@ function MessageItem({
         )}
       </div>
 
-      {/* Delete Confirmation - Fixed positioning to always appear in viewport */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 bg-black/50 backdrop-blur-sm">
-          <div
-            className="p-5 rounded-md max-w-xs w-full"
-            style={{
-              background: 'var(--surface-elevated)',
-              border: '1px solid var(--border)',
-              // Ensure modal stays within viewport on mobile
-              maxHeight: '80vh',
-              overflowY: 'auto',
-            }}
-          >
-            <h3 className="text-xl mb-2.5" style={{ color: 'var(--text-primary)' }}>
-              Delete Message?
-            </h3>
-            <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
-              This action cannot be undone.
-            </p>
-            <div className="flex gap-2.5 justify-end">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-3.5 py-1.5 rounded-sm transition-all duration-fast"
-                style={{
-                  background: 'var(--surface)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-3.5 py-1.5 rounded-sm transition-all duration-fast"
-                style={{
-                  background: 'var(--error)',
-                  color: '#ffffff',
-                }}
-              >
-                Delete
-              </button>
+      {/* Delete Confirmation - Rendered via Portal to avoid scroll issues */}
+      {showDeleteConfirm &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 bg-black/50 backdrop-blur-sm">
+            <div
+              className="p-5 rounded-md max-w-xs w-full"
+              style={{
+                background: 'var(--surface-elevated)',
+                border: '1px solid var(--border)',
+                maxHeight: '80vh',
+                overflowY: 'auto',
+              }}
+            >
+              <h3 className="text-xl mb-2.5" style={{ color: 'var(--text-primary)' }}>
+                Delete Message?
+              </h3>
+              <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-2.5 justify-end">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-3.5 py-1.5 rounded-sm transition-all duration-fast"
+                  style={{
+                    background: 'var(--surface)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-3.5 py-1.5 rounded-sm transition-all duration-fast"
+                  style={{
+                    background: 'var(--error)',
+                    color: '#ffffff',
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.getElementById('modal-root')!
+        )}
 
       {/* Media Viewer Modal */}
       {imageViewer && (
