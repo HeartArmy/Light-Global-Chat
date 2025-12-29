@@ -297,18 +297,6 @@ button:focus {
   }
 }
 
-/* Pulse animation for scroll arrow */
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.9;
-  }
-}
-
 /* Typing indicator animation */
 @keyframes typingDots {
   0%, 100% {
@@ -342,11 +330,6 @@ button:focus {
   /* Reduce animations on mobile */
   .message-bubble {
     animation: none;
-  }
-  
-  /* Optimize scroll arrow for mobile */
-  .fixed.bottom-20 {
-    bottom: 5rem !important;
   }
   
   /* Optimize image rendering */
