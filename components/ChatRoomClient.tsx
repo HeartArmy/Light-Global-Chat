@@ -25,7 +25,7 @@ export default function ChatRoomClient() {
   const [onlineCount, setOnlineCount] = useState(0);
   const [gemmieEnabled, setGemmieEnabled] = useState(true);
 
-  // Initialize user session
+  // Initialize user session and mobile viewport
   useEffect(() => {
     const storedName = localStorage.getItem('userName');
     if (storedName) {
@@ -41,6 +41,15 @@ export default function ChatRoomClient() {
         setUserCountry(data.countryCode);
       })
       .catch((err) => console.error('Failed to get country:', err));
+
+    // Fix mobile viewport height
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    setVh();
+    window.addEventListener('resize', setVh);
+    return () => window.removeEventListener('resize', setVh);
   }, []);
 
   // Update clock every second
@@ -484,21 +493,23 @@ export default function ChatRoomClient() {
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
-      {/* Header */}
+      {/* Header - Compact on mobile */}
       <header
-        className="flex items-center justify-between px-2.5 py-1.5 border-b"
+        className="flex items-center justify-between px-2 py-1 md:px-2.5 md:py-1.5 border-b flex-shrink-0"
         style={{
           background: 'var(--surface)',
           borderColor: 'var(--border)',
         }}
       >
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <h1 className="text-heading" style={{ color: 'var(--text-primary)' }}>
-            🌐 Global Live Chat Room
+        {/* Left side - Title and status */}
+        <div className="flex items-center gap-1.5 md:gap-2.5 flex-wrap">
+          <h1 className="text-sm md:text-base lg:text-heading" style={{ color: 'var(--text-primary)' }}>
+            <span className="hidden md:inline">🌐 </span>Global Chat
           </h1>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
+            {/* Connection status - icon only on mobile */}
             <span
-              className="text-xs px-1.5 py-0.5 rounded-full flex items-center gap-1"
+              className="text-xs px-1 py-0.5 rounded-full flex items-center gap-1"
               style={{
                 background: 'var(--surface-elevated)',
                 color: 'var(--text-secondary)',
@@ -511,33 +522,37 @@ export default function ChatRoomClient() {
                   background: isConnected ? 'var(--success)' : 'var(--error)',
                 }}
               />
-              {isConnected ? 'Online' : 'Away'}
+              <span className="hidden sm:inline">{isConnected ? 'Online' : 'Away'}</span>
             </span>
+            {/* Online count - icon only on mobile */}
             <span
-              className="text-xs px-1.5 py-0.5 rounded-full"
+              className="text-xs px-1 py-0.5 rounded-full"
               style={{
                 background: 'var(--surface-elevated)',
                 color: 'var(--text-secondary)',
               }}
               title="Users online"
             >
-              👥 {onlineCount ? onlineCount + 1 : 1}
+              <span className="hidden sm:inline">👥</span> {onlineCount ? onlineCount + 1 : 1}
             </span>
+            {/* Time - hidden on small mobile */}
             <span
-              className="text-xs px-1.5 py-0.5 rounded-full font-mono"
+              className="text-xs px-1 py-0.5 rounded-full font-mono hidden sm:inline"
               style={{
                 background: 'var(--surface-elevated)',
                 color: 'var(--text-secondary)',
               }}
               title="Current UTC date and time"
             >
-              📅 {currentTime.toUTCString().slice(0, 16)} • {currentTime.toUTCString().slice(17, 25)} UTC
+              <span className="hidden md:inline">📅 {currentTime.toUTCString().slice(0, 16)} • </span>
+              {currentTime.toUTCString().slice(17, 25)} UTC
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          {/* Social Links */}
+        {/* Right side - Controls */}
+        <div className="flex items-center gap-1 md:gap-2.5">
+          {/* Social Links - Hidden on mobile to save space */}
           <div className="hidden md:flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
             <a
               href="https://arhamx.vercel.app?ref=chatapp"
@@ -571,11 +586,11 @@ export default function ChatRoomClient() {
             </a>
           </div>
 
-          {/* Gemmie Toggle - Only for arham and gemmie */}
+          {/* Gemmie Toggle - Only for arham and gemmie - Compact on mobile */}
           {(userName === 'arham' || userName === 'gemmie') && (
             <button
               onClick={handleToggleGemmie}
-              className="px-2.5 py-1.5 text-xs rounded-sm transition-all duration-fast"
+              className="px-1.5 py-1 text-xs rounded-sm transition-all duration-fast hidden sm:block"
               style={{
                 background: gemmieEnabled ? 'var(--success)' : 'var(--error)',
                 border: '1px solid var(--border)',
@@ -583,25 +598,28 @@ export default function ChatRoomClient() {
               }}
               title={`Gemmie is ${gemmieEnabled ? 'enabled' : 'disabled'}. Preference persists across sessions.`}
             >
-              🤖 {gemmieEnabled ? 'ON' : 'OFF'}
+              <span className="hidden md:inline">🤖 </span>{gemmieEnabled ? 'ON' : 'OFF'}
             </button>
           )}
 
+          {/* Username - Compact on mobile */}
           <button
             onClick={() => setShowNameModal(true)}
-            className="px-2.5 py-1.5 text-xs rounded-sm transition-all duration-fast"
+            className="px-1.5 py-1 text-xs rounded-sm transition-all duration-fast"
             style={{
               background: 'var(--background)',
               border: '1px solid var(--border)',
               color: 'var(--text-primary)',
             }}
           >
-            {userName}
+            <span className="hidden sm:inline">{userName}</span>
+            <span className="sm:hidden text-xs">👤</span>
           </button>
 
+          {/* Theme toggle - Icon only on mobile */}
           <button
             onClick={toggleTheme}
-            className="px-2.5 py-1.5 rounded-sm transition-all duration-fast"
+            className="p-1 md:px-2.5 md:py-1.5 rounded-sm transition-all duration-fast"
             style={{
               background: 'var(--background)',
               border: '1px solid var(--border)',
