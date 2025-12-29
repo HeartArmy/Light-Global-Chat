@@ -88,7 +88,7 @@ export default function ChatRoomClient() {
 
     setIsLoading(true);
     Promise.all([
-      fetch('/api/messages?limit=300').then(res => res.json()),
+      fetch('/api/messages?limit=1000').then(res => res.json()),
       fetch('/api/gemmie-status').then(res => res.json())
     ])
       .then(([messagesData, gemmieData]) => {
@@ -438,7 +438,7 @@ export default function ChatRoomClient() {
     setIsLoading(true);
     try {
       const res = await fetch(
-        `/api/messages?limit=300&before=${new Date(oldestMessage.timestamp).toISOString()}`
+        `/api/messages?limit=1000&before=${new Date(oldestMessage.timestamp).toISOString()}`
       );
       const data = await res.json();
       setMessages((prev) => [...data.messages.reverse(), ...prev]);
