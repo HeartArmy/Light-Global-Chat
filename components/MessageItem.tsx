@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Message, Reaction } from '@/types';
 import MessageActions from './MessageActions';
 import MediaViewer from './ImageViewer'; // Renamed from ImageViewer
@@ -20,7 +20,23 @@ interface MessageItemProps {
   isActive?: boolean;
 }
 
-export default function MessageItem({
+// Custom comparison function for React.memo to prevent unnecessary re-renders
+const arePropsEqual = (prevProps: MessageItemProps, nextProps: MessageItemProps) => {
+  // Only re-render if message content, reactions, or active state changed
+  if (prevProps.isActive !== nextProps.isActive) return false;
+  if (prevProps.message._id !== nextProps.message._id) return false;
+  if (prevProps.message.content !== nextProps.message.content) return false;
+  if (prevProps.message.edited !== nextProps.message.edited) return false;
+  if (prevProps.message.reactions?.length !== nextProps.message.reactions?.length) return false;
+  if (JSON.stringify(prevProps.message.reactions) !== JSON.stringify(nextProps.message.reactions)) return false;
+  if (prevProps.message.attachments?.length !== nextProps.message.attachments?.length) return false;
+  if (prevProps.currentUserName !== nextProps.currentUserName) return false;
+  if (prevProps.isOwn !== nextProps.isOwn) return false;
+  
+  return true;
+};
+
+function MessageItem({
   message,
   isOwn,
   currentUserName,
@@ -438,3 +454,5 @@ export default function MessageItem({
     </div>
   );
 }
+
+export default memo(MessageItem, arePropsEqual);
