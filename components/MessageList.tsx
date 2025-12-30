@@ -35,46 +35,16 @@ export default function MessageList({
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScrollYRef = useRef(0);
   const isScrollingRef = useRef(false);
-  const isInitialLoadRef = useRef(true);
-  const isLoadingMoreRef = useRef(false);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
-    if (!listRef.current) return;
-    
-    const currentLength = messages.length;
-    const prevLength = prevMessagesLengthRef.current;
-    
-    if (currentLength === 0) {
-      prevMessagesLengthRef.current = 0;
-      return;
+    if (shouldAutoScroll && listRef.current) {
+      const isNewMessage = messages.length > prevMessagesLengthRef.current;
+      if (isNewMessage) {
+        listRef.current.scrollTop = listRef.current.scrollHeight;
+      }
     }
-    
-    // Initial load - scroll to bottom after messages are rendered
-    if (prevLength === 0 && isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
-      // Small delay to ensure DOM is fully updated
-      setTimeout(() => {
-        if (listRef.current) {
-          listRef.current.scrollTop = listRef.current.scrollHeight;
-        }
-      }, 50);
-    }
-    // New message added at bottom
-    else if (currentLength > prevLength && shouldAutoScroll && !isLoadingMoreRef.current) {
-      // Immediate scroll for new messages
-      setTimeout(() => {
-        if (listRef.current) {
-          listRef.current.scrollTop = listRef.current.scrollHeight;
-        }
-      }, 0);
-    }
-    // Loading more messages at top
-    else if (isLoadingMoreRef.current) {
-      isLoadingMoreRef.current = false;
-    }
-    
-    prevMessagesLengthRef.current = currentLength;
+    prevMessagesLengthRef.current = messages.length;
   }, [messages, shouldAutoScroll]);
 
   // Throttled scroll handler for better mobile performance
@@ -102,8 +72,6 @@ export default function MessageList({
       // Load more messages when scrolling near top
       const isNearTop = scrollTop < 100;
       if (isNearTop && hasMore && !isLoading) {
-        // Set flag to prevent auto-scroll during pagination
-        isLoadingMoreRef.current = true;
         onLoadMore();
       }
       
