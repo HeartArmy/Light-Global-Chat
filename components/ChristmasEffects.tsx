@@ -14,8 +14,17 @@ export default function ChristmasEffects() {
   };
 
   useEffect(() => {
+    const christmasSeason = isChristmasSeason();
+    
+    // Add or remove christmas-season class on body
+    if (christmasSeason) {
+      document.body.classList.add('christmas-season');
+    } else {
+      document.body.classList.remove('christmas-season');
+    }
+    
     // Don't run Christmas effects outside of December 15-31
-    if (!isChristmasSeason()) {
+    if (!christmasSeason) {
       return;
     }
     
@@ -98,6 +107,8 @@ export default function ChristmasEffects() {
       // Clean up any remaining elements
       document.querySelectorAll('.snowflake').forEach(el => el.remove());
       document.querySelectorAll('.christmas-popup').forEach(el => el.remove());
+      // Remove christmas-season class
+      document.body.classList.remove('christmas-season');
     };
   }, []);
 

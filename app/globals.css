@@ -238,10 +238,10 @@ button {
   }
 }
 
-/* Subtle Christmas glow for input fields */
-input:focus,
-textarea:focus,
-button:focus {
+/* Subtle Christmas glow for input fields - December 15-31 only */
+.christmas-season input:focus,
+.christmas-season textarea:focus,
+.christmas-season button:focus {
   box-shadow: 0 0 8px rgba(245, 124, 0, 0.3);
   animation: gentleGlow 3s ease-in-out infinite;
 }
@@ -252,9 +252,9 @@ button:focus {
   background: rgba(245, 124, 0, 0.3);
 }
 
-/* Add subtle snow effect to message bubbles - DISABLED ON MOBILE for performance */
+/* Add subtle snow effect to message bubbles - December 15-31 only, DISABLED ON MOBILE for performance */
 @media (min-width: 769px) {
-  .message-bubble::before {
+  .christmas-season .message-bubble::before {
     content: '❄';
     position: absolute;
     top: -5px;
