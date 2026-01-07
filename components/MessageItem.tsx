@@ -455,16 +455,18 @@ function MessageItem({
           document.getElementById('modal-root')!
         )}
 
-      {/* Media Viewer Modal */}
-      {imageViewer && (
-        <MediaViewer
-          isOpen={true}
-          mediaUrl={imageViewer.url}
-          mediaName={imageViewer.name}
-          mediaType={imageViewer.type}
-          onClose={closeImageViewer}
-        />
-      )}
+      {/* Media Viewer Modal - Rendered via Portal to ensure proper z-index */}
+      {imageViewer &&
+        createPortal(
+          <MediaViewer
+            isOpen={true}
+            mediaUrl={imageViewer.url}
+            mediaName={imageViewer.name}
+            mediaType={imageViewer.type}
+            onClose={closeImageViewer}
+          />,
+          document.getElementById('modal-root')!
+        )}
     </div>
   );
 }
