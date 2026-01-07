@@ -318,7 +318,7 @@ function MessageItem({
                             <video
                               src={attachment.url}
                               controls
-                              className="rounded-md max-w-full"
+                              className="rounded-md max-w-full bg-black"
                               style={{ maxHeight: '198px' }}
                               title={attachment.name}
                             >
