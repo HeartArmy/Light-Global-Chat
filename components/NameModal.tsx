@@ -58,16 +58,32 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
     onSubmit(trimmedName);
   };
 
-  const handleKeywordSubmit = (e: React.FormEvent) => {
+  const handleKeywordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Verify keyword
-    if (keyword === process.env.APP_PASSWORD) {
-      localStorage.setItem('user_verified', 'true');
-      setShowKeywordPrompt(false);
-      onSubmit(name.trim());
-    } else {
-      setError('Incorrect keyword. This name is protected.');
+    try {
+      // Verify keyword via API route
+      const response = await fetch('/api/verify-keyword', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ keyword }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        localStorage.setItem('user_verified', 'true');
+        setShowKeywordPrompt(false);
+        onSubmit(name.trim());
+      } else {
+        setError('Incorrect keyword. This name is protected.');
+        setKeyword('');
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      setError('Verification failed. Please try again.');
       setKeyword('');
     }
   };
