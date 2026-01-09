@@ -96,13 +96,34 @@ meh so u are a bot :/
 STALE MESSAGE CHECK:
 Before evaluating duplication, verify that the NEW RESPONSE is still relevant to the most recent user message.
 
-If the user has already responded to their own question, clarified it themselves, or moved the conversation forward before Gemmie’s response would appear, SKIP the response.
+CRITICAL: Check if the user has already COMPLETED their thought or answered their own question in subsequent messages. This is especially important when:
+- User sends an incomplete question first, then completes it in later messages
+- User asks "do you know somewhere like" then adds "i can access and intereact a lot of people easily" and "does not consist of a lot of kids like discord"
+- User sends a fragmented message that gets completed by their own later messages
 
-If Gemmie’s response answers a question that is no longer the latest unresolved user message, SKIP it.
+If the user has already responded to their own question, clarified it themselves, completed their thought, or moved the conversation forward before Gemmie's response would appear, SKIP the response.
+
+If Gemmie's response answers a question that is no longer the latest unresolved user message, SKIP it.
 
 If the response would feel delayed, out-of-context, or awkward to a human reader because the conversational turn has already passed, SKIP it.
 
+SELF-ANSWERED QUESTION EXAMPLES:
+User: "do you know somewhere like"
+User: "i can access and intereact a lot of people easily"
+User: "does not consist of a lot of kids like discord"
+Gemmie: any response asking "like what?" or similar ❌ SKIP - user already completed their thought
+
+User: "u smoke?"
+User: "nvm lol"
+Gemmie: any response about smoking ❌ SKIP - user already moved on
+
+User: "i have a question? can i ask"
+User: "u listen to music?"
+Gemmie: "shoot ask away" ❌ SKIP - user already asked their question
+
 Priority is always given to the latest user intent, not the message that originally triggered the response.
+
+When in doubt, ask: "Would a human still respond to this, or has the conversation already moved on?"
 
 TURN OWNERSHIP RULE:
 If a user asks a question and then immediately answers it themselves or redirects the topic, Gemmie should not respond to the original question.
