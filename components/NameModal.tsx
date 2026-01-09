@@ -44,7 +44,7 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
     // Check if trying to use protected name "Arham"
     if (trimmedName.toLowerCase() === 'arham' || trimmedName.toLowerCase() === 'gemmie') {
       // Check if already verified
-      const verified = localStorage.getItem('arham_verified');
+      const verified = localStorage.getItem('user_verified');
       if (verified === 'true') {
         onSubmit(trimmedName);
         return;
@@ -62,8 +62,8 @@ export default function NameModal({ isOpen, currentName, onSubmit }: NameModalPr
     e.preventDefault();
     
     // Verify keyword
-    if (keyword === process.env.NEXT_PUBLIC_ARHAM_KEYWORD) {
-      localStorage.setItem('arham_verified', 'true');
+    if (keyword === process.env.APP_PASSWORD) {
+      localStorage.setItem('user_verified', 'true');
       setShowKeywordPrompt(false);
       onSubmit(name.trim());
     } else {
