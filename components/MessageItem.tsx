@@ -295,12 +295,7 @@ function MessageItem({
                   {message.content && (
                     <div
                       ref={contentRef}
-                      className="text-sm break-words whitespace-pre-wrap text-left"
-                      style={{
-                        wordWrap: 'break-word',
-                        overflowWrap: 'break-word',
-                        textAlign: 'left',
-                      }}
+                      className="text-sm break-words whitespace-pre-wrap"
                       dangerouslySetInnerHTML={{ __html: renderMessageContent(message.content, isOwn) }}
                     />
                   )}
