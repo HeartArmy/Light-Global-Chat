@@ -21,8 +21,8 @@ export default function EmojiPicker({ onSelect, mode }: EmojiPickerProps) {
 
   if (mode === 'quick') {
     return (
-      <div 
-        className="flex gap-0.5 p-1.5 rounded-lg shadow-2xl"
+      <div
+        className="flex gap-1.5 p-2 rounded-lg shadow-2xl sm:gap-1 sm:p-1.5"
         style={{
           background: 'var(--surface-elevated)',
           border: '1px solid var(--border)',
@@ -32,7 +32,7 @@ export default function EmojiPicker({ onSelect, mode }: EmojiPickerProps) {
           <button
             key={emoji}
             onClick={() => onSelect(emoji)}
-            className="w-7 h-7 flex items-center justify-center text-base rounded-md transition-all duration-fast hover:scale-125 active:scale-95"
+            className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center text-base sm:text-sm rounded-md transition-all duration-fast hover:scale-125 active:scale-95"
             style={{
               background: 'var(--surface)',
             }}

@@ -33,15 +33,15 @@ export default function MessageActions({
   const [showExtendedPicker, setShowExtendedPicker] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(TEN_MINUTES);
 
-  // Auto-dismiss emoji picker after timeout
+  // Auto-dismiss emoji picker after timeout - ONLY on mobile
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | null = null;
     
-    if (showEmojiPicker) {
+    if (showEmojiPicker && typeof window !== 'undefined' && window.innerWidth <= 768) {
       timeoutId = setTimeout(() => {
         setShowEmojiPicker(false);
         setShowExtendedPicker(false);
-      }, 5000); // Auto-hide after 5 seconds like Telegram
+      }, 8000); // 8 seconds on mobile
     }
 
     return () => {

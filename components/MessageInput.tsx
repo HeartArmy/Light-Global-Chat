@@ -52,11 +52,12 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
     },
   });
 
-  // Auto-resize textarea
+  // Auto-resize textarea with max height
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 120);
+      textareaRef.current.style.height = `${newHeight}px`;
     }
   }, [content]);
 
@@ -534,13 +535,16 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
             }
             rows={1}
             maxLength={5000}
-            className="w-full px-2.5 py-1.5 rounded-full resize-none transition-all duration-fast"
+            className="w-full px-2.5 py-1.5 rounded-xl resize-none transition-all duration-fast text-left"
             style={{
               background: 'var(--background)',
               border: `1px solid ${isOverLimit ? 'var(--error)' : 'var(--border)'}`,
               color: 'var(--text-primary)',
-              maxHeight: '80px',
+              maxHeight: '120px',
               outline: 'none',
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              textAlign: 'left',
             }}
           />
           {charCount > 4500 && (
