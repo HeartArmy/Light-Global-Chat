@@ -6,7 +6,7 @@ import { Message } from '@/types';
 
 const EmojiPicker = dynamic(() => import('./EmojiPicker'), {
   loading: () => <div className="text-caption">Loading...</div>,
-});
+}); 
 
 interface MessageActionsProps {
   message: Message;
