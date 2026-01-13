@@ -24,11 +24,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setTheme(stored);
       document.documentElement.classList.toggle('dark', stored === 'dark');
     } else {
-      // Check system preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const systemTheme = prefersDark ? 'dark' : 'light';
-      setTheme(systemTheme);
-      document.documentElement.classList.toggle('dark', systemTheme === 'dark');
+      // Default to dark mode for first-time visitors
+      setTheme('dark');
+      document.documentElement.classList.add('dark');
     }
   }, []);
 
