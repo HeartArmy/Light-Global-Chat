@@ -452,8 +452,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
     }
 
-    // 5-second cooldown check - prevent back-to-back Gemmie messages
-    const COOLDOWN_SECONDS = 5;
+    // 11-second cooldown check - prevent back-to-back Gemmie messages
+    const COOLDOWN_SECONDS = 11;
     const twentySecondsAgo = new Date(Date.now() - COOLDOWN_SECONDS * 1000);
     const mostRecentGemmieMessage = await Message.findOne({
       userName: 'gemmie',
