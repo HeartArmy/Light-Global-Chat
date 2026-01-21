@@ -98,8 +98,10 @@ export async function shouldGemmieReact(messageId: string): Promise<boolean> {
 export async function selectEmojiForMessage(content: string): Promise<string> {
   try {
     console.log('🤖 Using AI to select emoji for:', content);
+    console.log('📋 Available emojis:', AVAILABLE_EMOJIS);
+    console.log('📝 Full prompt being sent:', EMOJI_SELECTION_PROMPT + ` "${content}"`);
     
-    // Use NVIDIA model specifically for emoji selection
+    const startTime = Date.now();
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -121,14 +123,23 @@ export async function selectEmojiForMessage(content: string): Promise<string> {
       })
     });
     
+    const responseTime = Date.now() - startTime;
+    console.log(`⏱️  AI response time: ${responseTime}ms`);
+    
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ OpenRouter API error for emoji selection:', response.status, errorText);
+      console.error('📋 Full error response:', errorText);
       throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
     }
     
     const data = await response.json();
+    console.log('📡 Full API response:', JSON.stringify(data, null, 2));
+    
     const aiResponse = data.choices[0]?.message?.content?.trim() || '';
+    console.log('🔍 Raw AI response content:', JSON.stringify(aiResponse));
+    console.log('📏 AI response length:', aiResponse.length);
+    console.log('🔤 AI response characters:', Array.from(aiResponse).map((c, i) => `(${i}: '${c}' ${(c as string).charCodeAt(0)})`).join(', '));
     
     // Extract emoji from response (should be just the emoji character)
     const emoji = aiResponse.trim();
@@ -136,9 +147,12 @@ export async function selectEmojiForMessage(content: string): Promise<string> {
     // Validate that the response is one of our allowed emojis
     if (AVAILABLE_EMOJIS.includes(emoji)) {
       console.log(`✅ AI selected emoji: ${emoji}`);
+      console.log(`🎯 Emoji character code: ${emoji.charCodeAt(0)}`);
       return emoji;
     } else {
-      console.log(`⚠️ AI returned invalid emoji: "${emoji}", falling back to default`);
+      console.log(`⚠️ AI returned invalid emoji: "${emoji}" (length: ${emoji.length}), falling back to default`);
+      console.log('🔍 Character analysis:', Array.from(emoji).map((c, i) => `(${i}: '${c}' ${(c as string).charCodeAt(0)})`).join(', '));
+      console.log('📋 Available emojis for comparison:', AVAILABLE_EMOJIS.map(e => `"${e}" (${e.charCodeAt(0)})`).join(', '));
       // Fallback to a default emoji if AI returns something unexpected
       return '❤️';
     }
