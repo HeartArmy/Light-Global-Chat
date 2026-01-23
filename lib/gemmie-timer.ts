@@ -103,7 +103,7 @@ export async function getAndClearGemmieQueue(): Promise<any[]> {
 }
 
 /**
- * Schedules the delayed Gemmie response via QStash
+ * Schedules the delayed Gemmie response via QStash 
  */
 async function scheduleDelayedResponse(userName: string, userMessage: string, userCountry: string): Promise<void> {
   // Import QStash here to avoid circular dependencies
