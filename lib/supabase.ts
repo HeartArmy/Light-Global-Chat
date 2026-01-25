@@ -28,6 +28,63 @@ export const SUPPORTED_VIDEO_FORMATS = [
 export const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
 
 /**
+ * Ensure the video bucket exists and is properly configured
+ */
+async function ensureVideoBucketExists() {
+  try {
+    // Check if bucket exists
+    const { data: buckets, error: listError } = await supabaseAdmin
+      .storage
+      .listBuckets();
+
+    if (listError) {
+      console.error('Failed to list buckets:', listError.message);
+      return false;
+    }
+
+    const bucketExists = buckets?.some(bucket => bucket.name === VIDEO_BUCKET);
+
+    if (!bucketExists) {
+      console.log(`Creating bucket: ${VIDEO_BUCKET}`);
+      // Create the bucket
+      const { error: createError } = await supabaseAdmin
+        .storage
+        .createBucket(VIDEO_BUCKET, {
+          public: true,  // Make bucket public for video streaming
+          fileSizeLimit: MAX_VIDEO_SIZE,  // 50MB limit
+          allowedMimeTypes: SUPPORTED_VIDEO_FORMATS
+        });
+
+      if (createError) {
+        console.error('Failed to create bucket:', createError.message);
+        return false;
+      }
+
+      console.log(`Bucket ${VIDEO_BUCKET} created successfully`);
+    } else {
+      console.log(`Bucket ${VIDEO_BUCKET} already exists`);
+    }
+
+    // Ensure bucket is public
+    const { error: updateError } = await supabaseAdmin
+      .storage
+      .updateBucket(VIDEO_BUCKET, {
+        public: true
+      });
+
+    if (updateError) {
+      console.error('Failed to ensure bucket is public:', updateError.message);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Bucket setup error:', error);
+    return false;
+  }
+}
+
+/**
  * Upload video file to Supabase storage
  */
 export async function uploadVideoToSupabase(file: File): Promise<{ url: string, path: string }> {
@@ -39,6 +96,12 @@ export async function uploadVideoToSupabase(file: File): Promise<{ url: string, 
   // Validate file size
   if (file.size > MAX_VIDEO_SIZE) {
     throw new Error(`Video file too large. Maximum size is ${MAX_VIDEO_SIZE / 1024 / 1024}MB`);
+  }
+
+  // Ensure bucket exists
+  const bucketReady = await ensureVideoBucketExists();
+  if (!bucketReady) {
+    throw new Error(`Failed to set up video storage bucket. Please check Supabase configuration.`);
   }
 
   // Generate unique filename
