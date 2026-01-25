@@ -318,6 +318,9 @@ function MessageItem({
                             <video
                               src={attachment.url}
                               controls
+                              playsInline
+                              webkit-playsinline="true"
+                              preload="metadata"
                               className="rounded-md max-w-full bg-black"
                               style={{ maxHeight: '198px' }}
                               title={attachment.name}

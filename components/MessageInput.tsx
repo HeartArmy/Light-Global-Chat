@@ -52,6 +52,30 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
     },
   });
 
+  // Function to upload video to Supabase
+  const uploadVideoToSupabase = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload-video', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload video');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Video upload error:', error);
+      throw error;
+    }
+  };
+
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
@@ -247,17 +271,35 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
         }
       }
 
-      // Upload videos and other files together using fileUploader
-      const filesToUpload = [...videoFiles, ...otherFiles];
-      if (filesToUpload.length > 0) {
-        const fileResults = await startFileUpload(filesToUpload);
+      // Upload videos to Supabase
+      if (videoFiles.length > 0) {
+        for (const videoFile of videoFiles) {
+          try {
+            const videoData = await uploadVideoToSupabase(videoFile);
+            newAttachments.push({
+              type: 'video',
+              url: videoData.url,
+              name: videoFile.name,
+              size: videoFile.size,
+            });
+            completed++;
+            setUploadProgress({ current: completed, total: fileArray.length });
+          } catch (error) {
+            console.error('Failed to upload video:', videoFile.name, error);
+            // Continue with other files even if one video fails
+          }
+        }
+      }
+
+      // Upload other files using fileUploader (not videos)
+      if (otherFiles.length > 0) {
+        const fileResults = await startFileUpload(otherFiles);
         if (fileResults) {
           fileResults.forEach((result, index) => {
             if (result) {
-              const originalFile = filesToUpload[index];
-              const fileType = originalFile.type.startsWith('video/') ? 'video' : 'file';
+              const originalFile = otherFiles[index];
               newAttachments.push({
-                type: fileType,
+                type: 'file',
                 url: result.url,
                 name: originalFile.name,
                 size: originalFile.size,
@@ -398,7 +440,26 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
                     <button
                       onClick={() => removeAttachment(index)}
                       className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] transition-all duration-fast hover:scale-110"
-                      style={{ 
+                      style={{
+                        background: 'var(--error)',
+                        color: '#ffffff',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : attachment.type === 'video' ? (
+                  <div className="relative">
+                    <video
+                      src={attachment.url}
+                      className="w-11 h-11 object-cover bg-black"
+                      title={attachment.name}
+                      disablePictureInPicture
+                    />
+                    <button
+                      onClick={() => removeAttachment(index)}
+                      className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] transition-all duration-fast hover:scale-110"
+                      style={{
                         background: 'var(--error)',
                         color: '#ffffff',
                       }}
@@ -415,7 +476,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
                     <button
                       onClick={() => removeAttachment(index)}
                       className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] transition-all duration-fast hover:scale-110"
-                      style={{ 
+                      style={{
                         background: 'var(--error)',
                         color: '#ffffff',
                       }}
@@ -450,7 +511,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
           ref={fileInputRef}
           type="file"
           onChange={handleFileSelect}
-          accept="image/*,.avif,.webp,.pdf,.doc,.docx,.txt,.mp4,.mov,.avi,.mkv"
+          accept="image/*,.avif,.webp,.pdf,.doc,.docx,.txt,.mp4,.mov,.avi,.mkv,.webm,.ogg,.3gp,.3g2"
           multiple
           className="hidden"
         />
@@ -465,7 +526,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
               border: '1px solid var(--border)',
               color: 'var(--text-primary)',
             }}
-            title={`Attach files (${attachments.length}/8 used) - Supports images (including AVIF), PDFs, docs, videos`}
+            title={`Attach files (${attachments.length}/8 used) - Supports images (including AVIF), PDFs, docs, videos (MP4, MOV, AVI, MKV, WEBM, OGG, 3GP)`}
           >
             {isUploading ? '⏳' : attachments.length > 0 ? `📎${attachments.length}` : '📎'}
           </button>
