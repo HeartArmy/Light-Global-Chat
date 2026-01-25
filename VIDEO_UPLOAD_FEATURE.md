@@ -53,6 +53,41 @@ graph TD
     H --> I[Send message with attachments]
 ```
 
+## Setup Instructions
+
+### 1. Supabase Configuration
+
+Add these environment variables to your `.env` file:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-public-key"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+```
+
+### 2. Create Storage Bucket
+
+**The system will automatically create the bucket if it doesn't exist**, but you can also create it manually:
+
+#### Manual Bucket Creation:
+
+1. Go to your Supabase project dashboard: [https://app.supabase.com](https://app.supabase.com)
+2. Navigate to the "Storage" section in the left sidebar
+3. Click the "New Bucket" button
+4. Name the bucket exactly: `chat-videos`
+5. Set "Public" to ON (for video streaming)
+6. Set file size limit to 50MB (or your preferred limit)
+7. Add allowed MIME types: `video/mp4`, `video/quicktime`, `video/x-msvideo`, `video/x-matroska`, `video/webm`, `video/ogg`, `video/3gpp`, `video/3gpp2`
+8. Click "Create Bucket"
+
+#### Automatic Bucket Creation:
+
+The system will automatically create the bucket with proper settings when you upload your first video. No manual setup required!
+
+### 3. Update UploadThing Configuration
+
+No changes needed - images continue to use UploadThing as before.
+
 ## Implementation Details
 
 ### Backend Changes
@@ -154,6 +189,16 @@ interface Attachment {
 ```
 
 ## Troubleshooting
+
+### Bucket Not Found Error
+
+If you see "bucket not found" error:
+
+1. **Check Service Role Key**: Ensure your `SUPABASE_SERVICE_ROLE_KEY` has `storage.write` permissions
+2. **Verify Bucket Name**: The bucket must be named exactly `chat-videos`
+3. **Check Storage Quota**: Ensure you haven't exceeded Supabase storage limits
+4. **Manual Creation**: If auto-creation fails, create the bucket manually as described in Setup Instructions
+5. **Permissions**: Ensure the bucket has public read access for video streaming
 
 ### Common Issues
 
