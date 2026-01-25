@@ -238,15 +238,24 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
 
     try {
       // Separate images, videos, and other files
-      const imageFiles = fileArray.filter(file => 
-        file.type.startsWith('image/') || 
-        file.type === 'image/avif' || 
+      const imageFiles = fileArray.filter(file =>
+        file.type.startsWith('image/') ||
+        file.type === 'image/avif' ||
         file.type === 'image/webp'
       );
       const videoFiles = fileArray.filter(file => file.type.startsWith('video/'));
-      const otherFiles = fileArray.filter(file => 
-        !imageFiles.includes(file) && !videoFiles.includes(file)
+      const otherFiles = fileArray.filter(file =>
+        !file.type.startsWith('image/') &&
+        !file.type.startsWith('video/') &&
+        file.type !== 'image/avif' &&
+        file.type !== 'image/webp'
       );
+
+      // Debug logging
+      console.log('File separation results:');
+      console.log('Images:', imageFiles.map(f => `${f.name} (${f.type})`));
+      console.log('Videos:', videoFiles.map(f => `${f.name} (${f.type})`));
+      console.log('Other files:', otherFiles.map(f => `${f.name} (${f.type})`));
 
       const newAttachments: Attachment[] = [];
       let completed = 0;
@@ -273,9 +282,12 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
 
       // Upload videos to Supabase
       if (videoFiles.length > 0) {
+        console.log(`Uploading ${videoFiles.length} videos to Supabase...`);
         for (const videoFile of videoFiles) {
           try {
+            console.log(`Uploading video: ${videoFile.name} (${videoFile.type}, ${videoFile.size} bytes)`);
             const videoData = await uploadVideoToSupabase(videoFile);
+            console.log(`Video uploaded successfully: ${videoData.url}`);
             newAttachments.push({
               type: 'video',
               url: videoData.url,
@@ -286,6 +298,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
             setUploadProgress({ current: completed, total: fileArray.length });
           } catch (error) {
             console.error('Failed to upload video:', videoFile.name, error);
+            alert(`Failed to upload video ${videoFile.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
             // Continue with other files even if one video fails
           }
         }
