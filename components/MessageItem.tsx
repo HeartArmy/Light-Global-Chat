@@ -156,6 +156,8 @@ function MessageItem({
     
     // Only start long press timer for non-interactive elements
     if (!isInteractiveElement) {
+      // Firefox mobile fix: prevent default to avoid conflicts
+      e.preventDefault();
       longPressTimer = setTimeout(() => {
         showActionsWithTimeout();
       }, 500);

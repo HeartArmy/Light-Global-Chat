@@ -135,7 +135,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
       
       if (!isInMessageInput) return;
 
-      const clipboardData = e.clipboardData;
+      const clipboardData = e.clipboardData || (e as any).originalEvent?.clipboardData;
       if (!clipboardData) return;
 
       const items = Array.from(clipboardData.items);
@@ -207,7 +207,10 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      // Use setTimeout to ensure Firefox handles the state update properly
+      setTimeout(() => {
+        handleSend();
+      }, 0);
     }
   };
 
@@ -216,13 +219,17 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
     // Allow sending if there's content OR attachments
     if (!trimmedContent && attachments.length === 0) return;
 
-    // Pass the trimmed content (can be empty string if only attachments)
-    onSend(trimmedContent, attachments, replyingTo?._id);
+    // Firefox fix: ensure state updates are processed before sending
     setContent('');
     setAttachments([]);
     
     // Clear typing indicator when sending
     handleTypingStop();
+    
+    // Use setTimeout to ensure Firefox processes state updates properly
+    setTimeout(() => {
+      onSend(trimmedContent, attachments, replyingTo?._id);
+    }, 0);
   };
 
   // Reusable function to handle file uploads
