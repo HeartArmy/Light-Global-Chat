@@ -110,14 +110,6 @@ export default function ChatRoomClient() {
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
       authEndpoint: '/api/pusher/auth',
-      // Firefox-specific configurations
-      forceTLS: true,
-      enabledTransports: ['ws', 'wss'],
-      log: (level: string, message: string) => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[Pusher ${level}]`, message);
-        }
-      },
     });
 
     const channel = pusher.subscribe('chat-room');

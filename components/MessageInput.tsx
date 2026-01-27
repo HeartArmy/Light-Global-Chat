@@ -139,7 +139,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
       if (!clipboardData) return;
 
       const items = Array.from(clipboardData.items);
-      const imageItems = items.filter(item => item.type.startsWith('image/'));
+      const imageItems = items.filter((item: any) => item.type.startsWith('image/'));
       
       if (imageItems.length === 0) return;
 
@@ -160,7 +160,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
       // Convert clipboard items to files
       const files: File[] = [];
       for (const item of imageItems) {
-        const file = item.getAsFile();
+        const file = (item as any).getAsFile();
         if (file) {
           files.push(file);
         }
