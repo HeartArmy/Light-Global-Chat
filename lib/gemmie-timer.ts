@@ -1,4 +1,5 @@
 import redis from '@/lib/redis';
+import Message from '@/models/Message';
 
 // Key for tracking the last message timestamp
 const LAST_MESSAGE_KEY = 'gemmie:last-message-timestamp';
@@ -197,6 +198,81 @@ export async function clearJobActive(): Promise<void> {
     console.log('🔓 Cleared Gemmie job active flag.');
   } catch (error) {
     console.error('❌ Error clearing job active flag:', error);
+  }
+}
+
+/**
+ * Clears the Gemmie job active flag only if it's stuck
+ * A flag is considered stuck if it's set but no actual job is in progress
+ */
+export async function clearStuckJobActive(): Promise<boolean> {
+  try {
+    const isActive = await redis.get(JOB_ACTIVE_KEY);
+    
+    if (isActive === 'active') {
+      console.log('⚠️ Job active flag is set, checking if it\'s stuck...');
+      
+      // Check if there are any recent messages that might indicate an active job
+      const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
+      const recentMessages = await Message.find({
+        timestamp: { $gte: sixtySecondsAgo }
+      }).sort({ timestamp: -1 }).limit(3).lean();
+      
+      // Check if there are any recent Gemmie messages that might indicate an active job
+      const recentGemmieMessages = recentMessages.filter((msg: any) =>
+        msg.userName.toLowerCase() === 'gemmie'
+      );
+      
+      // Check if there are any recent non-Gemmie messages that might indicate a job should be running
+      const recentUserMessages = recentMessages.filter((msg: any) =>
+        msg.userName.toLowerCase() !== 'gemmie'
+      );
+      
+      // If there are no recent messages at all, the flag is likely stuck
+      if (recentMessages.length === 0) {
+        console.log('🔓 No recent messages found, flag appears to be stuck - clearing it');
+        await redis.del(JOB_ACTIVE_KEY);
+        console.log('✅ Cleared stuck job active flag');
+        return true;
+      }
+      
+      // If there are only old Gemmie messages but no recent user messages, the flag might be stuck
+      if (recentGemmieMessages.length > 0 && recentUserMessages.length === 0) {
+        const latestGemmieTime = new Date(recentGemmieMessages[0].timestamp).getTime();
+        const timeSinceLastGemmie = Date.now() - latestGemmieTime;
+        
+        // If last Gemmie message was more than 2 minutes ago, flag might be stuck
+        if (timeSinceLastGemmie > 2 * 60 * 1000) {
+          console.log('🔓 Only old Gemmie messages found, flag appears to be stuck - clearing it');
+          await redis.del(JOB_ACTIVE_KEY);
+          console.log('✅ Cleared stuck job active flag');
+          return true;
+        }
+      }
+      
+      // If there are recent user messages but no corresponding Gemmie response, flag might be stuck
+      if (recentUserMessages.length > 0 && recentGemmieMessages.length === 0) {
+        const latestUserTime = new Date(recentUserMessages[0].timestamp).getTime();
+        const timeSinceLastUser = Date.now() - latestUserTime;
+        
+        // If last user message was more than 3 minutes ago, flag might be stuck
+        if (timeSinceLastUser > 3 * 60 * 1000) {
+          console.log('🔓 Recent user messages found but no Gemmie response, flag appears to be stuck - clearing it');
+          await redis.del(JOB_ACTIVE_KEY);
+          console.log('✅ Cleared stuck job active flag');
+          return true;
+        }
+      }
+      
+      console.log('✅ Job active flag appears to be legitimate, keeping it set');
+      return false;
+    } else {
+      console.log('ℹ️ Job active flag is not set, no action needed');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error checking and clearing stuck job active flag:', error);
+    return false;
   }
 }
 

@@ -874,10 +874,15 @@ Allowed indices: [1] or [2] only!`;
     }
     
     if (shouldClearJobActive) {
-      const { clearJobActive, clearJobScheduled } = await import('@/lib/gemmie-timer');
-      await clearJobActive();
+      const { clearStuckJobActive, clearJobScheduled } = await import('@/lib/gemmie-timer');
+      const wasStuck = await clearStuckJobActive();
       await clearJobScheduled();
-      console.log('🔓 Cleared job active flag and job scheduled key as queue is now empty.');
+      
+      if (wasStuck) {
+        console.log('🔓 Cleared stuck job active flag and job scheduled key as queue is now empty.');
+      } else {
+        console.log('🔓 Cleared job scheduled key as queue is now empty (job active flag was legitimate).');
+      }
       
       // Log final job state
       const finalJobStatus = await (await import('@/lib/redis')).default.get('gemmie:job-active');
@@ -895,29 +900,34 @@ Allowed indices: [1] or [2] only!`;
     // the main logic could decide to reschedule or clear it normally.
     // This is a fallback for unexpected errors.
     try {
-      const { clearJobActive } = await import('@/lib/gemmie-timer');
+      const { clearStuckJobActive, clearJobScheduled } = await import('@/lib/gemmie-timer');
       const redis = (await import('@/lib/redis')).default;
       const JOB_ACTIVE_KEY = 'gemmie:job-active';
       const isActive = await redis.get(JOB_ACTIVE_KEY);
       
       if (isActive === 'active') {
-        // Double-check that we should clear by seeing if there are queued messages
-        const { getAndClearGemmieQueue } = await import('@/lib/gemmie-timer');
-        const queuedMessages = await getAndClearGemmieQueue();
+        // Use the stuck job detection logic in the finally block as well
+        const wasStuck = await clearStuckJobActive();
         
-        if (queuedMessages.length === 0) {
-          // No queued messages, safe to clear
-          await clearJobActive();
-          const { clearJobScheduled } = await import('@/lib/gemmie-timer');
+        if (wasStuck) {
           await clearJobScheduled();
-          console.log('🔓 Cleared job active flag and job scheduled key in finally block (no queued messages).');
+          console.log('🔓 Cleared stuck job active flag and job scheduled key in finally block.');
         } else {
-          // Put messages back in queue and don't clear flag
-          const { queueGemmieMessage } = await import('@/lib/gemmie-timer');
-          for (const msg of queuedMessages) {
-            await queueGemmieMessage(msg.userName, msg.userMessage, msg.userCountry);
+          // Check if there are queued messages
+          const { getAndClearGemmieQueue } = await import('@/lib/gemmie-timer');
+          const queuedMessages = await getAndClearGemmieQueue();
+          
+          if (queuedMessages.length === 0) {
+            await clearJobScheduled();
+            console.log('🔓 Cleared job scheduled key in finally block (no queued messages).');
+          } else {
+            // Put messages back in queue and don't clear flag
+            const { queueGemmieMessage } = await import('@/lib/gemmie-timer');
+            for (const msg of queuedMessages) {
+              await queueGemmieMessage(msg.userName, msg.userMessage, msg.userCountry);
+            }
+            console.log(`⚠️ Found ${queuedMessages.length} queued messages in finally block, keeping job active flag set.`);
           }
-          console.log(`⚠️ Found ${queuedMessages.length} queued messages in finally block, keeping job active flag set.`);
         }
       } else {
         console.log('ℹ️ Job active flag already cleared by main logic.');
