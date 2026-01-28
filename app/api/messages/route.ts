@@ -276,10 +276,25 @@ export async function POST(request: NextRequest) {
         const jobSet = await setJobActive();
         if (jobSet) {
           // If job set active, reset the timer (which will schedule a new QStash job)
-          await resetGemmieTimer(userName, content || '[attachment]', countryCode);
+          // Include reply context if this is a quote reply
+          let messageWithContext = content || '[attachment]';
+          if (replyTo) {
+            try {
+              // Fetch the quoted message to include in context
+              const quotedMessage = await Message.findById(replyTo).select('userName content').lean();
+              if (quotedMessage) {
+                messageWithContext = `${content || '[attachment]'} (replying to ${quotedMessage.userName}: ${quotedMessage.content})`;
+                console.log('📝 Quote reply context added for:', quotedMessage.userName);
+              }
+            } catch (error) {
+              console.error('❌ Failed to fetch quoted message for context:', error);
+            }
+          }
+          
+          await resetGemmieTimer(userName, messageWithContext, countryCode);
           
           // Schedule Gemmie typing indicator after delay
-          scheduleGemmieTypingIndicator(userName, content || '[attachment]', countryCode);
+          scheduleGemmieTypingIndicator(userName, messageWithContext, countryCode);
           
           // Store the first image URL for AI processing if available (do this AFTER resetGemmieTimer)
           const firstImage = attachments.find(attachment => attachment.type === 'image');
@@ -289,7 +304,22 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // If job already active, queue this message
-          await queueGemmieMessage(userName, content || '[attachment]', countryCode);
+          // Include reply context if this is a quote reply
+          let messageWithContext = content || '[attachment]';
+          if (replyTo) {
+            try {
+              // Fetch the quoted message to include in context
+              const quotedMessage = await Message.findById(replyTo).select('userName content').lean();
+              if (quotedMessage) {
+                messageWithContext = `${content || '[attachment]'} (replying to ${quotedMessage.userName}: ${quotedMessage.content})`;
+                console.log('📝 Quote reply context added for:', quotedMessage.userName);
+              }
+            } catch (error) {
+              console.error('❌ Failed to fetch quoted message for context:', error);
+            }
+          }
+          
+          await queueGemmieMessage(userName, messageWithContext, countryCode);
           console.log('📝 Message queued as a Gemmie job is already active.');
           
           // Store the first image URL for AI processing if available
