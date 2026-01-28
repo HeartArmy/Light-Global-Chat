@@ -213,14 +213,22 @@ export async function clearStuckJobActive(): Promise<boolean> {
     if (isActive === 'active') {
       console.log('⚠️ Job active flag is set, checking if it\'s stuck...');
       
-      // Ensure database connection is established
-      await connectDB();
+      let recentMessages: any[] = [];
       
-      // Check if there are any recent messages that might indicate an active job
-      const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
-      const recentMessages = await Message.find({
-        timestamp: { $gte: sixtySecondsAgo }
-      }).sort({ timestamp: -1 }).limit(3).lean();
+      try {
+        // Ensure database connection is established
+        await connectDB();
+        
+        // Check if there are any recent messages that might indicate an active job
+        const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
+        recentMessages = await Message.find({
+          timestamp: { $gte: sixtySecondsAgo }
+        }).sort({ timestamp: -1 }).limit(3).lean();
+      } catch (dbError) {
+        console.error('❌ Failed to connect to database or query messages:', dbError);
+        // If database connection fails, assume the flag is stuck to prevent queue blockage
+        return true;
+      }
       
       // Check if there are any recent Gemmie messages that might indicate an active job
       const recentGemmieMessages = recentMessages.filter((msg: any) =>
