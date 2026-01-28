@@ -9,7 +9,6 @@ interface YouTubeEmbedProps {
 }
 
 export default function YouTubeEmbed({ videoId, className = '', title = 'YouTube Video' }: YouTubeEmbedProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -25,26 +24,6 @@ export default function YouTubeEmbed({ videoId, className = '', title = 'YouTube
     setIsLoading(false);
     setHasError(true);
   };
-
-  // Handle play state changes from iframe
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // Only accept messages from YouTube iframe
-      if (event.origin !== 'https://www.youtube.com') return;
-      
-      try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (data.event === 'infoDelivery' && data.info) {
-          setIsPlaying(data.info.playerState === 1); // 1 = playing
-        }
-      } catch (error) {
-        // Ignore parsing errors
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
 
   // YouTube embed URL with optimized parameters for inline playback
   const embedUrl = `https://www.youtube.com/embed/${videoId}?`;
@@ -92,33 +71,7 @@ export default function YouTubeEmbed({ videoId, className = '', title = 'YouTube
         sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
       />
 
-      {/* Play button overlay for better UX */}
-      {!isPlaying && !isLoading && !hasError && (
-        <div 
-          className="absolute inset-0 flex items-center justify-center cursor-pointer bg-black/20 rounded-lg transition-opacity hover:bg-black/30"
-          style={{ aspectRatio: '16 / 9' }}
-          onClick={() => {
-            if (iframeRef.current) {
-              // Try to play via API first
-              try {
-                iframeRef.current.contentWindow?.postMessage(
-                  JSON.stringify({ event: 'command', func: 'playVideo' }),
-                  '*'
-                );
-              } catch (error) {
-                // Fallback: just focus the iframe which might trigger autoplay
-                iframeRef.current.focus();
-              }
-            }
-          }}
-        >
-          <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg transform transition-transform hover:scale-110">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
