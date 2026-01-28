@@ -79,10 +79,30 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      const textarea = textareaRef.current;
+      
+      // Reset height to auto to get accurate scrollHeight
+      textarea.style.height = 'auto';
+      
+      // Only set height if there's actual content (not just whitespace)
+      const trimmedContent = content.trim();
+      if (trimmedContent) {
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      } else {
+        // For empty or whitespace-only content, set to minimum height
+        textarea.style.height = 'auto';
+      }
     }
   }, [content]);
+
+  // Cleanup effect to reset textarea height on unmount
+  useEffect(() => {
+    return () => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
+    };
+  }, []);
 
   // Handle typing indicator
   useEffect(() => {
@@ -223,6 +243,11 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
           setTimeout(() => {
             textarea.selectionStart = textarea.selectionEnd = start + 1;
             textarea.focus();
+            // Trigger resize after content update
+            if (textareaRef.current) {
+              textareaRef.current.style.height = 'auto';
+              textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+            }
           }, 0);
         }
       } else {
