@@ -427,3 +427,62 @@ button {
     max-width: 100% !important;
   }
 }
+
+/* YouTube embed styles for cross-browser compatibility */
+.youtube-embed-container {
+  position: relative;
+  width: 100%;
+  margin: 8px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+
+.youtube-embed-wrapper {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+}
+
+/* Firefox-specific fixes for YouTube iframe */
+@-moz-document url-prefix() {
+  .youtube-embed-container iframe {
+    pointer-events: auto !important;
+  }
+}
+
+/* Ensure YouTube embeds work on mobile devices */
+@media (max-width: 768px) {
+  .youtube-embed-container {
+    border-radius: 8px;
+    margin: 6px 0;
+  }
+  
+  .youtube-embed-container iframe {
+    max-height: 200px !important;
+  }
+}
+
+/* Dark mode support for YouTube embeds */
+.dark .youtube-embed-container {
+  background: #000;
+}
+
+/* Accessibility improvements for YouTube embeds */
+.youtube-embed-container:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Prevent YouTube embeds from being selectable */
+.youtube-embed-container {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Ensure YouTube embeds respect container boundaries */
+.youtube-content .youtube-embed-wrapper {
+  contain: content;
+}

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Message, Reaction } from '@/types';
 import MessageActions from './MessageActions';
 import MediaViewer from './ImageViewer'; // Renamed from ImageViewer
+import YouTubeEmbed from './YouTubeEmbed';
 import { formatTimestamp, formatFileSize, getCountryFlag, renderMessageContent } from '@/lib/utils';
 import { useSwipe } from '@/lib/gestures';
 
@@ -53,6 +54,7 @@ function MessageItem({
   const [editContent, setEditContent] = useState(message.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [imageViewer, setImageViewer] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
+  const [youtubeEmbeds, setYoutubeEmbeds] = useState<Array<{videoId: string, url: string}>>([]);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Auto-dismiss actions after timeout (like Telegram/WhatsApp)
@@ -141,6 +143,24 @@ function MessageItem({
   const swipeHandlers = useSwipe(() => {
     onReply();
   });
+
+  // Extract YouTube embed information from message content
+  useEffect(() => {
+    const embeds: Array<{videoId: string, url: string}> = [];
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = renderMessageContent(message.content, isOwn);
+    
+    const embedWrappers = tempDiv.querySelectorAll('.youtube-embed-wrapper');
+    embedWrappers.forEach(wrapper => {
+      const videoId = wrapper.getAttribute('data-video-id');
+      const url = wrapper.getAttribute('data-url');
+      if (videoId && url) {
+        embeds.push({ videoId, url });
+      }
+    });
+    
+    setYoutubeEmbeds(embeds);
+  }, [message.content, isOwn]);
 
   // Long press for actions on mobile
   let longPressTimer: NodeJS.Timeout | null = null;
@@ -298,8 +318,23 @@ function MessageItem({
                     <div
                       ref={contentRef}
                       className="text-sm break-words whitespace-pre-wrap"
-                      dangerouslySetInnerHTML={{ __html: renderMessageContent(message.content, isOwn) }}
-                    />
+                    >
+                      {/* Render message content with YouTube embeds */}
+                      <div 
+                        className="youtube-content"
+                        dangerouslySetInnerHTML={{ __html: renderMessageContent(message.content, isOwn) }}
+                      />
+                      
+                      {/* Replace YouTube embed placeholders with actual components */}
+                      {youtubeEmbeds.map((embed, index) => (
+                        <div key={index} className="my-2">
+                          <YouTubeEmbed 
+                            videoId={embed.videoId} 
+                            title={`YouTube Video: ${embed.url}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   )}
 
                   {/* Attachments */}
