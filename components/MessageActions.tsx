@@ -128,7 +128,7 @@ export default function MessageActions({
         </button>
 
         {showEmojiPicker && (
-          <div className="absolute bottom-full right-0 transform translate-x-0 mb-2 z-50 min-w-max">
+          <div className="absolute bottom-full left-0 transform translate-x-0 mb-2 z-50 min-w-max">
             <div className="flex flex-col gap-1.5 shadow-2xl">
               <EmojiPicker mode="quick" onSelect={handleEmojiSelect} />
               <button
