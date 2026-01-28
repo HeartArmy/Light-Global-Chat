@@ -356,27 +356,8 @@ export default function ChatRoomClient() {
   };
 
   const handleSendMessage = async (content: string, attachments: Attachment[], replyTo?: string) => {
-    if (!userName) return;
-    
     try {
       console.log('Sending message:', { content, attachments, userName, replyTo });
-
-      // Create a temporary message object for immediate UI update
-      const tempMessage: Message = {
-        _id: `temp-${Date.now()}`, // Temporary ID
-        content,
-        userName: userName || '', // Ensure it's a string
-        userCountry: userCountry,
-        timestamp: new Date(),
-        attachments,
-        replyTo: replyTo || undefined,
-        reactions: [],
-        edited: false,
-      };
-
-      // Immediately add message to UI
-      setMessages(prev => [...prev, tempMessage]);
-      setReplyingTo(null);
 
       // Select the first image for AI processing if any
       const imageAttachment = attachments.find(att => att.type === 'image');
@@ -400,17 +381,13 @@ export default function ChatRoomClient() {
         const error = await response.json();
         console.error('Server error:', error);
         alert(`Failed to send message: ${error.error}`);
-        // Remove the temporary message if server fails
-        setMessages(prev => prev.filter(msg => msg._id !== tempMessage._id));
         return;
       }
 
-      // The message will be updated via Pusher event, so no need to update here
+      setReplyingTo(null);
     } catch (error) {
       console.error('Failed to send message:', error);
       alert('Failed to send message');
-      // Remove the temporary message if there's an error
-      setMessages(prev => prev.filter(msg => msg._id.startsWith('temp-')));
     }
   };
 
