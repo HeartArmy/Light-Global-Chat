@@ -25,6 +25,10 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'geolocation=(self), microphone=(), camera=(), fullscreen=(self)',
           },
+          {
+            key: 'x-vercel-insights',
+            value: 'true',
+          },
         ],
       },
     ];
