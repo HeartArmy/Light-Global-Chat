@@ -1,5 +1,12 @@
-import Log from '@/models/Log';
 import mongoose from 'mongoose';
+
+// Optional Log model import - handle cases where it might not be available
+let Log: any = null;
+try {
+  Log = require('@/models/Log').default;
+} catch (error) {
+  console.warn('Log model not available, logging will be disabled:', (error as Error).message);
+}
 
 // === CONSOLE LOGGING PATCHING ===
 // Helper function to convert arguments to string
@@ -34,6 +41,11 @@ function extractRouteFromStack(): string {
 
 // Save log to MongoDB
 async function saveToMongoDB(level: string, message: string, args: any[] = []) {
+  if (!Log) {
+    // Log model not available, skip logging
+    return;
+  }
+  
   try {
     await connectDB();
     
