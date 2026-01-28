@@ -11,31 +11,33 @@ const REACTION_COUNT_KEY = 'gemmie:reaction-count';
 const REACTED_MESSAGES_KEY = 'gemmie:reacted-messages';
 
 // Available emojis from quick reactions
-const AVAILABLE_EMOJIS = ['❤️', '😂', '👋', '😢'];
+const AVAILABLE_EMOJIS = ['❤️', '😂', '👋', '😢', '👍'];
 
-// AI prompt for emoji selection
-const EMOJI_SELECTION_PROMPT = `You're gemmie, a chill friend in a chat. Based on the user's message content, choose exactly one emoji from this list to react with: ❤️ 😂 👋 😢
+// AI prompt for emoji selection - now returns words instead of emojis
+const EMOJI_SELECTION_PROMPT = `You're gemmie, a chill friend in a chat. Based on the user's message content, choose exactly one word from this list to describe the vibe: love, funny, greeting, sad, approval
 
 Choose based on the message vibe:
-- ❤️ for love/appreciation/warm feelings  
-- 😂 for funny/laughing/humorous content
-- 👋 for greetings/hello/introductions
-- 😢 for sad/negative/upset content
+- love for love/appreciation/warm feelings
+- funny for funny/laughing/humorous content
+- greeting for greetings/hello/introductions
+- sad for sad/negative/upset content
+- approval for agreement/approval/positive feedback
 
-Respond with ONLY the emoji character, nothing else. No explanation, no text, just the emoji.
+Respond with ONLY the word, nothing else. No explanation, no text, just the word.
 
 Examples:
-User: "haha that's funny" → 😂  
-User: "hi everyone" → 👋
-User: "i feel sad" → 😢
-User: "love this" → ❤️
+User: "haha that's funny" → funny
+User: "hi everyone" → greeting
+User: "i feel sad" → sad
+User: "love this" → love
+User: "good job" → approval
 
 User message:`;
 
 // Cooldown settings (in seconds)
 const MIN_REACTION_INTERVAL = 180; // Minimum 3 minutes between reactions
 const MAX_REACTION_INTERVAL = 600; // Maximum 10 minutes between reactions
-const DAILY_REACTION_LIMIT = 4; // Maximum reactions per day
+const DAILY_REACTION_LIMIT = 5; // Maximum reactions per day
 
 /**
  * Determines if Gemmie should react to a message with an emoji
@@ -97,11 +99,6 @@ export async function shouldGemmieReact(messageId: string): Promise<boolean> {
  */
 export async function selectEmojiForMessage(content: string): Promise<string> {
   try {
-    console.log('🤖 Using AI to select emoji for:', content);
-    console.log('📋 Available emojis:', AVAILABLE_EMOJIS);
-    console.log('📝 Full prompt being sent:', EMOJI_SELECTION_PROMPT + ` "${content}"`);
-    
-    const startTime = Date.now();
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -118,67 +115,53 @@ export async function selectEmojiForMessage(content: string): Promise<string> {
             content: EMOJI_SELECTION_PROMPT + ` "${content}"`
           }
         ],
-        max_tokens: 50,
+        max_tokens: 10,
         temperature: 0.1
       })
     });
     
-    const responseTime = Date.now() - startTime;
-    console.log(`⏱️  AI response time: ${responseTime}ms`);
-    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ OpenRouter API error for emoji selection:', response.status, errorText);
-      console.error('📋 Full error response:', errorText);
-      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+      throw new Error(`OpenRouter API error: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('📡 Full API response:', JSON.stringify(data, null, 2));
-    
     const aiResponse = data.choices[0]?.message?.content?.trim() || '';
-    console.log('🔍 Raw AI response content:', JSON.stringify(aiResponse));
-    console.log('📏 AI response length:', aiResponse.length);
-    console.log('🔤 AI response characters:', Array.from(aiResponse).map((c, i) => `(${i}: '${c}' ${(c as string).charCodeAt(0)})`).join(', '));
     
-    // Extract emoji from response (should be just the emoji character)
-    const emoji = aiResponse.trim();
-    
-    // Validate that the response is one of our allowed emojis
-    if (AVAILABLE_EMOJIS.includes(emoji)) {
-      console.log(`✅ AI selected emoji: ${emoji}`);
-      console.log(`🎯 Emoji character code: ${emoji.charCodeAt(0)}`);
-      return emoji;
-    } else {
-      console.log(`⚠️ AI returned invalid emoji: "${emoji}" (length: ${emoji.length}), falling back to default`);
-      console.log('🔍 Character analysis:', Array.from(emoji).map((c, i) => `(${i}: '${c}' ${(c as string).charCodeAt(0)})`).join(', '));
-      console.log('📋 Available emojis for comparison:', AVAILABLE_EMOJIS.map(e => `"${e}" (${e.charCodeAt(0)})`).join(', '));
-      // Fallback to a default emoji if AI returns something unexpected
-      return '❤️';
-    }
+    // Extract vibe word from response and map to emoji
+    const vibeWord = aiResponse.trim().toLowerCase();
+    return mapVibeToEmoji(vibeWord) || '❤️'; // Default to heart emoji
     
   } catch (error) {
-    console.error('❌ AI emoji selection failed, using fallback:', error);
-    // Fallback logic for when AI fails
-    const lowerContent = content.toLowerCase().trim();
-    
-    // Love/affection should trigger heart emoji
-    if (lowerContent.includes('love') || lowerContent.includes('❤️') || lowerContent.includes('<3')) {
-      return '❤️';
-    }
-    // Positive/approval should trigger heart emoji (replacing thumbs up)
-    else if (lowerContent.includes('!') || lowerContent.includes('awesome') || lowerContent.includes('great') || lowerContent.includes('cool')) {
-      return '❤️';
-    } else if (lowerContent.includes('haha') || lowerContent.includes('lol') || lowerContent.includes('funny')) {
-      return '😂';
-    } else if (lowerContent.includes('hi') || lowerContent.includes('hello') || lowerContent.includes('hey')) {
-      return '👋';
-    } else if (lowerContent.includes('sad') || lowerContent.includes('bad') || lowerContent.includes('hate')) {
-      return '😢';
-    }
-    
-    return '❤️'; // Default fallback for neutral positive content (replacing thumbs up)
+    console.error('AI emoji selection failed, using default:', error);
+    return '❤️'; // Simple fallback to heart emoji
   }
+}
+
+/**
+ * Maps vibe words to emojis
+ */
+function mapVibeToEmoji(vibe: string): string | null {
+  const vibeMap: Record<string, string> = {
+    'love': '❤️',
+    'funny': '😂',
+    'greeting': '👋',
+    'sad': '😢', 
+    'approval': '👍',
+  };
+  
+  // Direct match
+  if (vibeMap[vibe]) {
+    return vibeMap[vibe];
+  }
+  
+  // Partial matches
+  for (const [key, emoji] of Object.entries(vibeMap)) {
+    if (vibe.includes(key) || key.includes(vibe)) {
+      return emoji;
+    }
+  }
+  
+  return null;
 }
 
 /**
