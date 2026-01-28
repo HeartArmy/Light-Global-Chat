@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import { Analytics } from '@vercel/analytics/next';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import JsonLd from './jsonld';
@@ -110,7 +109,8 @@ export default function RootLayout({
         </ErrorBoundary>
         {/* Portal container for modals */}
         <div id="modal-root" />
-        <Analytics />
+        <script data-goatcounter="https://globalchatroom.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
       </body>
     </html>
   );
