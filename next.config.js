@@ -26,7 +26,7 @@ const nextConfig = {
             value: 'geolocation=(self), microphone=(), camera=(), fullscreen=(self)',
           },
           {
-            key: 'x-vercel-insights',
+            key: 'x-vercel-analytics',
             value: 'true',
           },
         ],
