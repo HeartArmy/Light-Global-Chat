@@ -61,7 +61,29 @@ export default function ChatRoomClient() {
     return () => clearInterval(timer);
   }, []);
 
-  // Track tab visibility for notifications
+  // Check if device is mobile
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           window.innerWidth < 768;
+  };
+
+  // Fetch messages function
+  const fetchMessages = useCallback(async () => {
+    try {
+      console.log('🔄 Fetching latest messages...');
+      const res = await fetch('/api/messages?limit=100');
+      const data = await res.json();
+      // Reverse to maintain chronological order and get latest state
+      const freshMessages = data.messages.reverse();
+      setMessages(freshMessages);
+      setHasMore(data.hasMore);
+      console.log('✅ Messages refreshed successfully, got', freshMessages.length, 'messages');
+    } catch (error) {
+      console.error('Failed to refresh messages:', error);
+    }
+  }, []);
+
+  // Track tab visibility for notifications and mobile auto-refresh
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -70,12 +92,29 @@ export default function ChatRoomClient() {
         setIsTabVisible(true);
         setUnreadCount(0);
         document.title = 'Global Live Chat Room';
+        
+        // Auto-refresh messages on mobile when returning to browser after inactivity
+        if (isMobileDevice()) {
+          console.log('📱 Mobile device returning to browser, auto-refreshing messages...');
+          // Show a subtle loading indicator for mobile users
+          const wasLoading = isLoading;
+          if (!wasLoading) {
+            setIsLoading(true);
+          }
+          
+          fetchMessages().finally(() => {
+            if (!wasLoading) {
+              // Briefly show loading state then hide it
+              setTimeout(() => setIsLoading(false), 500);
+            }
+          });
+        }
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+  }, [fetchMessages]);
 
   // Handle arham leaving (tab close, navigation, etc.)
   // NOTE: removed automatic arham-disconnect calls on unload so Gemmie
@@ -450,16 +489,6 @@ export default function ChatRoomClient() {
     }
   }, [messages, hasMore, isLoading]);
 
-  const fetchMessages = useCallback(async () => {
-    try {
-      const res = await fetch('/api/messages?limit=100');
-      const data = await res.json();
-      setMessages(data.messages.reverse());
-      setHasMore(data.hasMore);
-    } catch (error) {
-      console.error('Failed to refresh messages:', error);
-    }
-  }, []);
 
   const handleToggleGemmie = async () => {
     if (userName !== 'arham' && userName !== 'gemmie') return;
