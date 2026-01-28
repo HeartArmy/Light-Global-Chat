@@ -111,6 +111,7 @@ export default function RootLayout({
         <div id="modal-root" />
         <script data-goatcounter="https://globalchatroom.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
+        <script defer src="https://cloud.umami.is/script.js" data-website-id="cb47d195-310f-4991-8510-4c8caaf8b080"></script>
       </body>
     </html>
   );
