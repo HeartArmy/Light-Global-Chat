@@ -278,6 +278,11 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
     // Use setTimeout to ensure Firefox processes state updates properly
     setTimeout(() => {
       onSend(trimmedContent, attachments, replyingTo?._id);
+      
+      // Keep textarea focused on mobile after sending to prevent keyboard from collapsing
+      if (isMobile && textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }, 0);
   };
 
