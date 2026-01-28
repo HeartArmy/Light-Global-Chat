@@ -205,12 +205,36 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      // Use setTimeout to ensure Firefox handles the state update properly
-      setTimeout(() => {
-        handleSend();
-      }, 0);
+    // Mobile: Enter key creates new line, only send button sends messages
+    // Desktop: Enter key sends message, Shift+Enter creates new line
+    if (e.key === 'Enter') {
+      if (isMobile) {
+        // On mobile, Enter always creates a new line
+        if (!e.shiftKey) {
+          e.preventDefault();
+          // Insert a newline character at the cursor position
+          const textarea = e.currentTarget;
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const newValue = content.substring(0, start) + '\n' + content.substring(end);
+          setContent(newValue);
+          
+          // Set cursor position after the newline
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = start + 1;
+            textarea.focus();
+          }, 0);
+        }
+      } else {
+        // On desktop, Enter sends message (Shift+Enter for new line)
+        if (!e.shiftKey) {
+          e.preventDefault();
+          // Use setTimeout to ensure Firefox handles the state update properly
+          setTimeout(() => {
+            handleSend();
+          }, 0);
+        }
+      }
     }
   };
 
@@ -610,8 +634,8 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
             }}
             placeholder={
               isMobile
-                ? "Type a message... (tap 📎 to add files)"
-                : "Type a message... (Cmd+V to paste images)"
+                ? "Type a message... (Enter for new line, tap ➤ to send)"
+                : "Type a message... (Enter to send, Shift+Enter for new line, Cmd+V to paste images)"
             }
             rows={1}
             maxLength={5000}
@@ -645,7 +669,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
             background: 'var(--accent)',
             color: '#ffffff',
           }}
-          title="Send message"
+          title={isMobile ? "Tap to send message (Enter creates new line)" : "Send message (Enter to send, Shift+Enter for new line)"}
         >
           ➤
         </button>
