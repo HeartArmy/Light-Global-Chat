@@ -1,4 +1,5 @@
 import redis from '@/lib/redis';
+import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 
 // Key for tracking the last message timestamp
@@ -211,6 +212,9 @@ export async function clearStuckJobActive(): Promise<boolean> {
     
     if (isActive === 'active') {
       console.log('⚠️ Job active flag is set, checking if it\'s stuck...');
+      
+      // Ensure database connection is established
+      await connectDB();
       
       // Check if there are any recent messages that might indicate an active job
       const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
