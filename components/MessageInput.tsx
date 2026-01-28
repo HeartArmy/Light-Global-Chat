@@ -268,22 +268,20 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
     // Allow sending if there's content OR attachments
     if (!trimmedContent && attachments.length === 0) return;
 
-    // Firefox fix: ensure state updates are processed before sending
+    // Clear input immediately - UI updates right away
     setContent('');
     setAttachments([]);
     
     // Clear typing indicator when sending
     handleTypingStop();
     
-    // Use setTimeout to ensure Firefox processes state updates properly
-    setTimeout(() => {
-      onSend(trimmedContent, attachments, replyingTo?._id);
-      
-      // Keep textarea focused on mobile after sending to prevent keyboard from collapsing
-      if (isMobile && textareaRef.current) {
-        textareaRef.current.focus();
-      }
-    }, 0);
+    // Send message immediately without waiting for response
+    onSend(trimmedContent, attachments, replyingTo?._id);
+    
+    // Keep textarea focused on mobile after sending to prevent keyboard from collapsing
+    if (isMobile && textareaRef.current) {
+      textareaRef.current.focus();
+    }
   };
 
   // Reusable function to handle file uploads
