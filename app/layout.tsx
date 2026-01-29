@@ -112,6 +112,7 @@ export default function RootLayout({
         <script data-goatcounter="https://globalchatroom.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
         <script defer src="https://cloud.umami.is/script.js" data-website-id="cb47d195-310f-4991-8510-4c8caaf8b080"></script>
+        <script src="/_vercel/insights/script.js" defer></script>
       </body>
     </html>
   );
