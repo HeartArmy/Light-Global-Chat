@@ -19,7 +19,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self' * 'unsafe-inline' 'unsafe-eval'; script-src 'self' * 'unsafe-inline' 'unsafe-eval'; connect-src 'self' * wss: ws:; img-src 'self' * data: blob: 'unsafe-inline'; frame-src 'self' *; style-src 'self' * 'unsafe-inline';",
+            value: "default-src 'self' * 'unsafe-inline' 'unsafe-eval'; script-src 'self' * 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com; connect-src 'self' * wss: ws: https://va.vercel-scripts.com; img-src 'self' * data: blob: 'unsafe-inline'; frame-src 'self' *; style-src 'self' * 'unsafe-inline';",
           },
           {
             key: 'Permissions-Policy',
