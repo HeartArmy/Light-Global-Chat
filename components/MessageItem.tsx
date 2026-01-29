@@ -341,7 +341,7 @@ function MessageItem({
                   {message.attachments && message.attachments.length > 0 && (
                     <div className={message.content ? "mt-1.5 space-y-1.5" : "space-y-1.5"}>
                       {message.attachments.map((attachment, index) => (
-                        <div key={index}>
+                        <div key={index} className="block">
                           {attachment.type === 'image' ? (
                             <img
                               src={attachment.url}
@@ -352,18 +352,18 @@ function MessageItem({
                               title="Click to view full size"
                             />
                           ) : attachment.type === 'video' ? (
-                            <div className="relative rounded-md overflow-hidden bg-black">
+                            <div className="relative rounded-md overflow-hidden bg-black block" style={{ minHeight: '120px' }}>
                               <video
                                 src={attachment.url}
                                 controls
                                 playsInline
                                 webkit-playsinline="true"
                                 preload="metadata"
-                                className="max-w-full"
+                                className="max-w-full w-auto h-auto"
                                 style={{
-                                  minHeight: '120px',
                                   maxHeight: '300px',
-                                  width: 'auto',
+                                  display: 'block',
+                                  width: '100%',
                                   height: 'auto'
                                 }}
                                 title={attachment.name}
