@@ -125,7 +125,7 @@ export default function MediaViewer({ isOpen, mediaUrl, mediaName, mediaType, on
             controls
             playsInline
             webkit-playsinline="true"
-            preload="metadata"
+            preload="metadata" 
             className={`max-w-full max-h-full rounded-lg shadow-2xl ${isLoading || hasError ? 'hidden' : 'block'}`}
             onLoad={handleMediaLoad}
             onError={handleMediaError}
