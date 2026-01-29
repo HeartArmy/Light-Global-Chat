@@ -352,18 +352,25 @@ function MessageItem({
                               title="Click to view full size"
                             />
                           ) : attachment.type === 'video' ? (
-                            <video
-                              src={attachment.url}
-                              controls
-                              playsInline
-                              webkit-playsinline="true"
-                              preload="metadata"
-                              className="rounded-md max-w-full bg-black"
-                              style={{ maxHeight: '198px' }}
-                              title={attachment.name}
-                            >
-                              Your browser does not support the video tag.
-                            </video>
+                            <div className="relative rounded-md overflow-hidden bg-black">
+                              <video
+                                src={attachment.url}
+                                controls
+                                playsInline
+                                webkit-playsinline="true"
+                                preload="metadata"
+                                className="max-w-full"
+                                style={{
+                                  minHeight: '120px',
+                                  maxHeight: '300px',
+                                  width: 'auto',
+                                  height: 'auto'
+                                }}
+                                title={attachment.name}
+                              >
+                                Your browser does not support the video tag.
+                              </video>
+                            </div>
                           ) : (
                             <a
                               href={attachment.url}

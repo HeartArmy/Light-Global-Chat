@@ -83,7 +83,7 @@ export default function ChatRoomClient() {
     }
   }, []);
 
-  // Track tab visibility for notifications and mobile auto-refresh
+  // Track tab visibility for notifications and auto-refresh
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -93,22 +93,20 @@ export default function ChatRoomClient() {
         setUnreadCount(0);
         document.title = 'Global Live Chat Room';
         
-        // Auto-refresh messages on mobile when returning to browser after inactivity
-        if (isMobileDevice()) {
-          console.log('📱 Mobile device returning to browser, auto-refreshing messages...');
-          // Show a subtle loading indicator for mobile users
-          const wasLoading = isLoading;
-          if (!wasLoading) {
-            setIsLoading(true);
-          }
-          
-          fetchMessages().finally(() => {
-            if (!wasLoading) {
-              // Briefly show loading state then hide it
-              setTimeout(() => setIsLoading(false), 500);
-            }
-          });
+        // Auto-refresh messages when returning to browser after inactivity on all devices
+        console.log('🔄 Returning to browser, auto-refreshing messages...');
+        // Show a subtle loading indicator
+        const wasLoading = isLoading;
+        if (!wasLoading) {
+          setIsLoading(true);
         }
+        
+        fetchMessages().finally(() => {
+          if (!wasLoading) {
+            // Briefly show loading state then hide it
+            setTimeout(() => setIsLoading(false), 500);
+          }
+        });
       }
     };
 

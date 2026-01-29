@@ -267,6 +267,24 @@ export async function POST(request: NextRequest) {
       const isGemmieEnabled = await getGemmieStatus();
 
       if (isGemmieEnabled) {
+        // Check if message contains only video attachments (no text content)
+        const hasTextContent = content && typeof content === 'string' && content.trim().length > 0;
+        const hasVideoAttachments = attachments.some((attachment: Attachment) => attachment.type === 'video');
+        const hasOnlyVideoAttachments = hasVideoAttachments && !hasTextContent;
+        
+        console.log('Content analysis:', {
+          hasTextContent,
+          hasVideoAttachments,
+          hasOnlyVideoAttachments,
+          attachmentTypes: attachments.map((a: Attachment) => a.type)
+        });
+        
+        // Skip Gemmie response if message contains only video attachments
+        if (hasOnlyVideoAttachments) {
+          console.log('🎬 Message contains only video attachments, Gemmie will not respond (behaving like arham)');
+          return NextResponse.json({ message: populatedMessage });
+        }
+
         console.log('✅ Scheduling delayed Gemmie response for:', userName);
 
         // Use delayed processing with timer reset functionality
