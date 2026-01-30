@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Message, Attachment } from '@/types';
 import { useUploadThing } from '@/lib/uploadthing';
+import { supabaseClient } from '@/lib/supabase';
 
 // Hook to detect mobile device
 const useIsMobile = () => {
@@ -52,7 +53,49 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
     },
   });
 
-  // Function to upload video to Supabase
+  // Function to upload video to Supabase directly from client (bypasses Vercel API limit)
+  const uploadVideoToSupabaseDirect = async (file: File) => {
+    try {
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const filePath = `videos/${new Date().toISOString().split('T')[0]}/${fileName}`;
+
+      // Upload directly to Supabase storage
+      const { data, error } = await supabaseClient.storage
+        .from('chat-videos')
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (error) {
+        throw new Error(`Failed to upload video: ${error.message}`);
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabaseClient.storage
+        .from('chat-videos')
+        .getPublicUrl(filePath);
+
+      if (!publicUrlData?.publicUrl) {
+        throw new Error('Failed to get public URL for uploaded video');
+      }
+
+      return {
+        url: publicUrlData.publicUrl,
+        path: filePath,
+        name: file.name,
+        size: file.size,
+        type: file.type
+      };
+    } catch (error) {
+      console.error('Direct video upload error:', error);
+      throw error;
+    }
+  };
+
+  // Function to upload video to Supabase (existing API route method)
   const uploadVideoToSupabase = async (file: File) => {
     try {
       const formData = new FormData();
@@ -345,7 +388,17 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
         for (const videoFile of videoFiles) {
           try {
             console.log(`Uploading video: ${videoFile.name} (${videoFile.type}, ${videoFile.size} bytes)`);
-            const videoData = await uploadVideoToSupabase(videoFile);
+            
+            // Use direct upload for files > 4MB, API route for smaller files
+            let videoData;
+            if (videoFile.size > 4 * 1024 * 1024) { // 4MB
+              console.log(`Using direct upload for large file: ${videoFile.name}`);
+              videoData = await uploadVideoToSupabaseDirect(videoFile);
+            } else {
+              console.log(`Using API route for small file: ${videoFile.name}`);
+              videoData = await uploadVideoToSupabase(videoFile);
+            }
+            
             console.log(`Video uploaded successfully: ${videoData.url}`);
             newAttachments.push({
               type: 'video',
