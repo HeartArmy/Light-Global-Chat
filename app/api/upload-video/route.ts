@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { uploadVideoToSupabase, MAX_VIDEO_SIZE, SUPPORTED_VIDEO_FORMATS } from '@/lib/supabase';
+import { uploadVideoToSupabase, MAX_VIDEO_SIZE, SUPPORTED_VIDEO_FORMATS } from '@/lib/supabase-server';
 
 export async function POST(request: Request) {
   try {

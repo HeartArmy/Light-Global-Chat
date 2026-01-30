@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Message, Attachment } from '@/types';
 import { useUploadThing } from '@/lib/uploadthing';
-import { supabaseClient } from '@/lib/supabase';
+import { supabaseClient } from '@/lib/supabase-client';
 
 // Hook to detect mobile device
 const useIsMobile = () => {

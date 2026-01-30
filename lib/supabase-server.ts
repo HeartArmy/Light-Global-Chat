@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Client for client-side operations (anon key)
-export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseServiceRoleKey) {
+  throw new Error('Missing Supabase server environment variables');
+}
 
 // Client for server-side operations (service role key - full access)
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
