@@ -353,6 +353,54 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
         file.type !== 'image/webp'
       );
 
+      // Validate image files before upload
+      const invalidImages = imageFiles.filter(file => {
+        const isTooLarge = file.size > 10 * 1024 * 1024; // 10MB
+        const isUnsupportedType = !['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'].includes(file.type);
+        return isTooLarge || isUnsupportedType;
+      });
+
+      // Validate video files before upload
+      const invalidVideos = videoFiles.filter(file => {
+        const isTooLarge = file.size > 50 * 1024 * 1024; // 50MB
+        const isUnsupportedType = !['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/webm', 'video/ogg', 'video/3gpp', 'video/3gpp2'].includes(file.type);
+        return isTooLarge || isUnsupportedType;
+      });
+
+      // Validate document files before upload
+      const invalidDocuments = otherFiles.filter(file => {
+        const isTooLarge = file.size > 25 * 1024 * 1024; // 25MB
+        const isUnsupportedType = !['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'].includes(file.type);
+        return isTooLarge || isUnsupportedType;
+      });
+
+      // Collect all invalid files
+      const allInvalidFiles = [
+        ...invalidImages.map(file => ({ file, type: 'image' })),
+        ...invalidVideos.map(file => ({ file, type: 'video' })),
+        ...invalidDocuments.map(file => ({ file, type: 'document' }))
+      ];
+
+      if (allInvalidFiles.length > 0) {
+        const errors = allInvalidFiles.map(({ file, type }) => {
+          if (file.size > (type === 'image' ? 10 * 1024 * 1024 : type === 'video' ? 50 * 1024 * 1024 : 25 * 1024 * 1024)) {
+            const maxSize = type === 'image' ? '10MB' : type === 'video' ? '50MB' : '25MB';
+            return `${file.name}: File too large (max ${maxSize})`;
+          } else {
+            return `${file.name}: Unsupported format`;
+          }
+        });
+
+        const typeLimits = {
+          image: 'Images: Max 10MB (JPEG, PNG, GIF, WebP, AVIF)',
+          video: 'Videos: Max 50MB (MP4, MOV, AVI, MKV, WEBM, OGG, 3GP, 3G2)',
+          document: 'Documents: Max 25MB (PDF, DOC, DOCX, TXT)'
+        };
+
+        alert(`Cannot upload ${allInvalidFiles.length} file(s):\n\n${errors.join('\n')}\n\n\nFile type limits:\n${Object.values(typeLimits).join('\n')}`);
+        return;
+      }
+
       // Debug logging
       console.log('File separation results:');
       console.log('Images:', imageFiles.map(f => `${f.name} (${f.type})`));
@@ -636,7 +684,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
           ref={fileInputRef}
           type="file"
           onChange={handleFileSelect}
-          accept="image/*,.avif,.webp,.pdf,.doc,.docx,.txt,.mp4,.mov,.avi,.mkv,.webm,.ogg,.3gp,.3g2"
+          accept="image/jpeg,image/png,image/gif,image/webp,image/avif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm,video/ogg,video/3gpp,video/3gpp2"
           multiple
           className="hidden"
         />
