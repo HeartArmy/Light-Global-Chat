@@ -78,6 +78,11 @@ export default function MessageActions({
     setShowExtendedPicker(false);
   };
 
+  const handleCloseEmojiPicker = () => {
+    setShowEmojiPicker(false);
+    setShowExtendedPicker(false);
+  };
+
   return (
     <div className="flex items-center gap-0.5 bg-opacity-90 backdrop-blur-sm rounded-full px-1 py-0.25 shadow-lg" style={{ background: 'var(--surface-elevated)' }}>
       {/* Reply Button */}
@@ -130,7 +135,7 @@ export default function MessageActions({
         {showEmojiPicker && (
           <div className="absolute bottom-full left-0 transform translate-x-0 mb-2 z-50 min-w-max">
             <div className="flex flex-col gap-1.5 shadow-2xl">
-              <EmojiPicker mode="quick" onSelect={handleEmojiSelect} />
+              <EmojiPicker mode="quick" onSelect={handleEmojiSelect} onClose={handleCloseEmojiPicker} />
               <button
                 onClick={() => setShowExtendedPicker(!showExtendedPicker)}
                 className="px-2.5 py-1.5 text-xs rounded-lg transition-all duration-fast"
@@ -143,7 +148,7 @@ export default function MessageActions({
                 {showExtendedPicker ? '−' : '+'}
               </button>
               {showExtendedPicker && (
-                <EmojiPicker mode="extended" onSelect={handleEmojiSelect} />
+                <EmojiPicker mode="extended" onSelect={handleEmojiSelect} onClose={handleCloseEmojiPicker} />
               )}
             </div>
           </div>
