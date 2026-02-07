@@ -9,7 +9,7 @@ import YouTubeEmbed from './YouTubeEmbed';
 import { formatTimestamp, formatFileSize, getCountryFlag, renderMessageContent } from '@/lib/utils';
 import { useSwipe } from '@/lib/gestures';
 
-interface MessageItemProps {
+interface MessageItemProps { 
   message: Message;
   isOwn: boolean;
   currentUserName: string;
