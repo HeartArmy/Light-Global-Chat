@@ -8,7 +8,7 @@ export const ourFileRouter = {
     "image/avif": { maxFileSize: "8MB", maxFileCount: 8 },
     "image/webp": { maxFileSize: "8MB", maxFileCount: 8 },
   }).onUploadComplete(async ({ file }) => {
-    return { url: file.url };
+    return { url: file.ufsUrl };
   }),
   
   fileUploader: f({
@@ -20,7 +20,7 @@ export const ourFileRouter = {
       maxFileCount: 8
     },
   }).onUploadComplete(async ({ file }) => {
-    return { url: file.url };
+    return { url: file.ufsUrl };
   }),
 } satisfies FileRouter;
 
