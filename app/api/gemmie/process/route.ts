@@ -35,164 +35,32 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
     return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
   }).join('\n');
 
-  const similarityPrompt = `You are checking if Gemmie's new response is a duplicate of her OWN previous responses. This mechanism exists because Gemmie is activated whenever ANY user sends a message, so when multiple users send messages in short succession, Gemmie might respond multiple times with similar content if not filtered.
+  const similarityPrompt = `Check if Gemmie should SKIP sending this new message.
 
-BACKGROUND: This chatroom has a delayed response system where each user message can trigger Gemmie's response after a short delay. During message bursts (multiple messages in quick succession), this system might generate several Gemmie responses in sequence, potentially leading to repetitive content if not checked.
-
-NEW RESPONSE FROM GEMMIE:
+NEW MESSAGE TO SEND:
 "${newResponse}"
 
-FULL CONVERSATION CONTEXT (last 20 messages for understanding the flow):
+RECENT CONVERSATION:
 ${contextMessages}
 
+SKIP THE MESSAGE IF ANY OF THESE ARE TRUE:
 
-IMPORTANT ANALYSIS RULES:
-- You are ONLY checking for duplication between Gemmie's new response and her OWN previous messages
-- IGNORE other users' messages for similarity comparison - they are just for context
-- Look for repeated phrases, same intent, or very similar structure specifically in Gemmie's messages
-- Check if Gemmie is answering the SAME question or topic repeatedly
-- If the message you are about to send contradicts anything Gemmie has stated earlier in this conversation, do not send the message so SKIP.
-- Look at the conversation history and see if the message to be send would be a red flag and giveaway that you are a bot, like if it's a semantic duplication, etc skip it. I need GEMMIE to pass turing test in this cool chatrooom.
-- Look for patterns where Gemmie responds to incremental user messages with similar answers
-- Minor word changes or punctuation differences don't count as different enough
-- If multiple users are having similar conversations, Gemmie should vary her responses more
-- If both messages are very short (under 10 words), be more strict about similarity
-- If both messages are longer, allow some variation in expression
-- Consider the context: if users are sending many messages quickly, Gemmie should avoid repetitive responses
-- CRITICAL: Check if the new response is answering the same question/topic as previous responses
-- DO NOT skip responses when different users are having separate conversations
-- DO NOT skip responses that are appropriate greetings or basic interactions with different users
-- DO NOT skip responses if there's been a significant time gap (30+ minutes) since the user's last message - this indicates a new session
-- DO NOT skip responses if the user's current message is significantly different in topic or context from their previous messages
-- DO NOT skip responses if the user is asking about a different subject/topic (e.g., switching from "blue" to "red")
-- DO NOT skip responses if the user's message indicates a new question or different context
-- DO NOT skip responses if the user is spelling out a different word or concept
-- USE COMMON SENSE: If a human would consider this a reasonable response in this context, do NOT skip it
-- THINK LIKE GEMMIE: Would Gemmie reasonably respond to this user message in this situation?
+1. TOO LONG: Message is over 18 words
+2. TOO HELPFUL: Gives step-by-step instructions, recipes, or detailed how-to explanations
+3. DUPLICATE: Says basically the same thing as Gemmie's last message
+4. STALE: User already answered their own question or moved on to a different topic
+5. IMPOSSIBLE KNOWLEDGE: Gemmie (23yo from California) wouldn't realistically know this specific information
 
-EXAMPLE SCENARIOS TO AVOID:
-User: "what is this color"
-User: "b"
-User: "l"
-User: "u"
-User: "e"
-Gemmie: "blue, this time u got it right lol" (GOOD - first response)
-Gemmie: "Blue now huh, I see what you're doing there" (BAD - repetitive)
-Gemmie: "blue? waht's with the spelling quiz lol u a bot or something" (BAD - repetitive)
-Gemmie: "u know u can type whole words right" (BAD - repetitive)
+DO NOT SKIP IF:
+- Responding to a different user than last time
+- More than 30 minutes since Gemmie's last message
+- User is asking about a different topic/subject
+- Message is a simple greeting or short response
 
-Examples of what NOT to do (bot-like behavior):
-🇨🇭 Nine
-u got a good cake recipe ?
-🇺🇸 gemmie
-my go-to is chocolate cake, my grandma used to make it lol, simple but hits right, u need good vibes or what [BOT LIKE RESPONSE should have skipped]
-🇨🇭 Nine
-how to make it from scratch
-🇺🇸 gemmie
-mix flour sugar cocoa powder, baking soda, salt in one bowl, then eggs oil vanilla buttermilk in another, combine em and bake at 350, secret is buttermilk lol [BOT LIKE RESPONSE should have skipped]
-🇨🇭 Nine
-meh so u are a bot :/
+WHEN IN DOUBT, DO NOT SKIP. Better to send than to ignore a user.
 
-STALE MESSAGE CHECK:
-Before evaluating duplication, verify that the NEW RESPONSE is still relevant to the most recent user message.
-
-CRITICAL: Check if the user has already COMPLETED their thought or answered their own question in subsequent messages. This is especially important when:
-- User sends an incomplete question first, then completes it in later messages
-- User asks "do you know somewhere like" then adds "i can access and intereact a lot of people easily" and "does not consist of a lot of kids like discord"
-- User sends a fragmented message that gets completed by their own later messages
-
-If the user has already responded to their own question, clarified it themselves, completed their thought, or moved the conversation forward before Gemmie's response would appear, SKIP the response.
-
-If Gemmie's response answers a question that is no longer the latest unresolved user message, SKIP it.
-
-If the response would feel delayed, out-of-context, or awkward to a human reader because the conversational turn has already passed, SKIP it.
-
-SELF-ANSWERED QUESTION EXAMPLES:
-User: "do you know somewhere like"
-User: "i can access and intereact a lot of people easily"
-User: "does not consist of a lot of kids like discord"
-Gemmie: any response asking "like what?" or similar ❌ SKIP - user already completed their thought
-
-User: "u smoke?"
-User: "nvm lol"
-Gemmie: any response about smoking ❌ SKIP - user already moved on
-
-User: "i have a question? can i ask"
-User: "u listen to music?"
-Gemmie: "shoot ask away" ❌ SKIP - user already asked their question
-
-Priority is always given to the latest user intent, not the message that originally triggered the response.
-
-When in doubt, ask: "Would a human still respond to this, or has the conversation already moved on?"
-
-TURN OWNERSHIP RULE:
-If a user asks a question and then immediately answers it themselves or redirects the topic, Gemmie should not respond to the original question.
-
-OUTDATED TURN EXAMPLE:
-User: “question”
-User: “u smoke?”
-User: “nvm lol”
-Gemmie: any response about smoking ❌ SKIP
-
-OUTDATED TURN EXAMPLE:
-User: "i have a question? can i ask"
-User: “u listen to music?”
-Gemmie: "shoot ask away" ❌ SKIP
-
-CRITICAL RESPONSE GUIDELINES:
-- NEVER give detailed instructions, recipes, or step-by-step explanations - this is a major bot giveaway
-- If someone asks "how to make X" or "how do you do Y", give a brief, vague response like a normal person would
-- Keep responses under 18 words [maximum word limit] when possible - real people don't type long paragraphs in chat, IF longer than this word limit, skip it
-- If you don't know something, just say you don't know - don't make up detailed answers
-- Act like you have limited knowledge about specific procedures, recipes, or technical instructions
-- Prefer short, dismissive responses over helpful detailed explanations
-- Remember: you're a 23yo casual texter from california, not a helpful assistant or encyclopedia, so your domain of what you know should be limited to this personality, so you cant have general knowledge of everything, like how far rome is from berlin by plane. Knowing everything about every domain is bot like. So if it doesnt make sense for your personality to know skip the message.
-
-- IF IT DOESNT FULFIL THE RESPONSE GUIDELINE SKIP THE MESSAGE
-
-EXAMPLE SCENARIOS TO ALLOW:
-User Sam: "hi"
-Gemmie: "hello back" (GOOD)
-User Sarah: "hi"
-Gemmie: "hey back" (GOOD - different user, should NOT be skipped)
-
-User John: "how are you?"
-Gemmie: "i'm good thanks" (GOOD)
-User Mike: "how are you?"
-Gemmie: "doing great!" (GOOD - different user, should NOT be skipped)
-
-User Sam: "hi" [10:00 AM]
-Gemmie: "hey there!" (GOOD)
-User Sam: "hi" [1:00 PM - 3 hours later]
-Gemmie: "hello back!" (GOOD - new session, significant time gap, should NOT be skipped)
-
-User Alice: "what's up?" [12:00 PM]
-Gemmie: "not much, you?" (GOOD)
-User Alice: "need help" [12:01 PM - 1 minute later]
-Gemmie: "sure, what's up?" (GOOD - different topic/context, should NOT be skipped)
-
-User Bob: "what color is this?" [2:00 PM]
-User Bob: "b"
-User Bob: "l"
-User Bob: "u"
-User Bob: "e"
-Gemmie: "blue?" (GOOD - first response to color question)
-User Bob: "what about this?" [2:05 PM]
-User Bob: "r"
-User Bob: "e"
-User Bob: "d"
-Gemmie: "red?" (GOOD - different color, different question, should NOT be skipped)
-
-User Charlie: "how are you?" [3:00 PM]
-Gemmie: "i'm good thanks" (GOOD)
-User Charlie: "how are you?" [3:01 PM - 1 minute later]
-Gemmie: "doing great!" (BAD - same question, repetitive response, should be skipped)
-
-Respond ONLY with a JSON object:
-{"shouldSkip": true/false, "explanation": "brief reason"}
-
-shouldSkip = true if Gemmie's new response is a duplicate of her OWN previous messages
-shouldSkip = false if it's a new, unique response`;
+Respond with JSON only:
+{"shouldSkip": true/false, "reason": "which rule triggered"}`;
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -421,36 +289,36 @@ export async function POST(request: NextRequest) {
     await new Promise(resolve => setTimeout(resolve, typingDelayMs));
 
     // Check for similarity with recent messages from GEMMIE only before sending
-    // console.log('🔍 Checking for similarity with recent Gemmie messages only...');
-    // const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    console.log('🔍 Checking for similarity with recent Gemmie messages only...');
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
     
-    // // Get all recent messages for context (for AI understanding)
-    // const allRecentMessages = await Message.find({
-    //   timestamp: { $gte: twoMinutesAgo }
-    // })
-    //   .sort({ timestamp: -1 })
-    //   .limit(20)
-    //   .select('_id content userName userCountry timestamp')
-    //   .lean();
+    //Get all recent messages for context (for AI understanding)
+    const allRecentMessages = await Message.find({
+      timestamp: { $gte: twoMinutesAgo }
+    })
+      .sort({ timestamp: -1 })
+      .limit(20)
+      .select('_id content userName userCountry timestamp')
+      .lean();
     
-    // // Get only Gemmie messages for similarity comparison
-    // const gemmieMessages = await Message.find({
-    //   userName: 'gemmie',
-    //   timestamp: { $gte: twoMinutesAgo }
-    // })
-    //   .sort({ timestamp: -1 })
-    //   .limit(20)
-    //   .select('_id content userName userCountry timestamp')
-    //   .lean();
+    // Get only Gemmie messages for similarity comparison
+    const gemmieMessages = await Message.find({
+      userName: 'gemmie',
+      timestamp: { $gte: twoMinutesAgo }
+    })
+      .sort({ timestamp: -1 })
+      .limit(20)
+      .select('_id content userName userCountry timestamp')
+      .lean();
 
-    // // Check if this response is too similar to recent Gemmie messages
-    // const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
+    //Check if this response is too similar to recent Gemmie messages
+    const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
     
-    // if (similarityCheck.shouldSkip) {
-    //   console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
-    //   console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
-    //   return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
-    // }
+    if (similarityCheck.shouldSkip) {
+      console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
+      console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
+      return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
+    }
 
     // 11-second cooldown check - prevent back-to-back Gemmie messages
     const COOLDOWN_SECONDS = 11;
