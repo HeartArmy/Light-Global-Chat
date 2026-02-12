@@ -1,0 +1,205 @@
+name: Cleanup Old Logs (2 Days)
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC (adjust as needed)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+    inputs:
+      dry_run:
+        description: 'Dry run - only show what would be deleted'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup-logs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create log cleanup script
+        run: |
+          cat > cleanup-old-logs.js << 'EOF'
+          const mongoose = require('mongoose');
+          require('dotenv').config({ path: '.env.local' });
+
+          // Log schema (same as in your existing script)
+          const logSchema = new mongoose.Schema({
+            level: {
+              type: String,
+              enum: ['error', 'warn', 'info', 'debug'],
+              required: true,
+            },
+            message: {
+              type: String,
+              required: true,
+            },
+            meta: {
+              type: mongoose.Schema.Types.Mixed,
+              default: {},
+            },
+            route: {
+              type: String,
+              required: true,
+            },
+            timestamp: {
+              type: Date,
+              default: Date.now,
+              index: true,
+            },
+            userId: {
+              type: String,
+              default: null,
+            },
+            sessionId: {
+              type: String,
+              default: null,
+            },
+          }, {
+            timestamps: false,
+          });
+
+          // Index for efficient querying
+          logSchema.index({ timestamp: -1 });
+          logSchema.index({ level: 1, timestamp: -1 });
+
+          const Log = mongoose.models.Log || mongoose.model('Log', logSchema);
+
+          // Connect to MongoDB
+          async function connectDB() {
+            try {
+              await mongoose.connect(process.env.MONGODB_URI, {
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+              });
+              console.log('✅ Connected to MongoDB');
+            } catch (error) {
+              console.error('❌ MongoDB connection error:', error);
+              process.exit(1);
+            }
+          }
+
+          // Delete logs older than 7 days
+          async function deleteOldLogs(dryRun = false) {
+            try {
+              const sevenDaysAgo = new Date();
+              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+              
+              console.log(`🔍 Finding logs older than ${sevenDaysAgo.toISOString()}`);
+              
+              // Count logs older than 2 days
+              const oldLogsCount = await Log.countDocuments({
+                timestamp: { $lt: sevenDaysAgo }
+              });
+              
+              console.log(`📊 Found ${oldLogsCount} logs older than 2 days`);
+              
+              if (oldLogsCount === 0) {
+                console.log('✅ No logs to delete');
+                return 0;
+              }
+              
+              // Show sample of logs to be deleted
+              const sampleLogs = await Log.find({
+                timestamp: { $lt: sevenDaysAgo }
+              })
+              .sort({ timestamp: 1 })
+              .limit(5)
+              .select('_id level message route timestamp')
+              .lean();
+              
+              console.log('\n📋 Sample logs to be deleted:');
+              sampleLogs.forEach((log, index) => {
+                console.log(`${index + 1}. [${log.level.toUpperCase()}] ${log.route}: "${log.message.substring(0, 80)}${log.message.length > 80 ? '...' : ''}"`);
+                console.log(`   Time: ${new Date(log.timestamp).toISOString()}\n`);
+              });
+              
+              if (dryRun) {
+                console.log(`\n🔍 DRY RUN: Would delete ${oldLogsCount} logs`);
+                return oldLogsCount;
+              }
+              
+              // Delete old logs
+              console.log('🗑️  Deleting old logs...');
+              const result = await Log.deleteMany({
+                timestamp: { $lt: sevenDaysAgo }
+              });
+              
+              console.log(`✅ Successfully deleted ${result.deletedCount} logs`);
+              return result.deletedCount;
+              
+            } catch (error) {
+              console.error('❌ Error during deletion:', error);
+              throw error;
+            }
+          }
+
+          // Main function
+          async function main() {
+            await connectDB();
+            
+            const args = process.argv.slice(2);
+            const dryRun = args.includes('--dry-run') || process.env.DRY_RUN === 'true';
+            
+            if (dryRun) {
+              console.log('🔍 DRY RUN MODE - No logs will actually be deleted');
+            }
+            
+            try {
+              const deletedCount = await deleteOldLogs(dryRun);
+              console.log(`\n📊 Summary: ${deletedCount} logs processed`);
+              
+              if (dryRun) {
+                console.log('🔍 This was a dry run - no actual deletion occurred');
+              }
+            } catch (error) {
+              console.error('❌ Error:', error.message);
+              process.exit(1);
+            } finally {
+              await mongoose.disconnect();
+              console.log('🔓 Disconnected from MongoDB');
+            }
+          }
+
+          // Run the script
+          if (require.main === module) {
+            main();
+          }
+          EOF
+
+      - name: Run log cleanup
+        env:
+          MONGODB_URI: "${{ secrets.MONGODB_URI }}"
+          DRY_RUN: "${{ github.event.inputs.dry_run || 'false' }}"
+        run: |
+          # Ensure MongoDB URI has proper scheme
+          if [[ "$MONGODB_URI" != mongodb://* && "$MONGODB_URI" != mongodb+srv://* ]]; then
+            echo "⚠️  MongoDB URI missing scheme, adding mongodb+srv://"
+            MONGODB_URI="mongodb+srv://$MONGODB_URI"
+            echo "Modified URI: $MONGODB_URI"
+          fi
+          
+          echo "Running cleanup with DRY_RUN=$DRY_RUN"
+          node cleanup-old-logs.js
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Remove the cleanup script
+          rm -rf cleanup-old-logs.js
