@@ -1,4 +1,4 @@
-name: Cleanup Old Logs (2 Days)
+name: Cleanup Old MongoDB Logs (7 Days)
 
 on:
   schedule:
