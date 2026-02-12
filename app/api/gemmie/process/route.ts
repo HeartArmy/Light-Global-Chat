@@ -421,36 +421,36 @@ export async function POST(request: NextRequest) {
     await new Promise(resolve => setTimeout(resolve, typingDelayMs));
 
     // Check for similarity with recent messages from GEMMIE only before sending
-    console.log('🔍 Checking for similarity with recent Gemmie messages only...');
-    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    // console.log('🔍 Checking for similarity with recent Gemmie messages only...');
+    // const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
     
-    // Get all recent messages for context (for AI understanding)
-    const allRecentMessages = await Message.find({
-      timestamp: { $gte: twoMinutesAgo }
-    })
-      .sort({ timestamp: -1 })
-      .limit(20)
-      .select('_id content userName userCountry timestamp')
-      .lean();
+    // // Get all recent messages for context (for AI understanding)
+    // const allRecentMessages = await Message.find({
+    //   timestamp: { $gte: twoMinutesAgo }
+    // })
+    //   .sort({ timestamp: -1 })
+    //   .limit(20)
+    //   .select('_id content userName userCountry timestamp')
+    //   .lean();
     
-    // Get only Gemmie messages for similarity comparison
-    const gemmieMessages = await Message.find({
-      userName: 'gemmie',
-      timestamp: { $gte: twoMinutesAgo }
-    })
-      .sort({ timestamp: -1 })
-      .limit(20)
-      .select('_id content userName userCountry timestamp')
-      .lean();
+    // // Get only Gemmie messages for similarity comparison
+    // const gemmieMessages = await Message.find({
+    //   userName: 'gemmie',
+    //   timestamp: { $gte: twoMinutesAgo }
+    // })
+    //   .sort({ timestamp: -1 })
+    //   .limit(20)
+    //   .select('_id content userName userCountry timestamp')
+    //   .lean();
 
-    // Check if this response is too similar to recent Gemmie messages
-    const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
+    // // Check if this response is too similar to recent Gemmie messages
+    // const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
     
-    if (similarityCheck.shouldSkip) {
-      console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
-      console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
-      return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
-    }
+    // if (similarityCheck.shouldSkip) {
+    //   console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
+    //   console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
+    //   return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
+    // }
 
     // 11-second cooldown check - prevent back-to-back Gemmie messages
     const COOLDOWN_SECONDS = 11;
