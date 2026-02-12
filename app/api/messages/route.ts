@@ -267,21 +267,35 @@ export async function POST(request: NextRequest) {
       const isGemmieEnabled = await getGemmieStatus();
 
       if (isGemmieEnabled) {
-        // Check if message contains only video attachments (no text content)
+        // Check if message contains only non-text [video, image, file] attachments (no text content)
         const hasTextContent = content && typeof content === 'string' && content.trim().length > 0;
         const hasVideoAttachments = attachments.some((attachment: Attachment) => attachment.type === 'video');
+        const hasImageAttachments = attachments.some((attachment: Attachment) => attachment.type === 'image');
+        const hasFileAttachments = attachments.some((attachment: Attachment) => attachment.type === 'file');
         const hasOnlyVideoAttachments = hasVideoAttachments && !hasTextContent;
+        const hasOnlyImageAttachments = hasImageAttachments && !hasTextContent;
+        const hasOnlyFileAttachments = hasFileAttachments && !hasTextContent;
+        const hasOnlyNonTextAttachments = hasOnlyVideoAttachments || hasOnlyImageAttachments || hasOnlyFileAttachments;
         
         console.log('Content analysis:', {
           hasTextContent,
           hasVideoAttachments,
+          hasImageAttachments,
+          hasFileAttachments,
           hasOnlyVideoAttachments,
+          hasOnlyImageAttachments,
+          hasOnlyFileAttachments,
+          hasOnlyNonTextAttachments,
           attachmentTypes: attachments.map((a: Attachment) => a.type)
         });
         
-        // Skip Gemmie response if message contains only video attachments
-        if (hasOnlyVideoAttachments) {
-          console.log('🎬 Message contains only video attachments, Gemmie will not respond (behaving like arham)');
+                // Skip Gemmie response if message contains only video attachments
+        // if (hasOnlyVideoAttachments) {
+        //   console.log('🎬 Message contains only video attachments, Gemmie will not respond (behaving like arham)');
+
+        // Skip Gemmie response if message contains only non-text attachments (video, image, or file only)
+        if (hasOnlyNonTextAttachments) {
+          console.log('🎬 Message contains only non-text attachments, Gemmie will not respond (behaving like arham)');
           return NextResponse.json({ message: populatedMessage });
         }
 
