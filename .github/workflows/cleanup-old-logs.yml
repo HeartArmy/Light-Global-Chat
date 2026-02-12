@@ -85,8 +85,7 @@ jobs:
           async function connectDB() {
             try {
               await mongoose.connect(process.env.MONGODB_URI, {
-                useNewUrlParser: true,
-                useUnifiedTopology: true,
+                // Removed deprecated options
               });
               console.log('✅ Connected to MongoDB');
             } catch (error) {
@@ -103,12 +102,12 @@ jobs:
               
               console.log(`🔍 Finding logs older than ${sevenDaysAgo.toISOString()}`);
               
-              // Count logs older than 2 days
+              // Count logs older than 7 days
               const oldLogsCount = await Log.countDocuments({
                 timestamp: { $lt: sevenDaysAgo }
               });
               
-              console.log(`📊 Found ${oldLogsCount} logs older than 2 days`);
+              console.log(`📊 Found ${oldLogsCount} logs older than 7 days`);
               
               if (oldLogsCount === 0) {
                 console.log('✅ No logs to delete');
@@ -188,13 +187,6 @@ jobs:
           MONGODB_URI: "${{ secrets.MONGODB_URI }}"
           DRY_RUN: "${{ github.event.inputs.dry_run || 'false' }}"
         run: |
-          # Ensure MongoDB URI has proper scheme
-          if [[ "$MONGODB_URI" != mongodb://* && "$MONGODB_URI" != mongodb+srv://* ]]; then
-            echo "⚠️  MongoDB URI missing scheme, adding mongodb+srv://"
-            MONGODB_URI="mongodb+srv://$MONGODB_URI"
-            echo "Modified URI: $MONGODB_URI"
-          fi
-          
           echo "Running cleanup with DRY_RUN=$DRY_RUN"
           node cleanup-old-logs.js
 
