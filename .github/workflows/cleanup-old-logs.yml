@@ -202,11 +202,11 @@ jobs:
       - name: Run log cleanup
         env:
           MONGODB_URI: "${{ secrets.MONGODB_URI }}"
-          DATABASE_NAME: "${{ secrets.DATABASE_NAME || '' }}"
+          DATABASE_NAME: "${{ secrets.DATABASE_NAME }}"
           DRY_RUN: "${{ github.event.inputs.dry_run || 'false' }}"
         run: |
           echo "Running cleanup with DRY_RUN=$DRY_RUN"
-          node cleanup-old-logs.js ${ { github.event.inputs.dry_run && '--dry-run' || '' } }
+          node cleanup-old-logs.js
 
       - name: Cleanup
         if: always()
