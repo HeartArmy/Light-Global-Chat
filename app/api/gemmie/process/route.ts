@@ -204,7 +204,7 @@ shouldSkip = false if it's a new, unique response`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.2-3b-instruct:free',
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
         messages: [{ role: 'user', content: similarityPrompt }],
         max_tokens: 32000,
         temperature: 0.1
@@ -729,7 +729,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'meta-llama/llama-3.2-3b-instruct:free',
+            model: 'meta-llama/llama-3.3-70b-instruct:free',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 32000,
             temperature: 0.1
