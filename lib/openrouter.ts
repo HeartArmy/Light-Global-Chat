@@ -206,7 +206,7 @@ export async function generateGemmieResponse(
     const currentDateTime = getCurrentDateTimeInfo();
     
     // Determine model and prompt based on image presence
-    const modelToUse = selectedImageUrl ? 'google/gemma-3-27b-it:free' : 'openrouter/free';
+    const modelToUse = selectedImageUrl ? 'openrouter/free' : 'openrouter/free'; // the first one before the : should be a image model
     
     const prompt = selectedImageUrl
       ? `Respond as gemmie.
@@ -394,7 +394,7 @@ export async function generateGemmieResponseForContext(
     }
 
     // Determine which model to use based on image presence
-    const modelToUse = selectedImageUrl ? 'google/gemma-3-27b-it:free' : 'openrouter/free';
+    const modelToUse = selectedImageUrl ? 'openrouter/free' : 'openrouter/free'; //the first one before the : should be a image model
     
     // Construct the full prompt
     const fullPrompt = selectedImageUrl

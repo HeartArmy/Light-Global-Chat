@@ -39,10 +39,10 @@ Return ONLY the cleaned conversational response, nothing else.`;
   console.log('---');
   
   try {
-    console.log('\n🚀 Making API call to google/gemma-3-27b-it:free...');
+    console.log('\n🚀 Making API call to openrouter/free...'); // the model name here should be an image model
     
     console.log('🔑 Using OpenRouter API key from .env.local');
-    console.log('🔗 Model: google/gemma-3-27b-it:free');
+    console.log('🔗 Model: openrouter/free'); // the model name here should be an image model
     console.log('🌐 Site URL:', process.env.NEXT_PUBLIC_SITE_URL);
     console.log('🏷️  Site Name:', process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App');
 

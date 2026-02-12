@@ -562,7 +562,7 @@ export async function POST(request: NextRequest) {
     //         'Content-Type': 'application/json'
     //       },
     //       body: JSON.stringify({
-    //         model: 'google/gemma-3-27b-it:free',
+    //         model: 'openrouter/free', //no need of image model here just a good text model is sufficient
     //         messages: [{ role: 'user', content: reviewPrompt }],
     //         max_tokens: 200,
     //         temperature: 0.1
