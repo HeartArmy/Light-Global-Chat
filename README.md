@@ -8,8 +8,7 @@ A **real-time global chat room application** with a beautiful, minimalist design
 Try the app now on any of these live instances:
 
 - **Primary:** https://globalchatroom.vercel.app/
-- **Mirror 1:** https://live-chat-psi.vercel.app/
-- **Mirror 2:** https://true-live-chat.vercel.app/
+
 
 ## ✨ Features
 
