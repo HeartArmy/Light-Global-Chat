@@ -72,7 +72,7 @@ Respond with JSON only:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openrouter/free',
+        model: '',
         messages: [{ role: 'user', content: similarityPrompt }],
         max_tokens: 32000,
         temperature: 0.1
@@ -597,7 +597,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'openrouter/free',
+            model: 'z-ai/glm-4.5-air:free',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 32000,
             temperature: 0.1
