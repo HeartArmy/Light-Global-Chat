@@ -56,7 +56,11 @@ jobs:
           const fs = require('fs');
           const path = require('path');
           const { MongoClient } = require('mongodb');
-          // Remove dotenv dependency since we're using environment variables directly
+          // EJSON is part of the bson package which ships with the mongodb driver.
+          // It serializes ObjectId, Date, and all other BSON types into MongoDB
+          // Extended JSON format ( { "$oid": "..." }, { "$date": "..." } etc. )
+          // so the backup is always importable without data type loss.
+          const { EJSON } = require('bson');
 
           async function backupMongoDB() {
             try {
@@ -65,57 +69,58 @@ jobs:
               }
 
               console.log('🔄 Starting MongoDB backup...');
-              
-              // Connect to MongoDB
+
               const client = new MongoClient(process.env.MONGODB_URI);
               await client.connect();
               console.log('✅ Connected to MongoDB');
 
-              // Use database name from environment variable or extract from URI
-              const dbName = process.env.DATABASE_NAME || new URL(process.env.MONGODB_URI).pathname.substring(1).split('?')[0] || 'chatdb';
+              const dbName =
+                process.env.DATABASE_NAME ||
+                new URL(process.env.MONGODB_URI).pathname.substring(1).split('?')[0] ||
+                'chatdb';
               const database = client.db(dbName);
-              
-              // Create backup directory
+
               const backupDir = path.join(process.cwd(), 'mongodb-backup');
               if (!fs.existsSync(backupDir)) {
                 fs.mkdirSync(backupDir, { recursive: true });
               }
 
-              // Get all collections
               const collections = await database.listCollections().toArray();
               console.log(`📁 Found ${collections.length} collections to backup`);
 
               let totalDocuments = 0;
+              const collectionNames = [];
 
-              // Backup each collection
               for (const collectionInfo of collections) {
                 const collectionName = collectionInfo.name;
                 const collection = database.collection(collectionName);
-                
+
                 console.log(`📦 Backing up collection: ${collectionName}`);
-                
-                // Get all documents from collection
+
                 const documents = await collection.find({}).toArray();
                 totalDocuments += documents.length;
-                
-                // Save to JSON file
+                collectionNames.push(collectionName);
+
                 const backupFile = path.join(backupDir, `${collectionName}.json`);
-                fs.writeFileSync(backupFile, JSON.stringify(documents, null, 2));
-                
+
+                // EJSON.stringify preserves all BSON types. The resulting file can
+                // be reimported directly with:
+                //   mongoimport --uri <uri> --collection <name> --file <file> --jsonArray
+                fs.writeFileSync(backupFile, EJSON.stringify(documents, null, 2));
+
                 console.log(`✅ Backed up ${documents.length} documents from ${collectionName}`);
               }
 
-              console.log(`🎉 Backup completed! Total documents backed up: ${totalDocuments}`);
-              
-              // Create backup info file
+              console.log(`🎉 Backup completed! Total documents: ${totalDocuments}`);
+
               const backupInfo = {
                 timestamp: new Date().toISOString(),
                 database: dbName,
-                collections: collections.length,
-                totalDocuments: totalDocuments,
-                collections: collections.map(c => c.name)
+                collectionCount: collections.length,
+                totalDocuments,
+                collections: collectionNames,
               };
-              
+
               fs.writeFileSync(
                 path.join(backupDir, 'backup-info.json'),
                 JSON.stringify(backupInfo, null, 2)
@@ -123,7 +128,7 @@ jobs:
 
               await client.close();
               console.log('🔓 Disconnected from MongoDB');
-              
+
               return backupDir;
             } catch (error) {
               console.error('❌ Backup failed:', error);
@@ -131,7 +136,6 @@ jobs:
             }
           }
 
-          // Run the backup
           backupMongoDB()
             .then((backupDir) => {
               console.log('✅ Backup successful:', backupDir);
@@ -148,13 +152,11 @@ jobs:
           MONGODB_URI: "${{ secrets.MONGODB_URI }}"
           DATABASE_NAME: "${{ secrets.DATABASE_NAME }}"
         run: |
-          # Ensure MongoDB URI has proper scheme (strict check)
           if [[ "$MONGODB_URI" != mongodb://* && "$MONGODB_URI" != mongodb+srv://* ]]; then
             echo "⚠️  MongoDB URI missing scheme, adding mongodb+srv://"
             MONGODB_URI="mongodb+srv://$MONGODB_URI"
-            echo "Modified URI: $MONGODB_URI"
           fi
-          
+
           echo "Database name: $DATABASE_NAME"
           node backup-mongodb.js
 
@@ -168,6 +170,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: |
-          # Remove the backup script and directory after creating release
-          rm -rf backup-mongodb.js mongodb-backup/
+        run: rm -rf backup-mongodb.js mongodb-backup/
