@@ -138,7 +138,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
             content: validationPrompt
           }
         ],
-        max_tokens: 32000,
+        max_tokens: 15000,
         temperature: 0.1 // Low temperature for consistent cleaning
       })
     });

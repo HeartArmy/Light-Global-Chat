@@ -279,7 +279,7 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
             ]
           }
         ],
-        max_tokens: selectedImageUrl ? 32000 : 32000, // Increased to allow reasoning + response
+        max_tokens: selectedImageUrl ? 32000 : 15000, // Reduced to 15000 for text outputs, 32000 for image inputs
         temperature: selectedImageUrl ? 0.9 : 1.2 // Slightly less creative for image responses
       })
     });
@@ -457,7 +457,7 @@ write one brief, natural message as gemmie. Output the text message only (rememb
             ]
           }
         ],
-        max_tokens: selectedImageUrl ? 32000 : 32000, // Increased to allow reasoning + response
+        max_tokens: selectedImageUrl ? 32000 : 15000, // Reduced to 15000 for text outputs, 32000 for image inputs
         temperature: selectedImageUrl ? 0.9 : 0.8 // Slightly more creative for image responses
       })
     });

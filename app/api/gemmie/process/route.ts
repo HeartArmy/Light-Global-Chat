@@ -74,7 +74,7 @@ Respond with JSON only:
       body: JSON.stringify({
         model: '',
         messages: [{ role: 'user', content: similarityPrompt }],
-        max_tokens: 32000,
+        max_tokens: 15000,
         temperature: 0.1
       })
     });
@@ -599,7 +599,7 @@ Allowed indices: [1] or [2] only!`;
           body: JSON.stringify({
             model: 'liquid/lfm2-8b-a1b',
             messages: [{ role: 'user', content: reviewPrompt }],
-            max_tokens: 32000,
+            max_tokens: 15000,
             temperature: 0.1
           })
         });
