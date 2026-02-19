@@ -597,7 +597,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'z-ai/glm-4.5-air:free',
+            model: 'liquid/lfm2-8b-a1b',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 32000,
             temperature: 0.1
