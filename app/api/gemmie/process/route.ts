@@ -597,7 +597,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'meta-llama/llama-3.2-3b-instruct',
+            model: 'deepseek/deepseek-r1-0528:free',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 15000,
             temperature: 0.1
