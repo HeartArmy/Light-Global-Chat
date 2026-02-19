@@ -597,7 +597,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'liquid/lfm2-8b-a1b',
+            model: 'meta-llama/llama-3.2-3b-instruct',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 15000,
             temperature: 0.1
