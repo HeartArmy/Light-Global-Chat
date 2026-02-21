@@ -597,7 +597,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'openai/gpt-oss-120b:exacto',
+            model: 'mistralai/mistral-nemo',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 15000,
             temperature: 0.1
