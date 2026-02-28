@@ -131,7 +131,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openrouter/free',
+        model: 'bytedance-seed/seed-2.0-mini',
         messages: [
           {
             role: 'user',
