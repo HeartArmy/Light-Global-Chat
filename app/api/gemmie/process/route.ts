@@ -597,7 +597,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'mistralai/mistral-nemo',
+            model: 'bytedance-seed/seed-2.0-mini',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 15000,
             temperature: 0.1
