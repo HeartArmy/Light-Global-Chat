@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
     const hasImageAttachments = attachments.some((attachment: Attachment) => attachment.type === 'image');
     const hasVideoAttachments = attachments.some((attachment: Attachment) => attachment.type === 'video');
     const hasFileAttachments = attachments.some((attachment: Attachment) => attachment.type === 'file');
-    const hasAnyAttachments = hasImageAttachments || hasVideoAttachments || hasFileAttachments;
+    const hasAnyAttachments =  hasVideoAttachments || hasFileAttachments; //messages with images, gemmie will react to
     
     console.log('Content analysis:', {
       hasTextContent: content && typeof content === 'string' && content.trim().length > 0,
@@ -277,7 +277,7 @@ export async function POST(request: NextRequest) {
     
     // Skip Gemmie response if message contains any attachments (image, video, or file) regardless of text content
     if (hasAnyAttachments) {
-      console.log('🎬 Message contains attachments, Gemmie will not respond (behaving like arham)');
+      console.log('🎬 Message contains attachments (other than image files), Gemmie will not respond (behaving like arham)');
       return NextResponse.json({ message: populatedMessage });
     }
 
