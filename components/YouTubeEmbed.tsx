@@ -69,7 +69,6 @@ export default function YouTubeEmbed({ videoId, className = '', title = 'YouTube
         style={{ aspectRatio: '16 / 9', height: 'auto' }}
         onLoad={handleIframeLoad}
         onError={handleIframeError}
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
       />
 
 
