@@ -39,6 +39,7 @@ export default function YouTubeEmbed({ videoId, className = '', title = 'YouTube
     playsinline: '1', // Critical for mobile inline playback
     enablejsapi: '1', // Enable API for state tracking
     origin: typeof window !== 'undefined' ? window.location.origin : '',
+    allowfullscreen: '1', // Explicitly allow fullscreen
   });
 
   return (
@@ -62,10 +63,10 @@ export default function YouTubeEmbed({ videoId, className = '', title = 'YouTube
         src={`${embedUrl}${embedParams.toString()}`}
         title={title}
         frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
-        className={`w-full h-full rounded-lg ${isLoading || hasError ? 'hidden' : 'block'}`}
-        style={{ aspectRatio: '16 / 9' }}
+        className={`w-full rounded-lg ${isLoading || hasError ? 'hidden' : 'block'}`}
+        style={{ aspectRatio: '16 / 9', height: 'auto' }}
         onLoad={handleIframeLoad}
         onError={handleIframeError}
         sandbox="allow-same-origin allow-scripts allow-popups allow-forms"

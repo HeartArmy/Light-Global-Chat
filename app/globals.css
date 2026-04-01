@@ -439,9 +439,7 @@ button {
 }
 
 .youtube-embed-wrapper {
-  display: block;
-  width: 100%;
-  margin: 8px 0;
+  display: none; /* Hidden, used as data marker only */
 }
 
 /* Firefox-specific fixes for YouTube iframe */
@@ -456,10 +454,6 @@ button {
   .youtube-embed-container {
     border-radius: 8px;
     margin: 6px 0;
-  }
-  
-  .youtube-embed-container iframe {
-    max-height: 200px !important;
   }
 }
 

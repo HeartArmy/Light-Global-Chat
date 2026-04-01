@@ -71,21 +71,23 @@ export function renderMessageContent(text: string, isOwn: boolean = false): stri
   // First, escape all HTML to prevent XSS from user input
   let processedText = escapeHtml(text);
 
-  // 1. Find YouTube URLs and replace them with inline embed component
-  const youtubeUrlRegex = /\s*(https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)|https?:\/\/youtu\.be\/([a-zA-Z0-9_-]+))\s*/g;
+  // 1. Find YouTube URLs and replace them with embed placeholder (remove from text entirely)
+  const youtubeUrlRegex = /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)(?:[^\s]*)?|(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]+)(?:[^\s]*)?/g;
   
-  processedText = processedText.replace(youtubeUrlRegex, (match, url, id1, id2) => {
+  processedText = processedText.replace(youtubeUrlRegex, (match, id1, id2) => {
     const videoId = id1 || id2;
-    if (!videoId) return match; // Should not happen, but as a safeguard
+    if (!videoId) return match;
     
-    // Return a React component placeholder that will be rendered by the client
-    return `<div class="youtube-embed-wrapper" data-video-id="${videoId}" data-url="${url}"></div>`;
+    // Return embed placeholder, no text shown
+    return `<div class="youtube-embed-wrapper" data-video-id="${videoId}" data-url="https://youtu.be/${videoId}"></div>`;
   });
 
-  // 2. Linkify any other remaining URLs
-  // This regex is designed to not match URLs within HTML attributes (like href or style)
-  const urlRegex = /(?<!href="|url\()https?:\/\/[^\s<>"]+/g;
+  // 2. Linkify any other remaining URLs (excluding YouTube which was already handled)
+  const urlRegex = /(?<!href="|url\(|data-url=")https?:\/\/[^\s<>"]+/g;
   processedText = processedText.replace(urlRegex, (url) => {
+    // Skip if it's a YouTube URL (shouldn't happen, but safety check)
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return '';
+    
     const linkColor = isOwn ? '#ffffff' : 'var(--accent)';
     return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: ${linkColor}; text-decoration: underline;">${url}</a>`;
   });

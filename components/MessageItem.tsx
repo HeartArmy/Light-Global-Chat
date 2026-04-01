@@ -319,8 +319,8 @@ function MessageItem({
                       ref={contentRef}
                       className="text-sm break-words whitespace-pre-wrap"
                     >
-                      {/* Render message content with YouTube embeds */}
-                      <div 
+                      {/* Render message content with YouTube embeds (URLs hidden, only embeds shown) */}
+                      <div
                         className="youtube-content"
                         dangerouslySetInnerHTML={{ __html: renderMessageContent(message.content, isOwn) }}
                       />
@@ -328,8 +328,8 @@ function MessageItem({
                       {/* Replace YouTube embed placeholders with actual components */}
                       {youtubeEmbeds.map((embed, index) => (
                         <div key={index} className="my-2">
-                          <YouTubeEmbed 
-                            videoId={embed.videoId} 
+                          <YouTubeEmbed
+                            videoId={embed.videoId}
                             title={`YouTube Video: ${embed.url}`}
                           />
                         </div>
