@@ -19,7 +19,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Permissions-Policy',
-            value: 'geolocation=(self), microphone=(), camera=(), fullscreen=(self)',
+            value: 'geolocation=(self), microphone=(), camera=(), fullscreen=*',
           },
           {
             key: 'x-vercel-analytics',

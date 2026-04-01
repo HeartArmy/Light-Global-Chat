@@ -69,6 +69,8 @@ export default function YouTubeEmbed({ videoId, className = '', title = 'YouTube
         style={{ aspectRatio: '16 / 9', height: 'auto' }}
         onLoad={handleIframeLoad}
         onError={handleIframeError}
+        // Use referrerPolicy to help with fullscreen permissions
+        referrerPolicy="no-referrer-when-downgrade"
       />
 
 
