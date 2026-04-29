@@ -208,49 +208,53 @@ export default function ChatRoomClient() {
     // Listen for message edits
     channel.bind('edit-message', (data: any) => {
       console.log('📝 Received edit-message event:', data);
-      console.log('📝 Current messages count:', messages.length);
       console.log('📝 Looking for message to edit:', data.messageId);
       
-      // Check if the message actually exists in our current state
-      const messageExists = messages.some((msg) => msg._id === data.messageId);
-      console.log('📝 Message exists in current state:', messageExists);
-      
-      if (messageExists) {
-        setMessages((prev) =>
-          prev.map((msg) =>
+      // Use functional update to always access latest messages state
+      setMessages((prev) => {
+        // Check if the message actually exists in current state
+        const messageExists = prev.some((msg) => msg._id === data.messageId);
+        console.log('📝 Current messages count:', prev.length);
+        console.log('📝 Message exists in current state:', messageExists);
+        
+        if (messageExists) {
+          console.log('✅ Message edited successfully');
+          return prev.map((msg) =>
             msg._id === data.messageId
               ? { ...msg, content: data.newContent, edited: true, editedAt: new Date() }
               : msg
-          )
-        );
-        console.log('✅ Message edited successfully');
-      } else {
-        // Message not in current view (user scrolling old messages) - skip refresh to avoid scroll reset
-        console.log('⚠️ Message not in current view, skipping edit update to preserve scroll position');
-      }
+          );
+        } else {
+          // Message not in current view (user scrolling old messages) - skip to avoid scroll reset
+          console.log('⚠️ Message not in current view, skipping edit update to preserve scroll position');
+          return prev;
+        }
+      });
     });
 
     // Listen for message deletions
     channel.bind('delete-message', (data: any) => {
       console.log('🗑️ Received delete-message event:', data);
-      console.log('🗑️ Current messages count before delete:', messages.length);
       console.log('🗑️ Looking for message to delete:', data.messageId);
       
-      // Check if the message actually exists in our current state
-      const messageExists = messages.some((msg) => msg._id === data.messageId);
-      console.log('🗑️ Message exists in current state:', messageExists);
-      
-      if (messageExists) {
-        setMessages((prevMessages) => {
+      // Use functional update to always access latest messages state
+      setMessages((prevMessages) => {
+        // Check if the message actually exists in current state
+        const messageExists = prevMessages.some((msg) => msg._id === data.messageId);
+        console.log('🗑️ Current messages count before delete:', prevMessages.length);
+        console.log('🗑️ Message exists in current state:', messageExists);
+        
+        if (messageExists) {
           const filteredMessages = prevMessages.filter((msg) => msg._id !== data.messageId);
           console.log('🗑️ Messages count after delete:', filteredMessages.length);
           console.log('🗑️ Message was found and removed:', filteredMessages.length < prevMessages.length);
           return filteredMessages;
-        });
-      } else {
-        // Message not in current view (user scrolling old messages) - skip refresh to avoid scroll reset
-        console.log('🗑️ Message not in current view, skipping delete update to preserve scroll position');
-      }
+        } else {
+          // Message not in current view (user scrolling old messages) - skip to avoid scroll reset
+          console.log('🗑️ Message not in current view, skipping delete update to preserve scroll position');
+          return prevMessages;
+        }
+      });
     });
 
     // Listen for reactions
