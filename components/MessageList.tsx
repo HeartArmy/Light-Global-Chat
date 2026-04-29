@@ -65,8 +65,12 @@ export default function MessageList({
   useEffect(() => {
     if (!listRef.current) return;
     if (messages.length > 0 && prevMessagesLengthRef.current === 0) {
-      // First time messages loaded - scroll to bottom
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+      // First time messages loaded - scroll to bottom after DOM renders
+      requestAnimationFrame(() => {
+        if (listRef.current) {
+          listRef.current.scrollTop = listRef.current.scrollHeight;
+        }
+      });
       prevMessagesLengthRef.current = messages.length;
     }
   }, [messages]);
