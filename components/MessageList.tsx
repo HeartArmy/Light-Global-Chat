@@ -44,6 +44,7 @@ export default function MessageList({
     if (!listRef.current) return;
 
     const isNewMessage = messages.length > prevMessagesLengthRef.current;
+    const isInitialLoad = prevMessagesLengthRef.current === 0 && messages.length > 0;
 
     // Check if user is viewing old messages (scrolled up significantly)
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
@@ -52,28 +53,20 @@ export default function MessageList({
 
     // Only auto-scroll if:
     // 1. User is near bottom (viewing recent messages) OR
-    // 2. This is initial load (not a new message coming in)
-    if (isNewMessage && shouldAutoScroll && !isViewingOldMessagesRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
-    }
-    // If viewing old messages, preserve scroll position (do nothing)
-
-    prevMessagesLengthRef.current = messages.length;
-  }, [messages, shouldAutoScroll]);
-
-  // Initial scroll to bottom when messages first load
-  useEffect(() => {
-    if (!listRef.current) return;
-    if (messages.length > 0 && prevMessagesLengthRef.current === 0) {
-      // First time messages loaded - scroll to bottom after DOM renders
+    // 2. This is initial load (first batch of messages)
+    const shouldScroll = (isNewMessage && shouldAutoScroll && !isViewingOldMessagesRef.current) || isInitialLoad;
+    
+    if (shouldScroll) {
+      // Use requestAnimationFrame for initial load to ensure DOM is ready
       requestAnimationFrame(() => {
         if (listRef.current) {
           listRef.current.scrollTop = listRef.current.scrollHeight;
         }
       });
-      prevMessagesLengthRef.current = messages.length;
     }
-  }, [messages]);
+
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages, shouldAutoScroll]);
 
   // Throttled scroll handler for better mobile performance
   const handleScroll = useCallback(() => {
