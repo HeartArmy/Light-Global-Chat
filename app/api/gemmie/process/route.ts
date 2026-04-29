@@ -693,7 +693,7 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'google/gemma-4-26b-a4b-it:free',
+            model: 'gemma-4-26b-a4b-it',
             messages: [{ role: 'user', content: reviewPrompt }],
             max_tokens: 300,
             temperature: 0.1,

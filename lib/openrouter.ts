@@ -426,7 +426,7 @@ export async function generateGemmieResponseForContext(
     }
 
     // Determine which model to use based on image presence
-    const modelToUse = selectedImageUrl ? 'google/gemma-3-27b-it' : 'mistralai/mistral-small-3.2-24b-instruct'; //the first one before the : should be a image model
+    const modelToUse = selectedImageUrl ? 'gemma-4-26b-a4b-it' : 'mistralai/mistral-small-3.2-24b-instruct'; //the first one before the : should be a image model
     
     // Construct the full prompt
     const memoryUserBlock = memoryContext?.userMemoryBlock?.trim() || 'none';
