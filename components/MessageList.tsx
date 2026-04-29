@@ -40,6 +40,8 @@ export default function MessageList({
 
   // Track if user is viewing old messages (not at bottom)
   const isViewingOldMessagesRef = useRef(false);
+  // Track if initial scroll has been done
+  const hasInitiallyScrolledRef = useRef(false);
 
   // Auto-scroll to bottom on new messages only if user is near bottom
   useEffect(() => {
@@ -47,6 +49,7 @@ export default function MessageList({
 
     const isNewMessage = messages.length > prevMessagesLengthRef.current;
     const newMessagesCount = messages.length - prevMessagesLengthRef.current;
+    const isInitialLoad = messages.length > 0 && !hasInitiallyScrolledRef.current;
 
     // Check if user is viewing old messages (scrolled up significantly)
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
@@ -56,10 +59,15 @@ export default function MessageList({
     // Update scroll-to-latest visibility
     setShowScrollToLatest(isViewingOldMessagesRef.current);
 
-    // Only auto-scroll if:
-    // 1. User is near bottom (viewing recent messages) OR
-    // 2. This is initial load (not a new message coming in)
-    if (isNewMessage && shouldAutoScroll && !isViewingOldMessagesRef.current) {
+    // Scroll to bottom on:
+    // 1. Initial load (first time messages arrive)
+    // 2. New message arrives and user is near bottom
+    if (isInitialLoad) {
+      // Initial load - always scroll to bottom
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+      hasInitiallyScrolledRef.current = true;
+    } else if (isNewMessage && shouldAutoScroll && !isViewingOldMessagesRef.current) {
+      // New message while near bottom
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
 
