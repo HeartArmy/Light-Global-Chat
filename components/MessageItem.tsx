@@ -55,14 +55,8 @@ function MessageItem({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [imageViewer, setImageViewer] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
   const [youtubeEmbeds, setYoutubeEmbeds] = useState<Array<{videoId: string, url: string}>>([]);
-  const [isEmojiPickerOpen, setIsEmojiPickerOpenState] = useState(false);
-  const isEmojiPickerOpenRef = useRef(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-
-  const setIsEmojiPickerOpen = (open: boolean) => {
-    isEmojiPickerOpenRef.current = open;
-    setIsEmojiPickerOpenState(open);
-  };
 
   // Auto-dismiss actions after timeout (like Telegram/WhatsApp)
   let actionsTimeout: NodeJS.Timeout | null = null;
@@ -76,7 +70,7 @@ function MessageItem({
 
   const hideActions = () => {
     // Don't hide if emoji picker is open
-    if (isEmojiPickerOpenRef.current) return;
+    if (isEmojiPickerOpen) return;
     
     if (actionsTimeout) {
       clearTimeout(actionsTimeout);
