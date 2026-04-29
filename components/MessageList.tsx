@@ -31,9 +31,7 @@ export default function MessageList({
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const [newMessageCount, setNewMessageCount] = useState(0);
   const prevMessagesLengthRef = useRef(messages.length);
-  const lastMessageIdRef = useRef<string | null>(messages[messages.length - 1]?._id || null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScrollYRef = useRef(0);
   const isScrollingRef = useRef(false);
@@ -45,24 +43,22 @@ export default function MessageList({
   useEffect(() => {
     if (!listRef.current) return;
     
+    const isNewMessage = messages.length > prevMessagesLengthRef.current;
+    
+    // Check if user is viewing old messages (scrolled up significantly)
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
     isViewingOldMessagesRef.current = distanceFromBottom > 300; // 300px threshold
-
-    const currentLastMessageId = messages[messages.length - 1]?._id || null;
-    const isNewMessage = currentLastMessageId && currentLastMessageId !== lastMessageIdRef.current;
-    const addedMessages = messages.length - prevMessagesLengthRef.current;
-
-    if (isNewMessage) {
-      if (shouldAutoScroll && !isViewingOldMessagesRef.current) {
-        listRef.current.scrollTop = scrollHeight;
-      } else if (isViewingOldMessagesRef.current) {
-        setNewMessageCount((count) => count + Math.max(addedMessages, 1));
-      }
+    
+    // Only auto-scroll if:
+    // 1. User is near bottom (viewing recent messages) OR
+    // 2. This is initial load (not a new message coming in)
+    if (isNewMessage && shouldAutoScroll && !isViewingOldMessagesRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
     }
-
+    // If viewing old messages, preserve scroll position (do nothing)
+    
     prevMessagesLengthRef.current = messages.length;
-    lastMessageIdRef.current = currentLastMessageId;
   }, [messages, shouldAutoScroll]);
 
   // Throttled scroll handler for better mobile performance
@@ -86,9 +82,6 @@ export default function MessageList({
       const { scrollTop, scrollHeight, clientHeight } = listRef.current!;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
       setShouldAutoScroll(isNearBottom);
-      if (isNearBottom) {
-        setNewMessageCount(0);
-      }
 
       // Load more messages when scrolling near top
       const isNearTop = scrollTop < 100;
@@ -115,18 +108,11 @@ export default function MessageList({
     }
   };
 
-  const jumpToLatest = () => {
-    if (!listRef.current) return;
-    listRef.current.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
-    setShouldAutoScroll(true);
-    setNewMessageCount(0);
-  };
-
   return (
     <div
       ref={listRef}
       onScroll={handleScroll}
-      className="relative flex-1 overflow-y-auto"
+      className="flex-1 overflow-y-auto"
       style={{
         background: 'var(--background)',
         // Enable GPU acceleration for smoother scrolling on mobile
@@ -134,28 +120,6 @@ export default function MessageList({
         WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
       }}
     >
-      {newMessageCount > 0 && (
-        <div
-          className="pointer-events-none absolute right-3 bottom-3 z-10 flex justify-end"
-          style={{ width: '100%' }}
-        >
-          <button
-            onClick={jumpToLatest}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium transition-all duration-200"
-            style={{
-              background: 'rgba(255,255,255,0.96)',
-              color: 'var(--text-primary)',
-              borderColor: 'rgba(16,24,40,0.08)',
-              boxShadow: '0 18px 50px rgba(15,23,42,0.08)',
-              backdropFilter: 'blur(10px)',
-            }}
-            aria-label="Jump to latest messages"
-          >
-            <span>{newMessageCount === 1 ? 'jump to latest' : `jump to latest (${newMessageCount})`}</span>
-            <span style={{ opacity: 0.72, fontSize: '0.75rem' }}>new</span>
-          </button>
-        </div>
-      )}
       {/* Loading indicator for pagination */}
       {isLoading && hasMore && (
         <div className="flex justify-center py-3.5">
