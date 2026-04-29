@@ -330,7 +330,7 @@ export async function POST(request: NextRequest) {
       if (userMemoryDoc) return userMemoryDoc;
 
       if (nameChange.oldName) {
-        const match = sameCountryDocs.find((doc: any) => doc.knownNames?.includes(nameChange.oldName.toLowerCase()));
+        const match = sameCountryDocs.find((doc: any) => doc.knownNames?.includes(nameChange.oldName?.toLowerCase() || ''));
         if (match) return match;
       }
 
