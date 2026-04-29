@@ -331,9 +331,9 @@ export async function POST(request: NextRequest) {
             });
           }
         }
-        // cap growth: keep strongest/recent
+        // cap growth: keep strongest/recent, max 10 items
         out.sort((a, b) => (Number(b.strength) - Number(a.strength)) || (Number(new Date(b.lastMentionedAt).getTime()) - Number(new Date(a.lastMentionedAt).getTime())));
-        return out.slice(0, 8);
+        return out.slice(0, 10);
       };
 
       if (memoryUpdate?.topics?.length) {

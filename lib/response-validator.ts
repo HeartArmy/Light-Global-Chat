@@ -91,9 +91,10 @@ export function hasProblematicPatterns(response: string): { hasProblem: boolean;
 }
 
 
-/**
- * Uses a secondary AI model to validate and clean responses
- */
+// UNUSED - commented out to prevent accidental use
+// This function was designed to use a secondary AI for response validation
+// but it's not currently used in production. Only hasProblematicPatterns is used.
+/*
 export async function validateWithSecondaryAI(primaryResponse: string): Promise<string> {
   try {
     console.log('🔍 Sending response to secondary AI validator...');
@@ -139,7 +140,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
           }
         ],
         max_tokens: 500,
-        temperature: 0.1 // Low temperature for consistent cleaning
+        temperature: 0.1
       })
     });
 
@@ -152,11 +153,11 @@ Return ONLY the cleaned conversational response, nothing else.`;
     const cleanedResponse = data.choices[0]?.message?.content?.trim() || '';
     
     console.log('✅ Secondary AI validation result:', cleanedResponse);
-    return cleanedResponse || primaryResponse; // Fallback to original if cleaning fails
+    return cleanedResponse || primaryResponse;
     
   } catch (error) {
     console.error('❌ Secondary AI validation error:', error);
-    // Return original response if validation fails
     return primaryResponse;
   }
 }
+*/
