@@ -22,7 +22,7 @@ function getCountryFlag(countryCode: string, userName?: string): string {
 }
 
 // Check if response is too similar to recent messages using AI
-async function checkResponseSimilarity(newResponse: string, recentMessages: any[]): Promise<{ shouldSkip: boolean; similarMessage?: string }> {
+async function checkResponseSimilarity(newResponse: string, recentMessages: any[]): Promise<{ shouldSkip: boolean; reason?: string; similarMessage?: string }> {
   if (recentMessages.length === 0) {
     return { shouldSkip: false };
   }
@@ -61,7 +61,7 @@ DO NOT SKIP IF:
 WHEN IN DOUBT, DO NOT SKIP. Better to send than to ignore a user.
 
 Respond with JSON only:
-{"shouldSkip": true/false, "reason": "which rule triggered"}`;
+{"shouldSkip": true/false, "reason": "which rule triggered (e.g., 'too_long', 'duplicate', 'stale', etc)"}`;
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -90,6 +90,7 @@ Respond with JSON only:
           const parsed = JSON.parse(jsonMatch[0]);
           return {
             shouldSkip: parsed.shouldSkip || false,
+            reason: parsed.reason || 'unknown',
             similarMessage: mostRecentMessage
           };
         }
@@ -101,7 +102,7 @@ Respond with JSON only:
     console.error('Error in similarity check:', error);
   }
 
-  return { shouldSkip: false };
+  return { shouldSkip: false, reason: 'check_failed' };
 }
 
 // This API route handles the delayed Gemmie response
@@ -425,15 +426,18 @@ export async function POST(request: NextRequest) {
     console.log('💬 Generated gemmie JSON:', {
       shouldRespond: gen.shouldRespond,
       replyPreview: gen.reply?.slice(0, 80),
+      skipReason: gen.skipReason || 'none',
     });
 
     await applyMemoryUpdate(gen.memoryUpdate);
 
     if (!gen.shouldRespond || !gen.reply) {
+      const skipReason = gen.skipReason || 'no-reason-provided';
+      console.log(`🚫 Gemmie decided NOT to respond. Reason: ${skipReason}`);
       const { setTypingIndicator } = await import('@/lib/gemmie-timer');
       await setTypingIndicator(false, 'gemmie');
       await scheduleNextFromQueue();
-      return NextResponse.json({ success: true, skipped: true, reason: 'shouldRespond-false' });
+      return NextResponse.json({ success: true, skipped: true, reason: 'shouldRespond-false', skipReason });
     }
 
     // Track if typos were added for conditional editing
@@ -485,6 +489,7 @@ export async function POST(request: NextRequest) {
     
     if (similarityCheck.shouldSkip) {
       console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
+      console.log(`📝 Reason: ${similarityCheck.reason || 'unknown'}`);
       console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
       const { setTypingIndicator } = await import('@/lib/gemmie-timer');
       await setTypingIndicator(false, 'gemmie');

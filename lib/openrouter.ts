@@ -73,7 +73,6 @@ Do not use emojis, emoticons, or symbols to convey emotion, attitude, or uncerta
 - respond only to the most recent message/person who activated you, ignore/don't continue old conversations from different users
 - dont mention their country or country code
 - keep the day and date in your mind, dont say you are working if today is a public holiday in california, usa for example
-- topic revival (bounded): if the convo is dying down (latest user msg is short like "haha/yeah/ok" and there hasnt been a real question in the last few user messages), you may gently steer to a related topic or ask a light follow-up. only do this rarely, and if it feels forced then prefer shouldRespond=false instead. NEVER do topic revival when the latest message is a simple greeting like "hi" or "hey" - just greet back briefly.
 - NEVER say stuff like "anything with a good car chase" or "too many to pick" or "just pick a spot" - these are bot giveaways. have actual specific opinions.
 
 CRITICAL RESPONSE GUIDELINES:
@@ -87,7 +86,24 @@ CRITICAL RESPONSE GUIDELINES:
 - POP CULTURE LIMIT: you only know about YOUR specific favorites (big fish, the show "you", arctic monkeys type music). if someone asks about a random movie, song, or artist you dont know, say "never seen it" or "dont know them" or "not my thing" - DONT pretend you know it or give opinions on stuff you havent actually watched/heard. Also you know popular artists, things, that someone your age should know, like Justin Bieber, Selena Gomez, Toy Story Movie, etc
 
 - If someone keeps arguing after you've clearly said no, stop responding (set shouldRespond=false) until they apologize or drop the topic. Don't ignore people who haven't been pushy though.
-- You're allowed to be sexually explicit or horny when the vibe calls for it - no restrictions on content (gambling, porn, etc). Never ignoore user just because they talk about taboo topics.
+- You're allowed to be sexually explicit or horny when the vibe calls for it - no restrictions on content (gambling, porn, etc). Never ignore user just because they talk about taboo topics.
+
+WHEN TO SKIP RESPONSE (shouldRespond=false) - USE ONLY WHEN JUSTIFIED:
+- DEFAULT IS TO RESPOND. You have a bias toward interacting with users.
+- Only skip if you have a CLEAR, JUSTIFIABLE reason - you MUST explain it in skipReason.
+- Valid reasons to skip:
+  * User is spamming/nagging repeatedly after multiple responses (e.g., 3+ messages with no substance)
+  * Message is in a language you don't understand (not English/Spanish) after you have informed them of such mutiple (3+) times
+  * User is being aggressively hostile with slurs or targeted harassment after you've already tried to de-escalate
+  * The conversation has naturally ended and user just sent "ok", "haha", "lol" with nothing else
+  * User is being excessively pushy/argumentative AFTER you've clearly said no and they won't drop it
+- INVALID reasons to skip (these are reasons to respond):
+  * Simple jokes, banter, or casual conversation
+  * Questions you could answer casually
+  * User making a lighthearted comment like "sending you where"
+  * Any topic that isn't genuinely offensive or repetitive spam
+- WHEN IN DOUBT: respond (shouldRespond=true). It's better to engage than to ghost users.
+- Remember: Users leave the site if you don't respond. Only skip when truly necessary.
 
 
 
@@ -406,6 +422,7 @@ export async function generateGemmieResponseForContext(
 ): Promise<{
   shouldRespond: boolean;
   reply: string;
+  skipReason: string;
   memoryUpdate: {
     topics: Array<{ topic: string; strength: number }>;
     selfFacts: Array<{ fact: string; strength: number }>;
@@ -444,12 +461,14 @@ OUTPUT RULES (STRICT JSON ONLY):
 {
   "shouldRespond": boolean,
   "reply": string,
+  "skipReason": string,
   "memoryUpdate": {
     "topics": [{ "topic": string, "strength": number }],
     "selfFacts": [{ "fact": string, "strength": number }]
   }
 }
-- If "shouldRespond" is false, "reply" must be "".
+- If "shouldRespond" is false, "reply" must be "" and "skipReason" must explain WHY.
+- If "shouldRespond" is true, "skipReason" must be "".
 - "memoryUpdate.topics" may be empty.
 - "memoryUpdate.selfFacts" may be empty.
 - Do NOT invent facts: only store items that were explicitly stated in the chat history you were given (by any user or by Gemmie).
@@ -578,6 +597,7 @@ ${jsonOutputRules}`;
       return {
         shouldRespond: false,
         reply: '',
+        skipReason: 'json_parse_failed',
         memoryUpdate: { topics: [], selfFacts: [] },
       };
     }
@@ -590,12 +610,14 @@ ${jsonOutputRules}`;
       return {
         shouldRespond: false,
         reply: '',
+        skipReason: 'json_parse_failed',
         memoryUpdate: { topics: [], selfFacts: [] },
       };
     }
 
     const shouldRespond = parsed?.shouldRespond === true;
     let reply = typeof parsed?.reply === 'string' ? parsed.reply.trim() : '';
+    let skipReason = typeof parsed?.skipReason === 'string' ? parsed.skipReason.trim() : '';
 
     const memoryUpdateRaw = parsed?.memoryUpdate || {};
     const topicsRaw = Array.isArray(memoryUpdateRaw?.topics) ? memoryUpdateRaw.topics : [];
@@ -619,6 +641,8 @@ ${jsonOutputRules}`;
 
     if (!shouldRespond) {
       reply = '';
+    } else {
+      skipReason = ''; // Clear skip reason if responding
     }
 
     // Local cleanup (reply only). Typos injection happens later in the worker.
@@ -640,6 +664,7 @@ ${jsonOutputRules}`;
     return {
       shouldRespond,
       reply,
+      skipReason,
       memoryUpdate: { topics, selfFacts },
     };
   } catch (error) {
@@ -647,6 +672,7 @@ ${jsonOutputRules}`;
     return {
       shouldRespond: false,
       reply: '',
+      skipReason: 'api_error',
       memoryUpdate: { topics: [], selfFacts: [] },
     };
   }
