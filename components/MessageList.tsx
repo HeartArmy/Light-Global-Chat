@@ -61,6 +61,16 @@ export default function MessageList({
     prevMessagesLengthRef.current = messages.length;
   }, [messages, shouldAutoScroll]);
 
+  // Initial scroll to bottom when messages first load
+  useEffect(() => {
+    if (!listRef.current) return;
+    if (messages.length > 0 && prevMessagesLengthRef.current === 0) {
+      // First time messages loaded - scroll to bottom
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+      prevMessagesLengthRef.current = messages.length;
+    }
+  }, [messages]);
+
   // Throttled scroll handler for better mobile performance
   const handleScroll = useCallback(() => {
     if (!listRef.current) return;
