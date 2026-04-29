@@ -55,6 +55,7 @@ function MessageItem({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [imageViewer, setImageViewer] = useState<{ url: string; name: string; type: 'image' | 'video' } | null>(null);
   const [youtubeEmbeds, setYoutubeEmbeds] = useState<Array<{videoId: string, url: string}>>([]);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Auto-dismiss actions after timeout (like Telegram/WhatsApp)
@@ -65,16 +66,12 @@ function MessageItem({
     if (onActionToggle) {
       onActionToggle(message._id);
     }
-    // Auto-hide after 3 seconds on mobile, similar to Telegram
-    // REMOVED: Actions on mobile will never auto-disappear except on background click
-    // if (typeof window !== 'undefined' && window.innerWidth <= 768) {
-    //   actionsTimeout = setTimeout(() => {
-    //     if (onActionToggle) onActionToggle('');
-    //   }, 3000);
-    // }
   };
 
   const hideActions = () => {
+    // Don't hide if emoji picker is open
+    if (isEmojiPickerOpen) return;
+    
     if (actionsTimeout) {
       clearTimeout(actionsTimeout);
       actionsTimeout = null;
@@ -222,6 +219,7 @@ function MessageItem({
               onEdit={handleEdit}
               onDelete={handleDelete}
               onReact={onReact}
+              onEmojiPickerChange={setIsEmojiPickerOpen}
             />
           </div>
         )}
@@ -410,6 +408,7 @@ function MessageItem({
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onReact={onReact}
+                onEmojiPickerChange={setIsEmojiPickerOpen}
               />
             </div>
           )}
@@ -450,6 +449,7 @@ function MessageItem({
               onEdit={handleEdit}
               onDelete={handleDelete}
               onReact={onReact}
+              onEmojiPickerChange={setIsEmojiPickerOpen}
             />
           </div>
         )}

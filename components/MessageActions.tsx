@@ -16,6 +16,7 @@ interface MessageActionsProps {
   onEdit: () => void;
   onDelete: () => void;
   onReact: (emoji: string) => void;
+  onEmojiPickerChange?: (isOpen: boolean) => void;
 }
 
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -28,10 +29,17 @@ export default function MessageActions({
   onEdit,
   onDelete,
   onReact,
+  onEmojiPickerChange,
 }: MessageActionsProps) {
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showEmojiPicker, setShowEmojiPickerState] = useState(false);
   const [showExtendedPicker, setShowExtendedPicker] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(TEN_MINUTES);
+
+  // Wrapper to update both local state and notify parent
+  const setShowEmojiPicker = (isOpen: boolean) => {
+    setShowEmojiPickerState(isOpen);
+    onEmojiPickerChange?.(isOpen);
+  };
 
   // Emoji picker stays open until user clicks outside or selects an emoji
   // No auto-dismiss timeout - allows users time to browse and select
@@ -61,13 +69,15 @@ export default function MessageActions({
 
   const handleEmojiSelect = (emoji: string) => {
     onReact(emoji);
-    setShowEmojiPicker(false);
+    setShowEmojiPickerState(false);
     setShowExtendedPicker(false);
+    onEmojiPickerChange?.(false);
   };
 
   const handleCloseEmojiPicker = () => {
-    setShowEmojiPicker(false);
+    setShowEmojiPickerState(false);
     setShowExtendedPicker(false);
+    onEmojiPickerChange?.(false);
   };
 
   return (
