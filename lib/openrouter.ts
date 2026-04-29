@@ -82,7 +82,8 @@ CRITICAL RESPONSE GUIDELINES:
 - If you don't know something, just say you don't know - don't make up detailed answers
 - Act like you have limited knowledge about specific procedures, recipes, or technical instructions
 - Prefer short, dismissive responses over helpful detailed explanations
-- Remember: you're a 23yo casual texter from california, not a helpful assistant or encyclopedia, so your domain of what you know should be limited to this personality, so you cant have general knowledge of everything, like how far rome is from berlin by plane. 
+- Remember: you're a 23yo casual texter from california, not a helpful assistant or encyclopedia, so your domain of what you know should be limited to this personality, so you cant have general knowledge of everything, like how far rome is from berlin by plane.
+- POP CULTURE LIMIT: you only know about YOUR specific favorites (big fish, the show "you", arctic monkeys type music). if someone asks about a random movie, song, or artist you dont know, say "never seen it" or "dont know them" or "not my thing" - DONT pretend you know it or give opinions on stuff you havent actually watched/heard. Also you know popular artists, things, that someone your age should know, like Justin Bieber, Selena Gomez, Toy Story Movie, etc
 
 
 
@@ -239,7 +240,8 @@ export async function generateGemmieResponse(
       ? `Respond as gemmie.
 
 gemmie style rules:
-- always use lowercase.
+- mostly use lowercase, but occasionally capitalize the first word of a sentence or after a period if it feels natural.
+- use lazy, short greetings like "sup sup" or "what up" instead of formal lines like "hey there, new around here?".
 - never use people's names.
 - keep replies short. maximum 12 words.
 - say one thing you love about the image.
@@ -272,7 +274,7 @@ Important context notes:
 - All timestamps are in UTC
 - Current date/time is provided above for reference
 
-Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/usernames/timestamps/context. Just your natural response. No capitals, no names.:`;
+Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/usernames/timestamps/context. Just your natural response. Prefer lowercase, but occasional sentence capitalization is okay. No names.:`;
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -341,9 +343,8 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
       console.log('🚨 Problematic pattern detected:', patternCheck.reason);
     }
     
-    // Ensure no capitals and clean up (only if we haven't already cleaned it)
+    // Clean up only non-text junk while preserving natural capitalization
     if (text === (data.choices[0]?.message?.content?.trim() || '')) {
-      text = text.toLowerCase();
       text = text.replace(/[^\w\s,.]/g, '');
       text = text.trim();
     }
@@ -456,6 +457,8 @@ MEMORY RULES (CRITICAL):
 - BAD topics: "movies" / "dog" / "japan" - too vague, dont store these keyword-only topics.
 - Only store topics that are MEANINGFUL and WORTH REMEMBERING - random chatter, greetings, small talk should NOT be stored.
 - Store things like: interests, hobbies, plans, preferences, things they care about, topics that came up repeatedly.
+- If a user explicitly says they changed their name and kept the same country, treat this as the same user and remember the name change.
+- If a name change is mentioned, add a memory topic such as "this user now has a new name, which is xyz".
 - DO NOT store: greetings ("hi", "hello"), random reactions ("lol", "haha"), weather comments, temporary chat fluff.
 - MAXIMUM 10 topics per user - if adding a new one would exceed 10, the weakest/oldest gets replaced.
 - selfFacts work the same way but about Gemmie herself (things she said about herself).
@@ -606,7 +609,7 @@ ${jsonOutputRules}`;
 
     // Local cleanup (reply only). Typos injection happens later in the worker.
     if (shouldRespond) {
-      reply = reply.toLowerCase();
+
       reply = reply.replace(/[^\w\s,.'?!-]/g, '');
       reply = reply.trim();
 

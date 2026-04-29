@@ -165,6 +165,29 @@ export default function ChatRoomClient() {
       setIsConnected(false);
     });
 
+    // Auto-reconnect on connection failure
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    pusher.connection.bind('disconnected', () => {
+      console.log('🔌 Pusher disconnected, attempting reconnect in 3s...');
+      setIsConnected(false);
+      reconnectTimeout = setTimeout(() => {
+        if (pusher.connection.state !== 'connected') {
+          console.log('🔄 Attempting Pusher reconnect...');
+          pusher.connect();
+        }
+      }, 3000);
+    });
+
+    // Clear reconnect timeout on successful connection
+    pusher.connection.bind('connected', () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+      setIsConnected(true);
+      console.log('✅ Pusher reconnected successfully');
+    });
+
     // Listen for new messages
     channel.bind('new-message', (message: Message) => {
       setMessages((prev) => {
@@ -202,9 +225,8 @@ export default function ChatRoomClient() {
         );
         console.log('✅ Message edited successfully');
       } else {
-        console.log('⚠️ Message not found in current state, forcing refresh');
-        // Force a refresh of messages from the server
-        fetchMessages();
+        // Message not in current view (user scrolling old messages) - skip refresh to avoid scroll reset
+        console.log('⚠️ Message not in current view, skipping edit update to preserve scroll position');
       }
     });
 
@@ -226,9 +248,8 @@ export default function ChatRoomClient() {
           return filteredMessages;
         });
       } else {
-        console.log('🗑️ Message not found in current state, possibly already deleted or not loaded yet');
-        // Force a refresh of messages from the server
-        fetchMessages();
+        // Message not in current view (user scrolling old messages) - skip refresh to avoid scroll reset
+        console.log('🗑️ Message not in current view, skipping delete update to preserve scroll position');
       }
     });
 
@@ -327,6 +348,9 @@ export default function ChatRoomClient() {
 
     return () => {
       // Do not automatically change Gemmie state on disconnect; persist preference.
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
       channel.unbind_all();
       channel.unsubscribe();
       presenceChannel.unbind_all();

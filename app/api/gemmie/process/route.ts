@@ -293,7 +293,18 @@ export async function POST(request: NextRequest) {
     const userMemoryKey = `${userName.toLowerCase()}:${userCountry}`;
     const gemmieSelfMemoryKey = 'gemmie:self';
 
-    const userMemoryDoc: any = await GemmieMemory.findOne({ key: userMemoryKey }).lean();
+    const findUserMemoryDoc = async (): Promise<any> => {
+      const exactDoc = await GemmieMemory.findOne({ key: userMemoryKey }).lean();
+      if (exactDoc) return exactDoc;
+
+      const aliasDoc = await GemmieMemory.findOne({
+        userCountry,
+        knownNames: userName.toLowerCase(),
+      }).lean();
+      return aliasDoc || null;
+    };
+
+    const userMemoryDoc: any = await findUserMemoryDoc();
     const gemmieSelfMemoryDoc: any = await GemmieMemory.findOne({ key: gemmieSelfMemoryKey }).lean();
 
     const userTopics = (userMemoryDoc?.topics || []).slice(0, 3).map((t: any) => String(t.topic));
@@ -301,6 +312,37 @@ export async function POST(request: NextRequest) {
 
     const userMemoryBlock = userTopics.length ? userTopics.map((t: string) => `- ${t}`).join('\n') : 'none';
     const gemmieSelfMemoryBlock = gemmieSelfFacts.length ? gemmieSelfFacts.map((f: string) => `- ${f}`).join('\n') : 'none';
+
+    const extractNameChange = (message: string) => {
+      const normalized = message.toLowerCase();
+      const nameMatch = normalized.match(/(?:changed my name to|i am now|i'm now|call me|my new name is)\s+([a-z0-9_\-]+)/i);
+      const oldNameMatch = normalized.match(/(?:formerly known as|used to be|was called)\s+([a-z0-9_\-]+)/i);
+      return {
+        newName: nameMatch?.[1] || null,
+        oldName: oldNameMatch?.[1] || null,
+      };
+    };
+
+    const nameChange = extractNameChange(userMessage);
+    const sameCountryDocs = await GemmieMemory.find({ userCountry }).lean();
+
+    const resolveExistingUserDoc = async (): Promise<any> => {
+      if (userMemoryDoc) return userMemoryDoc;
+
+      if (nameChange.oldName) {
+        const match = sameCountryDocs.find((doc: any) => doc.knownNames?.includes(nameChange.oldName.toLowerCase()));
+        if (match) return match;
+      }
+
+      if (nameChange.newName && nameChange.newName.toLowerCase() === userName.toLowerCase()) {
+        const candidates = sameCountryDocs.filter((doc: any) => doc.knownNames?.some((name: string) => name !== userName.toLowerCase()));
+        if (candidates.length === 1) return candidates[0];
+      }
+
+      return null;
+    };
+
+    const resolvedUserMemoryDoc = await resolveExistingUserDoc();
 
     const applyMemoryUpdate = async (
       memoryUpdate: { topics: Array<{ topic: string; strength: number }>; selfFacts: Array<{ fact: string; strength: number }> }
@@ -337,7 +379,14 @@ export async function POST(request: NextRequest) {
       };
 
       if (memoryUpdate?.topics?.length) {
-        const doc: any = (await GemmieMemory.findOne({ key: userMemoryKey }).exec()) || new GemmieMemory({ key: userMemoryKey });
+        const existingDoc: any = await GemmieMemory.findOne({ key: userMemoryKey }).exec();
+        const doc: any = existingDoc || resolvedUserMemoryDoc || new GemmieMemory({ key: userMemoryKey });
+        doc.userCountry = userCountry;
+        doc.currentName = userName;
+        doc.knownNames = Array.from(new Set([...(doc.knownNames || []).map((name: string) => name.toLowerCase()), userName.toLowerCase()]));
+        if (!doc.key) {
+          doc.key = userMemoryKey;
+        }
         doc.lastSeenAt = now;
         doc.topics = mergeByLower(
           doc.topics || [],

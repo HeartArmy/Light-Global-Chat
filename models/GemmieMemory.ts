@@ -23,6 +23,9 @@ const GemmieMemorySchema = new mongoose.Schema({
   // - `${userNameLower}:${userCountry}` for per-user topics
   // - `gemmie:self` for Gemmie self-facts
   key: { type: String, required: true, unique: true, index: true, maxlength: 120 },
+  userCountry: { type: String, maxlength: 4 },
+  currentName: { type: String, maxlength: 40 },
+  knownNames: { type: [String], default: [] },
   lastSeenAt: { type: Date, required: true, default: Date.now },
 
   topics: { type: [TopicSchema], default: [] },
