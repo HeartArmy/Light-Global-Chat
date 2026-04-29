@@ -13,6 +13,7 @@ export default function ChatRoomClient() {
   const { theme, toggleTheme } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string>('');
   const [userCountry, setUserCountry] = useState<string>('XX');
   const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
@@ -32,6 +33,18 @@ export default function ChatRoomClient() {
       setUserName(storedName);
     } else {
       setShowNameModal(true);
+    }
+
+    const storedUserId = localStorage.getItem('userId');
+    if (storedUserId) {
+      setUserId(storedUserId);
+    } else {
+      const generatedUserId =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `user-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem('userId', generatedUserId);
+      setUserId(generatedUserId);
     }
 
     // Get user country
@@ -142,11 +155,16 @@ export default function ChatRoomClient() {
 
   // Set up Pusher connection
   useEffect(() => {
-    if (!userName) return;
+    if (!userName || !userId) return;
 
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
       authEndpoint: '/api/pusher/auth',
+      auth: {
+        params: {
+          user_id: userId,
+        },
+      },
     });
 
     const channel = pusher.subscribe('chat-room');
@@ -361,7 +379,7 @@ export default function ChatRoomClient() {
       presenceChannel.unsubscribe();
       pusher.disconnect();
     };
-  }, [userName]);
+  }, [userName, userId]);
 
   // Typing indicator logic - handled by Pusher events
   // The typing indicator is shown/hidden via typing-start/typing-stop events

@@ -7,8 +7,12 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const socket_id = formData.get('socket_id') as string;
     const channel_name = formData.get('channel_name') as string;
+    const user_id =
+      (formData.get('user_id') as string) ||
+      (formData.get('auth[user_id]') as string) ||
+      socket_id;
 
-    // console.log('Pusher auth request:', { socket_id, channel_name });
+    // console.log('Pusher auth request:', { socket_id, channel_name, user_id });
 
     if (!socket_id || !channel_name) {
       return NextResponse.json(
@@ -30,7 +34,7 @@ export async function POST(request: NextRequest) {
     
     // Authenticate the user for the presence channel
     const authResponse = pusher.authenticate(socket_id, channel_name, {
-      user_id: socket_id, // Use socket_id as unique user identifier
+      user_id,
       user_info: {
         // You can add more user info here if needed
       },
