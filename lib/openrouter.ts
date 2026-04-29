@@ -2,7 +2,7 @@ import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import redis from '@/lib/redis';
 import { getAndClearSelectedImageUrl } from '@/lib/gemmie-timer';
-import { hasProblematicPatterns, validateWithSecondaryAI } from '@/lib/response-validator';
+import { hasProblematicPatterns } from '@/lib/response-validator';
 
 // Function to add probabilistic typos to text
 export function addProbabilisticTypos(text: string, removeTypoChance: number = 0.025, repeatTypoChance: number = 0.025): string { 
@@ -60,6 +60,7 @@ Do not use emojis, emoticons, or symbols to convey emotion, attitude, or uncerta
 - respond only to the most recent message/person who activated you, ignore/don't continue old conversations from different users
 - dont mention their country or country code
 - keep the day and date in your mind, dont say you are working if today is a public holiday in california, usa for example
+- topic revival (bounded): if the convo is dying down (latest user msg is short like "haha/yeah/ok" and there hasnt been a real question in the last few user messages), you may gently steer to a related topic or ask a light follow-up. only do this rarely, and if it feels forced then prefer shouldRespond=false instead.
 
 CRITICAL RESPONSE GUIDELINES:
 - NEVER give detailed instructions, recipes, or step-by-step explanations - this is a major bot giveaway
@@ -206,7 +207,7 @@ export async function generateGemmieResponse(
     const currentDateTime = getCurrentDateTimeInfo();
     
     // Determine model and prompt based on image presence
-    const modelToUse = selectedImageUrl ? 'google/gemma-3-27b-it' : 'deepseek/deepseek-v3.2'; // the first one before the : should be a image model
+    const modelToUse = selectedImageUrl ? 'google/gemma-3-27b-it' : 'mistralai/mistral-small-3.2-24b-instruct'; // the first one before the : should be a image model
     
     const prompt = selectedImageUrl
       ? `Respond as gemmie.
@@ -307,14 +308,11 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
       console.log('🎯 No content field found');
     }
     
-    // Check for problematic patterns
+    // Check for problematic patterns (no extra API calls here; we rely on local cleanup below)
     console.log('🔍 Checking for problematic patterns...');
     const patternCheck = hasProblematicPatterns(text);
-    
     if (patternCheck.hasProblem) {
       console.log('🚨 Problematic pattern detected:', patternCheck.reason);
-      console.log('🤖 Using', modelToUse, 'for advanced cleaning...');
-      text = await validateWithSecondaryAI(text);
     }
     
     // Ensure no capitals and clean up (only if we haven't already cleaned it)
@@ -372,8 +370,16 @@ export async function generateGemmieResponseForContext(
     primaryUserName: string,
     allMessagesContext: string,
     primaryUserCountry: string,
-    allMessagesData: Array<{userName: string, userMessage: string, userCountry: string}>
-): Promise<string> {
+    allMessagesData: Array<{userName: string, userMessage: string, userCountry: string}>,
+    memoryContext?: { userMemoryBlock: string; gemmieSelfMemoryBlock: string }
+): Promise<{
+  shouldRespond: boolean;
+  reply: string;
+  memoryUpdate: {
+    topics: Array<{ topic: string; strength: number }>;
+    selfFacts: Array<{ fact: string; strength: number }>;
+  };
+}> {
   try {
     console.log('🔧 OpenRouter API call starting with context...');
     console.log('📝 Primary User:', primaryUserName, 'Country:', primaryUserCountry);
@@ -394,33 +400,53 @@ export async function generateGemmieResponseForContext(
     }
 
     // Determine which model to use based on image presence
-    const modelToUse = selectedImageUrl ? 'google/gemma-3-27b-it' : 'deepseek/deepseek-v3.2'; //the first one before the : should be a image model
+    const modelToUse = selectedImageUrl ? 'google/gemma-3-27b-it' : 'mistralai/mistral-small-3.2-24b-instruct'; //the first one before the : should be a image model
     
     // Construct the full prompt
-    const fullPrompt = selectedImageUrl
-      ? `Respond as gemmie.
+    const memoryUserBlock = memoryContext?.userMemoryBlock?.trim() || 'none';
+    const memorySelfBlock = memoryContext?.gemmieSelfMemoryBlock?.trim() || 'none';
 
-gemmie style rules:
-- always use lowercase.
-- never use people's names.
-- keep replies short. maximum 12 words.
-- say one thing you love about the image.
-- never bring up older topics unless the user mentions them again in the most recent message.
-- avoid forced connections between the image and past chat. keep it in the moment.
-- never invent context or events that aren't shown.
-- if a user asks for the time say playfully for example its half past 1 here slow day, remember ur in cali time zone and the time given in context is in nyc or east coast time, so subtract by 3.
+    const jsonOutputRules = `
+OUTPUT RULES (STRICT JSON ONLY):
+- You MUST output valid JSON only (no markdown, no extra commentary).
+- Shape:
+{
+  "shouldRespond": boolean,
+  "reply": string,
+  "memoryUpdate": {
+    "topics": [{ "topic": string, "strength": number }],
+    "selfFacts": [{ "fact": string, "strength": number }]
+  }
+}
+- If "shouldRespond" is false, "reply" must be "".
+- "memoryUpdate.topics" may be empty.
+- "memoryUpdate.selfFacts" may be empty.
+- Do NOT invent facts: only store items that were explicitly stated in the chat history you were given (by any user or by Gemmie).
+- Do NOT repeat items already present in the memory blocks below (case-insensitive). If an item is already there, omit it from memoryUpdate.
+`;
+
+    const basePrompt = selectedImageUrl
+      ? `${GEMMIE_PROMPT}\n- say one thing you love about the image. keep it in the moment.`
+      : `${GEMMIE_PROMPT}`;
+
+    const fullPrompt = `${basePrompt}
+
+Current memory for THIS user (topics only):
+${memoryUserBlock}
+
+Current memory for GEMMIE-self (self facts only):
+${memorySelfBlock}
 
 messages leading up to this response (most recent last):
 ${allMessagesContext}${dbContext}
 
-Example Outputs:
-hey thats a nice sweater, i love pink
+Your task:
+1) Decide if Gemmie should respond now.
+2) If yes, write a brief, natural message as gemmie.
+3) Also provide memoryUpdate with any items worth remembering (new only, grounded in chat history).
+4) Output STRICT JSON only.
 
-your cat has fierce eyes haha love it
-
-your task:
-write one brief, natural message as gemmie. Output the text message only (remember: no capitals, never use people's name)`
-      : `${GEMMIE_PROMPT}\n\nMessages leading up to this response (most recent last):\n${allMessagesContext}${dbContext}\n\nRespond as gemmie (remember: no capitals, never use people's name):`;
+${jsonOutputRules}`;
 
     console.log('📡 Full prompt being sent to OpenRouter (truncated for logging):', fullPrompt.substring(0, 500) + '...');
     console.log('🤖 Using model:', modelToUse, selectedImageUrl ? '(with image)' : '(text only)');
@@ -485,44 +511,90 @@ write one brief, natural message as gemmie. Output the text message only (rememb
       console.log('🎯 No content field found');
     }
     
-    // Check for problematic patterns
+    // Check for problematic patterns (no extra API calls; we rely on JSON parsing + cleanup below)
     console.log('🔍 Checking for problematic patterns...');
     const patternCheck = hasProblematicPatterns(text);
-    
     if (patternCheck.hasProblem) {
       console.log('🚨 Problematic pattern detected:', patternCheck.reason);
-      console.log('🤖 Using', modelToUse, 'for advanced cleaning...');
-      text = await validateWithSecondaryAI(text);
     }
-    
-    // Ensure no capitals and clean up (only if we haven't already cleaned it)
-    if (text === (data.choices[0]?.message?.content?.trim() || '')) {
-      text = text.toLowerCase();
-      text = text.replace(/[^\w\s,.'?!-]/g, '');
-      
-      // Limit to 2 sentences max (only if we haven't already processed it)
-      const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim());
+
+    const rawContent = data.choices[0]?.message?.content?.trim() || '';
+    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('❌ Main Gemmie call did not return JSON. Raw content:', rawContent);
+      return {
+        shouldRespond: false,
+        reply: '',
+        memoryUpdate: { topics: [], selfFacts: [] },
+      };
+    }
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      console.error('❌ Failed to parse Gemmie JSON output:', e);
+      return {
+        shouldRespond: false,
+        reply: '',
+        memoryUpdate: { topics: [], selfFacts: [] },
+      };
+    }
+
+    const shouldRespond = parsed?.shouldRespond === true;
+    let reply = typeof parsed?.reply === 'string' ? parsed.reply.trim() : '';
+
+    const memoryUpdateRaw = parsed?.memoryUpdate || {};
+    const topicsRaw = Array.isArray(memoryUpdateRaw?.topics) ? memoryUpdateRaw.topics : [];
+    const selfFactsRaw = Array.isArray(memoryUpdateRaw?.selfFacts) ? memoryUpdateRaw.selfFacts : [];
+
+    const clampStrength = (v: any) => {
+      const n = typeof v === 'number' ? v : parseFloat(String(v));
+      if (Number.isNaN(n)) return 0.6;
+      return Math.max(0.01, Math.min(1, n));
+    };
+
+    const topics = topicsRaw
+      .map((t: any) => ({ topic: String(t?.topic || '').trim(), strength: clampStrength(t?.strength) }))
+      .filter((t: any) => t.topic.length > 0)
+      .slice(0, 6);
+
+    const selfFacts = selfFactsRaw
+      .map((f: any) => ({ fact: String(f?.fact || '').trim(), strength: clampStrength(f?.strength) }))
+      .filter((f: any) => f.fact.length > 0)
+      .slice(0, 6);
+
+    if (!shouldRespond) {
+      reply = '';
+    }
+
+    // Local cleanup (reply only). Typos injection happens later in the worker.
+    if (shouldRespond) {
+      reply = reply.toLowerCase();
+      reply = reply.replace(/[^\w\s,.'?!-]/g, '');
+      reply = reply.trim();
+
+      const sentences = reply.split(/[.!?]+/).filter((s: string) => s.trim());
       if (sentences.length > 2) {
-        text = sentences.slice(0, 2).join('. ') + '.';
+        reply = sentences.slice(0, 2).join('. ') + '.';
+      }
+
+      if (reply.trim() === 'gemmie 🇺🇸') {
+        reply = '';
       }
     }
-    
-    // Add probabilistic typos to make responses more natural
-    let textWithTypos = addProbabilisticTypos(text);
-    console.log('🔤 Text with probabilistic typos:', textWithTypos);
-    
-    // Prevent gemmie from sending just "gemmie 🇺🇸"
-    if (textWithTypos.trim() === 'gemmie 🇺🇸') {
-      textWithTypos = '(╯°□°）╯︵ ┻━┻';
-    }
-    
-    return textWithTypos || '¯\_( ͡~ ͜ʖ ͡°)_/¯';
+
+    return {
+      shouldRespond,
+      reply,
+      memoryUpdate: { topics, selfFacts },
+    };
   } catch (error) {
     console.error('OpenRouter API error (with context):', error);
-    // Fallback responses
-    const fallbacks = [
-      '(._.)',
-    ];
-    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    return {
+      shouldRespond: false,
+      reply: '',
+      memoryUpdate: { topics: [], selfFacts: [] },
+    };
   }
 }

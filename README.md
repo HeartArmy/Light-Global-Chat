@@ -143,7 +143,7 @@ A high-level overview of the project directory:
 ├── models/                   # Database schemas (Mongoose models)
 │   └── Message.ts
 ├── types/                    # TypeScript interfaces and types
-└── middleware.ts             # Next.js middleware for IP-based logic
+└── proxy.ts             # Next.js middleware for IP-based logic
 ```
 
 -----

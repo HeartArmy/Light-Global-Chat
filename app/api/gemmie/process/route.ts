@@ -4,6 +4,7 @@ import { generateGemmieResponse, generateGemmieResponseForContext, sendGemmieMes
 import { getPusherInstance } from '@/lib/pusher';
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
+import GemmieMemory from '@/models/GemmieMemory';
 import DeletedMessageByGemmie from '@/models/DeletedMessageByGemmie';
 import EditedMessageByGemmie from '@/models/EditedMessageByGemmie';
 import mongoose from 'mongoose'; 
@@ -30,7 +31,7 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
   const mostRecentMessage = recentMessages[0].content;
   
   // Create comprehensive context showing the full conversation flow with country flags and timestamps
-  const contextMessages = recentMessages.slice(0, 20).map((msg, index) => {
+  const contextMessages = recentMessages.slice(0, 10).map((msg, index) => {
     const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
     return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
   }).join('\n');
@@ -72,9 +73,9 @@ Respond with JSON only:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: '',
+        model: 'mistralai/mistral-small-3.2-24b-instruct',
         messages: [{ role: 'user', content: similarityPrompt }],
-        max_tokens: 15000,
+        max_tokens: 500,
         temperature: 0.1
       })
     });
@@ -209,23 +210,25 @@ export async function POST(request: NextRequest) {
 
     // Message Age Check - Prevent processing old messages
     const MAX_MESSAGE_AGE_SECONDS = 20;
-    const messageAge = Math.floor(Date.now() / 1000) - parsedBody.timestamp;
+    const messageTimestamp =
+      typeof parsedBody.timestamp === 'number'
+        ? parsedBody.timestamp
+        : Math.floor(Date.now() / 1000);
+    const messageAge = Math.floor(Date.now() / 1000) - messageTimestamp;
     if (messageAge > MAX_MESSAGE_AGE_SECONDS) {
       console.log(`⚠️ Message too old (${messageAge}s), skipping`);
       return NextResponse.json({ success: true, skipped: true, reason: 'message-too-old' });
     }
 
-    // Message Hash Check - Prevent duplicate processing
-    const { createMessageHash, isMessageAlreadyProcessed, markMessageAsProcessed } = await import('@/lib/gemmie-timer');
-    const messageHash = createMessageHash(userName, userMessage, parsedBody.timestamp);
-    
-    if (await isMessageAlreadyProcessed(messageHash)) {
+    // Message Hash Check - Prevent duplicate processing (atomic)
+    const { createMessageHash, tryMarkMessageAsProcessed } = await import('@/lib/gemmie-timer');
+    const messageHash = createMessageHash(userName, userMessage, messageTimestamp);
+    const acquired = await tryMarkMessageAsProcessed(messageHash);
+
+    if (!acquired) {
       console.log(`⚠️ Message already processed (hash: ${messageHash}), skipping`);
       return NextResponse.json({ success: true, skipped: true, reason: 'already-processed' });
     }
-    
-    // Mark this message as processed
-    await markMessageAsProcessed(messageHash);
 
     console.log('🤖 Starting delayed Gemmie response process for:', userName);
 
@@ -245,6 +248,34 @@ export async function POST(request: NextRequest) {
       { userName, userMessage, userCountry, timestamp: currentTimestamp },
       ...recentQueuedMessages
     ];
+
+    // Helper: even if we skip sending, we still need to drain any queued messages
+    // that arrived during processing and schedule the next job, otherwise the chat can stall.
+    const scheduleNextFromQueue = async (): Promise<void> => {
+      const {
+        getAndClearGemmieQueue: getQueueAgain,
+        resetGemmieTimer: scheduleNextJob,
+        queueGemmieMessage: queueGemmieMessageFn,
+      } = await import('@/lib/gemmie-timer');
+
+      const newlyQueuedMessages = await getQueueAgain();
+      if (newlyQueuedMessages.length === 0) return;
+
+      console.log(`📥 Found ${newlyQueuedMessages.length} new message(s) in queue. Scheduling next job immediately.`);
+
+      const nextMessageToProcess = newlyQueuedMessages[0]; // oldest first
+      await scheduleNextJob(
+        nextMessageToProcess.userName,
+        nextMessageToProcess.userMessage,
+        nextMessageToProcess.userCountry,
+        nextMessageToProcess.timestamp
+      );
+
+      const remainingMessages = newlyQueuedMessages.slice(1);
+      for (const remainingMsg of remainingMessages) {
+        await queueGemmieMessageFn(remainingMsg.userName, remainingMsg.userMessage, remainingMsg.userCountry);
+      }
+    };
     
     console.log(`🧠 Processing ${allMessagesForContext.length} messages (${recentQueuedMessages.length} recent queued, ${queuedMessagesAtStart.length - recentQueuedMessages.length} old messages ignored)`);
 
@@ -258,19 +289,108 @@ export async function POST(request: NextRequest) {
 
     const contextString = allMessagesForContext.map(formatMessageWithContext).join('\n---\n');
 
-    // Generate response using all messages as context
-    const response = await generateGemmieResponseForContext(
+    // ---- Memory-aware generation (main LLM call) ----
+    const userMemoryKey = `${userName.toLowerCase()}:${userCountry}`;
+    const gemmieSelfMemoryKey = 'gemmie:self';
+
+    const userMemoryDoc: any = await GemmieMemory.findOne({ key: userMemoryKey }).lean();
+    const gemmieSelfMemoryDoc: any = await GemmieMemory.findOne({ key: gemmieSelfMemoryKey }).lean();
+
+    const userTopics = (userMemoryDoc?.topics || []).slice(0, 3).map((t: any) => String(t.topic));
+    const gemmieSelfFacts = (gemmieSelfMemoryDoc?.selfFacts || []).slice(0, 3).map((f: any) => String(f.fact));
+
+    const userMemoryBlock = userTopics.length ? userTopics.map((t: string) => `- ${t}`).join('\n') : 'none';
+    const gemmieSelfMemoryBlock = gemmieSelfFacts.length ? gemmieSelfFacts.map((f: string) => `- ${f}`).join('\n') : 'none';
+
+    const applyMemoryUpdate = async (
+      memoryUpdate: { topics: Array<{ topic: string; strength: number }>; selfFacts: Array<{ fact: string; strength: number }> }
+    ): Promise<void> => {
+      const now = new Date();
+
+      const mergeByLower = (
+        existing: any[],
+        incoming: any[],
+        getExistingKey: (x: any) => string,
+        getIncomingKey: (x: any) => string,
+        getStrength: (x: any) => number,
+        keyField: 'topics' | 'selfFacts',
+      ): any[] => {
+        const out = [...existing];
+        for (const inc of incoming) {
+          const incKey = getIncomingKey(inc).toLowerCase();
+          const idx = out.findIndex(e => getExistingKey(e).toLowerCase() === incKey);
+          if (idx >= 0) {
+            out[idx].strength = Math.max(Number(out[idx].strength || 0), Number(getStrength(inc)));
+            out[idx].lastMentionedAt = now;
+          } else {
+            out.push({
+              ...(keyField === 'topics'
+                ? { topic: String(inc.topic), strength: getStrength(inc) }
+                : { fact: String(inc.fact), strength: getStrength(inc) }),
+              lastMentionedAt: now,
+            });
+          }
+        }
+        // cap growth: keep strongest/recent
+        out.sort((a, b) => (Number(b.strength) - Number(a.strength)) || (Number(new Date(b.lastMentionedAt).getTime()) - Number(new Date(a.lastMentionedAt).getTime())));
+        return out.slice(0, 8);
+      };
+
+      if (memoryUpdate?.topics?.length) {
+        const doc: any = (await GemmieMemory.findOne({ key: userMemoryKey }).exec()) || new GemmieMemory({ key: userMemoryKey });
+        doc.lastSeenAt = now;
+        doc.topics = mergeByLower(
+          doc.topics || [],
+          memoryUpdate.topics,
+          (x: any) => String(x.topic),
+          (x: any) => String(x.topic),
+          (x: any) => Number(x.strength),
+          'topics'
+        );
+        await doc.save();
+      }
+
+      if (memoryUpdate?.selfFacts?.length) {
+        const doc: any = (await GemmieMemory.findOne({ key: gemmieSelfMemoryKey }).exec()) || new GemmieMemory({ key: gemmieSelfMemoryKey });
+        doc.lastSeenAt = now;
+        doc.selfFacts = mergeByLower(
+          doc.selfFacts || [],
+          memoryUpdate.selfFacts,
+          (x: any) => String(x.fact),
+          (x: any) => String(x.fact),
+          (x: any) => Number(x.strength),
+          'selfFacts'
+        );
+        await doc.save();
+      }
+    };
+
+    const gen = await generateGemmieResponseForContext(
       userName,
       contextString,
       userCountry,
-      allMessagesForContext
+      allMessagesForContext,
+      { userMemoryBlock, gemmieSelfMemoryBlock }
     );
-    console.log('💬 Generated response:', response);
+
+    console.log('💬 Generated gemmie JSON:', {
+      shouldRespond: gen.shouldRespond,
+      replyPreview: gen.reply?.slice(0, 80),
+    });
+
+    await applyMemoryUpdate(gen.memoryUpdate);
+
+    if (!gen.shouldRespond || !gen.reply) {
+      const { setTypingIndicator } = await import('@/lib/gemmie-timer');
+      await setTypingIndicator(false, 'gemmie');
+      await scheduleNextFromQueue();
+      return NextResponse.json({ success: true, skipped: true, reason: 'shouldRespond-false' });
+    }
 
     // Track if typos were added for conditional editing
-    const originalResponse = response;
-    const responseWithTypos = addProbabilisticTypos(response);
-    const hasTypos = responseWithTypos !== response;
+    const originalResponse = gen.reply;
+    const responseWithTypos = addProbabilisticTypos(gen.reply);
+    const hasTypos = responseWithTypos !== gen.reply;
     
     if (hasTypos) {
       console.log('🔤 Typos detected, message will go through editing logic');
@@ -312,36 +432,33 @@ export async function POST(request: NextRequest) {
       .lean();
 
     //Check if this response is too similar to recent Gemmie messages
-    const similarityCheck = await checkResponseSimilarity(response, gemmieMessages);
+    const similarityCheck = await checkResponseSimilarity(originalResponse, gemmieMessages);
     
     if (similarityCheck.shouldSkip) {
       console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
       console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
+      const { setTypingIndicator } = await import('@/lib/gemmie-timer');
+      await setTypingIndicator(false, 'gemmie');
+      await scheduleNextFromQueue();
       return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
     }
 
-    // 11-second cooldown check - prevent back-to-back Gemmie messages
-    const COOLDOWN_SECONDS = 11;
-    const twentySecondsAgo = new Date(Date.now() - COOLDOWN_SECONDS * 1000);
-    const mostRecentGemmieMessage = await Message.findOne({
-      userName: 'gemmie',
-      timestamp: { $gte: twentySecondsAgo }
-    })
-      .sort({ timestamp: -1 })
-      .select('timestamp')
-      .lean();
-    
-    if (mostRecentGemmieMessage) {
-      const secondsSinceLastMessage = (Date.now() - new Date(mostRecentGemmieMessage.timestamp).getTime()) / 1000;
-      console.log(`⏰ Cooldown check: Last Gemmie message was ${secondsSinceLastMessage.toFixed(1)}s ago (cooldown: ${COOLDOWN_SECONDS}s)`);
-      
-      if (secondsSinceLastMessage < COOLDOWN_SECONDS) {
-        const remainingCooldown = COOLDOWN_SECONDS - secondsSinceLastMessage;
-        console.log(`⚠️ Gemmie is in cooldown (${remainingCooldown.toFixed(1)}s remaining), skipping message send`);
-        return NextResponse.json({ success: true, skipped: true, reason: 'cooldown' });
-      }
-    } else {
-      console.log('✅ No recent Gemmie messages found, cooldown check passed');
+    // Hard min-gap between Gemmie sends (race-proof via Redis lock)
+    const COOLDOWN_SECONDS = 11; // minimum gap you want
+    const SEND_COOLDOWN_LOCK_KEY = 'gemmie:send-cooldown';
+    const lockTTL = COOLDOWN_SECONDS + 1; // extra buffer to avoid suspiciously close timestamps
+
+    const lockAcquired = await redisClient.default.set(SEND_COOLDOWN_LOCK_KEY, '1', {
+      ex: lockTTL,
+      nx: true,
+    });
+
+    if (lockAcquired !== 'OK') {
+      console.log('⏰ Gemmie is in cooldown (Redis lock), skipping message send');
+      const { setTypingIndicator } = await import('@/lib/gemmie-timer');
+      await setTypingIndicator(false, 'gemmie');
+      await scheduleNextFromQueue();
+      return NextResponse.json({ success: true, skipped: true, reason: 'cooldown' });
     }
 
     // Clear typing indicator before sending message
@@ -371,29 +488,9 @@ export async function POST(request: NextRequest) {
     await pusher.trigger('chat-room', 'new-message', gemmieMessage);
     console.log('✅ Delayed Gemmie response sent for the initial message(s).');
     
-    // Check for new messages that arrived during processing and schedule next job immediately
-    // This allows the next job to start while editing happens concurrently
-    const { getAndClearGemmieQueue: getQueueAgain1, resetGemmieTimer: scheduleNextJob, queueGemmieMessage: queueGemmieMessage1 } = await import('@/lib/gemmie-timer');
-    const newlyQueuedMessages1 = await getQueueAgain1();
-    
-    if (newlyQueuedMessages1.length > 0) {
-      console.log(`📥 Found ${newlyQueuedMessages1.length} new message(s) in queue after sending message. Scheduling next job immediately.`);
-      
-      const nextMessageToProcess = newlyQueuedMessages1[0]; // Process the oldest one next
-      console.log('🔄 Scheduling next QStash job for:', nextMessageToProcess.userName);
-      
-      // Schedule the next job immediately after sending the current message
-      await scheduleNextJob(nextMessageToProcess.userName, nextMessageToProcess.userMessage, nextMessageToProcess.userCountry);
-      
-      // Re-queue the remaining messages (if any)
-      const remainingMessages = newlyQueuedMessages1.slice(1);
-      for (const remainingMsg of remainingMessages) {
-        await queueGemmieMessage1(remainingMsg.userName, remainingMsg.userMessage, remainingMsg.userCountry);
-        console.log(`📝 Re-queued remaining message from: ${remainingMsg.userName}`);
-      }
-      
-      console.log('✅ Next QStash job scheduled immediately. Editing will happen concurrently.');
-    }
+    // Check for new messages that arrived during processing and schedule next job immediately.
+    // This allows the next job to start while editing happens concurrently.
+    await scheduleNextFromQueue();
 
     // Check Gemmie's recent messages for repetition and delete if needed
     // console.log('🔍 Checking Gemmie messages for repetition...');
@@ -565,7 +662,6 @@ IMPORTANT RULES:
 - ONLY edit if there are clear typos or grammar errors that need fixing
 
 Examples of CORRECT edits:
-- "everytime" → "every time" (typo fix)
 - "alot" → "a lot" (typo fix)
 - "dont" → "don't" (grammar fix)
 - "teh" → "the" (typo fix)
@@ -597,10 +693,11 @@ Allowed indices: [1] or [2] only!`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'deepseek/deepseek-v3.2',
+            model: 'google/gemma-4-26b-a4b-it:free',
             messages: [{ role: 'user', content: reviewPrompt }],
-            max_tokens: 15000,
-            temperature: 0.1
+            max_tokens: 300,
+            temperature: 0.1,
+            response_format: { type: "json_object" }
           })
         });
 
@@ -619,8 +716,10 @@ Allowed indices: [1] or [2] only!`;
             if (jsonMatch) {
               console.log('✅ Found JSON object in response:', jsonMatch[0]);
               const parsed = JSON.parse(jsonMatch[0]);
-              editIndex = parsed.editIndex !== null ? parseInt(parsed.editIndex) : null;
-              newContent = parsed.newContent || null;
+              editIndex = typeof parsed.editIndex === 'number' ? parsed.editIndex : null;
+newContent = typeof parsed.newContent === 'string' && parsed.newContent.length > 0 
+  ? parsed.newContent 
+  : null;
               rawJsonExtracted = true;
               console.log('✅ Successfully parsed JSON:', { editIndex, newContent });
             } else {

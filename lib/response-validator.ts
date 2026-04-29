@@ -131,14 +131,14 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-v3.2',
+        model: 'google/gemma-4-26b-a4b-it:free',
         messages: [
           {
             role: 'user',
             content: validationPrompt
           }
         ],
-        max_tokens: 15000,
+        max_tokens: 500,
         temperature: 0.1 // Low temperature for consistent cleaning
       })
     });

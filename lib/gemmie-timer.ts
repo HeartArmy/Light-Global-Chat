@@ -23,7 +23,12 @@ const JOB_ACTIVE_TTL = 300; // 5 minutes - covers full processing including clea
  * Resets the Gemmie response timer when a user sends a message
  * If a job is already scheduled, it will be cancelled and rescheduled
  */
-export async function resetGemmieTimer(userName: string, userMessage: string, userCountry: string): Promise<void> {
+export async function resetGemmieTimer(
+  userName: string,
+  userMessage: string,
+  userCountry: string,
+  sourceTimestampSeconds?: number
+): Promise<void> {
   console.log('⏰ Resetting Gemmie timer...');
   
   // Get the current timestamp
@@ -43,8 +48,9 @@ export async function resetGemmieTimer(userName: string, userMessage: string, us
     await redis.del(JOB_SCHEDULED_KEY);
   }
   
-  // Schedule the new delayed response using QStash
-  await scheduleDelayedResponse(userName, userMessage, userCountry);
+  // Schedule the new delayed response using QStash.
+  // Use sourceTimestampSeconds when provided so downstream dedupe/hashing is stable.
+  await scheduleDelayedResponse(userName, userMessage, userCountry, sourceTimestampSeconds ?? now);
   
   console.log('✅ Gemmie timer reset and response scheduled');
 }
@@ -105,7 +111,12 @@ export async function getAndClearGemmieQueue(): Promise<any[]> {
 /**
  * Schedules the delayed Gemmie response via QStash 
  */
-async function scheduleDelayedResponse(userName: string, userMessage: string, userCountry: string): Promise<void> {
+async function scheduleDelayedResponse(
+  userName: string,
+  userMessage: string,
+  userCountry: string,
+  sourceTimestampSeconds: number
+): Promise<void> {
   // Import QStash here to avoid circular dependencies
   const qstash = await import('@/lib/qstash');
   console.log('🚀 Attempting to schedule QStash message for:', userName, 'with delay:', GEMMIE_DELAY, 's');
@@ -125,7 +136,8 @@ async function scheduleDelayedResponse(userName: string, userMessage: string, us
   const payload = {
     userName,
     userMessage,
-    userCountry
+    userCountry,
+    timestamp: sourceTimestampSeconds,
   };
   console.log('📦 QStash payload:', JSON.stringify(payload));
 
@@ -400,6 +412,25 @@ export async function markMessageAsProcessed(messageHash: string): Promise<void>
     console.log(`📍 Marked message as processed: ${messageHash}`);
   } catch (error) {
     console.error('❌ Error marking message as processed:', error);
+  }
+}
+
+/**
+ * Atomically marks a message as processed.
+ * @returns true if this call acquired the lock (message not processed yet), false otherwise.
+ */
+export async function tryMarkMessageAsProcessed(messageHash: string): Promise<boolean> {
+  try {
+    const result = await redis.set(
+      `${GEMMIE_PROCESSED_MESSAGES_KEY}:${messageHash}`,
+      '1',
+      { ex: 600, nx: true } // 10 minutes TTL
+    );
+    // Upstash/Redis returns 'OK' on successful set with nx:true
+    return result === 'OK';
+  } catch (error) {
+    console.error('❌ Error atomically marking message as processed:', error);
+    return false;
   }
 }
 

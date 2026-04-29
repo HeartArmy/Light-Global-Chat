@@ -167,7 +167,10 @@ export default function ChatRoomClient() {
 
     // Listen for new messages
     channel.bind('new-message', (message: Message) => {
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => {
+        if (prev.some((m) => m._id === message._id)) return prev; // defensive dedupe
+        return [...prev, message];
+      });
 
       // Increment unread count if tab is hidden
       if (document.hidden) {

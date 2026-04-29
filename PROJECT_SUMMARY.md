@@ -128,7 +128,7 @@ A fully-featured, real-time global chat room application built with modern web t
 ├── types/
 │   └── index.ts              # TypeScript type definitions
 │
-├── middleware.ts             # Security headers and CORS
+├── proxy.ts             # Security headers and CORS
 ├── next.config.js            # Next.js configuration
 ├── tailwind.config.ts        # Tailwind design system
 └── vercel.json               # Vercel deployment config
