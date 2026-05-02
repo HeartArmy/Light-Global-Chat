@@ -263,10 +263,11 @@ function MessageItem({
           {/* Message Bubble */}
           <div className="relative message-bubble">
             <div
-              className="rounded-2xl px-2.5 py-1 shadow-sm"
+              className="rounded-2xl px-2.5 py-1 sm:shadow-sm"
               style={{
                 background: isOwn ? 'var(--accent)' : 'var(--surface)',
                 color: isOwn ? '#ffffff' : 'var(--text-primary)',
+                border: '1px solid var(--border)',
               }}
             >
 
@@ -344,7 +345,7 @@ function MessageItem({
                             <img
                               src={attachment.url}
                               alt={attachment.name}
-                              className="rounded-md max-w-full cursor-pointer hover:opacity-90 transition-opacity duration-200"
+                              className="rounded-md max-w-full cursor-pointer sm:hover:opacity-90 sm:transition-opacity sm:duration-200"
                               style={{ maxHeight: '198px', objectFit: 'cover' }}
                               onClick={() => handleMediaClick(attachment.url, attachment.name, 'image')}
                               title="Click to view full size"
@@ -458,7 +459,7 @@ function MessageItem({
       {/* Delete Confirmation - Rendered via Portal to avoid scroll issues */}
       {showDeleteConfirm &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 bg-black/60">
             <div
               className="p-5 rounded-md max-w-xs w-full"
               style={{

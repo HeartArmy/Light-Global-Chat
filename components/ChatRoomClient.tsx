@@ -734,9 +734,8 @@ export default function ChatRoomClient() {
           pointerEvents: 'none',
           color: 'var(--text-secondary)',
           fontSize: '12px',
-          background: 'rgba(0, 0, 0, 0.05)',
-          backdropFilter: 'blur(2px)',
-          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          background: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
           borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
         }}
         title="Someone is typing..."

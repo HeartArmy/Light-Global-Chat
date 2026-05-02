@@ -122,8 +122,6 @@ export default function MessageList({
       className="flex-1 overflow-y-auto"
       style={{
         background: 'var(--background)',
-        // Enable GPU acceleration for smoother scrolling on mobile
-        willChange: 'transform',
         WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
       }}
     >

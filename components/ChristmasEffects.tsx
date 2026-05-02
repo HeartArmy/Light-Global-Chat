@@ -15,16 +15,22 @@ export default function ChristmasEffects() {
 
   useEffect(() => {
     const christmasSeason = isChristmasSeason();
-    
+
     // Add or remove christmas-season class on body
     if (christmasSeason) {
       document.body.classList.add('christmas-season');
     } else {
       document.body.classList.remove('christmas-season');
     }
-    
+
     // Don't run Christmas effects outside of December 15-31
     if (!christmasSeason) {
+      return;
+    }
+
+    // Disable Christmas effects on mobile for performance
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
       return;
     }
     
