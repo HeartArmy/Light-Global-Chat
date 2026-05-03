@@ -297,16 +297,19 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
         // On desktop, Enter sends message (Shift+Enter for new line)
         if (!e.shiftKey) {
           e.preventDefault();
+          // Capture replyTo synchronously BEFORE setTimeout to avoid Firefox race condition
+          // Firefox's setTimeout can delay execution until after state changes
+          const replyToId = replyingTo?._id;
           // Use setTimeout to ensure Firefox handles the state update properly
           setTimeout(() => {
-            handleSend();
+            handleSend(replyToId);
           }, 0);
         }
       }
     }
   };
 
-  const handleSend = async () => {
+  const handleSend = async (capturedReplyToId?: string) => {
     const trimmedContent = content.trim();
     // Allow sending if there's content OR attachments
     if (!trimmedContent && attachments.length === 0) return;
@@ -314,13 +317,15 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
     // Clear input immediately - UI updates right away
     setContent('');
     setAttachments([]);
-    
+
     // Clear typing indicator when sending
     handleTypingStop();
-    
+
     // Send message immediately without waiting for response
-    onSend(trimmedContent, attachments, replyingTo?._id);
-    
+    // Use captured replyToId from Firefox keydown handler, or fall back to current state for button clicks
+    const replyToId = capturedReplyToId !== undefined ? capturedReplyToId : replyingTo?._id;
+    onSend(trimmedContent, attachments, replyToId);
+
     // Keep textarea focused on mobile after sending to prevent keyboard from collapsing
     if (isMobile && textareaRef.current) {
       textareaRef.current.focus();
@@ -791,7 +796,7 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
         </div>
 
         <button
-          onClick={handleSend}
+          onClick={() => handleSend()}
           disabled={(!content.trim() && attachments.length === 0) || isOverLimit || isUploading}
           className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold transition-all duration-fast disabled:opacity-50 hover:scale-110 active:scale-95 mb-2"
           style={{
