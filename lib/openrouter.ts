@@ -366,6 +366,8 @@ QUOTE REPLY FORMAT (IMPORTANT):
 - If the message contains "(replying to USERNAME: quoted content)", this means the user is QUOTE REPLYING to a previous message.
 - The "quoted content" is what the previous message said.
 - When responding to a quote reply, acknowledge the quoted content if relevant to the conversation.
+- If the quoted content is "[image/attachment]", this means the user is replying to an IMAGE-ONLY message with no text.
+- When replying to an image-only message, DESCRIBE what you see in the image and answer the user's question about it.
 
 Important context notes:
 - Timestamps are in ISO format: YYYY-MM-DDTHH:MM:SS.sssZ
@@ -613,6 +615,8 @@ QUOTE REPLY FORMAT (IMPORTANT):
 - If a message contains "(replying to USERNAME: quoted content)", this means the user is QUOTE REPLYING to a previous message.
 - The "quoted content" is what the previous message said.
 - When responding to a quote reply, acknowledge the quoted content if relevant to the conversation.
+- If the quoted content is "[image/attachment]", this means the user is replying to an IMAGE-ONLY message with no text.
+- When replying to an image-only message, DESCRIBE what you see in the image and answer the user's question about it.
 
 messages leading up to this response (most recent last):
 ${allMessagesContext}${dbContext}
