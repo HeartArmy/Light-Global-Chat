@@ -387,6 +387,11 @@ ${recentMessages}
 Current user: ${userName} ${userFlag} from ${userCountry} [${actualTimestamp}]
 Their message: "${userMessage}"
 
+QUOTE REPLY FORMAT (IMPORTANT):
+- If the message contains "(replying to USERNAME: quoted content)", this means the user is QUOTE REPLYING to a previous message.
+- The "quoted content" is what the previous message said.
+- When responding to a quote reply, acknowledge the quoted content if relevant to the conversation.
+
 Important context notes:
 - Timestamps are in ISO format: YYYY-MM-DDTHH:MM:SS.sssZ
 - All timestamps are in UTC
@@ -628,6 +633,11 @@ ${memoryUserBlock}
 
 Current memory for GEMMIE-self (self facts only):
 ${memorySelfBlock}
+
+QUOTE REPLY FORMAT (IMPORTANT):
+- If a message contains "(replying to USERNAME: quoted content)", this means the user is QUOTE REPLYING to a previous message.
+- The "quoted content" is what the previous message said.
+- When responding to a quote reply, acknowledge the quoted content if relevant to the conversation.
 
 messages leading up to this response (most recent last):
 ${allMessagesContext}${dbContext}
