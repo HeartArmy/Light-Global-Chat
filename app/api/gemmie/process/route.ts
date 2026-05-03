@@ -522,21 +522,26 @@ export async function POST(request: NextRequest) {
 
     // Send to chat
     console.log('📤 Sending Gemmie message to chat...');
-    await sendGemmieMessage(responseWithTypos);
+    const createdMessage = await sendGemmieMessage(responseWithTypos);
 
-    // Trigger Pusher event for real-time update
+    if (!createdMessage) {
+      console.error('❌ Failed to create Gemmie message');
+      return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
+    }
+
+    // Trigger Pusher event for real-time update using the REAL ObjectId
     const pusher = getPusherInstance();
     const gemmieMessage = {
-      _id: new Date().getTime().toString(), // Temporary ID
-      content: responseWithTypos,
-      userName: 'gemmie',
-      userCountry: 'US', // Default country for Gemmie
-      timestamp: new Date(),
-      attachments: [],
-      replyTo: null,
-      reactions: [],
-      edited: false,
-      editedAt: null
+      _id: createdMessage._id, // Real MongoDB ObjectId
+      content: createdMessage.content,
+      userName: createdMessage.userName,
+      userCountry: createdMessage.userCountry,
+      timestamp: createdMessage.timestamp,
+      attachments: createdMessage.attachments,
+      replyTo: createdMessage.replyTo,
+      reactions: createdMessage.reactions,
+      edited: createdMessage.edited,
+      editedAt: createdMessage.editedAt
     };
 
     await pusher.trigger('chat-room', 'new-message', gemmieMessage);

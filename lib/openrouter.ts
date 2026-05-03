@@ -489,12 +489,12 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
 }
 
 // Send Gemmie's message to the chat
-export async function sendGemmieMessage(content: string): Promise<void> {
+export async function sendGemmieMessage(content: string): Promise<{ _id: string; content: string; userName: string; userCountry: string; timestamp: Date; attachments: any[]; replyTo: null; reactions: any[]; edited: boolean; editedAt: null } | null> {
   try {
     await connectDB();
-    
+
     // Create Gemmie's message
-    await Message.create({
+    const message = await Message.create({
       content,
       userName: 'gemmie',
       userCountry: 'US', // USA flag
@@ -504,9 +504,24 @@ export async function sendGemmieMessage(content: string): Promise<void> {
     });
 
     // Don't trigger notifications for Gemmie's messages
-    console.log('Gemmie sent message:', content);
+    console.log('Gemmie sent message:', content, 'with ID:', message._id.toString());
+
+    // Return the created message with its real ObjectId for Pusher events
+    return {
+      _id: message._id.toString(),
+      content: message.content,
+      userName: message.userName,
+      userCountry: message.userCountry,
+      timestamp: message.timestamp,
+      attachments: message.attachments || [],
+      replyTo: null,
+      reactions: [],
+      edited: false,
+      editedAt: null
+    };
   } catch (error) {
     console.error('Error sending Gemmie message:', error);
+    return null;
   }
 }
 

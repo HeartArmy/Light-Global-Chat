@@ -300,55 +300,87 @@ export async function POST(request: NextRequest) {
           // If job set active, reset the timer (which will schedule a new QStash job)
           // Include reply context if this is a quote reply
           let messageWithContext = content || '[attachment]';
+          let replyImageUrl: string | null = null;
+
           if (replyTo) {
             try {
-              // Fetch the quoted message to include in context
-              const quotedMessage = await Message.findById(replyTo).select('userName content').lean();
+              // Fetch the quoted message to include in context (including attachments)
+              const quotedMessage = await Message.findById(replyTo).select('userName content attachments').lean();
               if (quotedMessage) {
-                messageWithContext = `${content || '[attachment]'} (replying to ${quotedMessage.userName}: ${quotedMessage.content})`;
-                console.log('📝 Quote reply context added for:', quotedMessage.userName);
+                // Build context with quoted message content
+                const quotedContent = quotedMessage.content || '[image/attachment]';
+                messageWithContext = `${content || '[attachment]'} (replying to ${quotedMessage.userName}: ${quotedContent})`;
+
+                // Check if quoted message has images to include in context
+                const quotedImages = quotedMessage.attachments?.filter((a: any) => a.type === 'image') || [];
+                if (quotedImages.length > 0) {
+                  replyImageUrl = quotedImages[0].url;
+                  console.log('📝 Quote reply with image context from quoted message:', quotedMessage.userName, 'Image URL:', replyImageUrl);
+                } else {
+                  console.log('📝 Quote reply context added for:', quotedMessage.userName);
+                }
               }
             } catch (error) {
               console.error('❌ Failed to fetch quoted message for context:', error);
             }
           }
-          
+
           await resetGemmieTimer(userName, messageWithContext, countryCode);
-          
+
           // Schedule Gemmie typing indicator after delay
           scheduleGemmieTypingIndicator(userName, messageWithContext, countryCode);
-          
-          // Store the first image URL for AI processing if available (do this AFTER resetGemmieTimer)
+
+          // Store the first image URL for AI processing - from current message OR quoted message
           const firstImage = attachments.find(attachment => attachment.type === 'image');
           if (firstImage) {
-            console.log('📸 Storing selected image URL for AI processing:', firstImage.url);
+            console.log('📸 Storing selected image URL for AI processing (current message):', firstImage.url);
             await setSelectedImageUrl(firstImage.url);
+          } else if (replyImageUrl) {
+            // If current message has no images but quoted message does, use the quoted image
+            console.log('📸 Storing selected image URL for AI processing (quoted message):', replyImageUrl);
+            await setSelectedImageUrl(replyImageUrl);
           }
         } else {
           // If job already active, queue this message
           // Include reply context if this is a quote reply
           let messageWithContext = content || '[attachment]';
+          let replyImageUrl: string | null = null;
+
           if (replyTo) {
             try {
-              // Fetch the quoted message to include in context
-              const quotedMessage = await Message.findById(replyTo).select('userName content').lean();
+              // Fetch the quoted message to include in context (including attachments)
+              const quotedMessage = await Message.findById(replyTo).select('userName content attachments').lean();
               if (quotedMessage) {
-                messageWithContext = `${content || '[attachment]'} (replying to ${quotedMessage.userName}: ${quotedMessage.content})`;
-                console.log('📝 Quote reply context added for:', quotedMessage.userName);
+                // Build context with quoted message content
+                const quotedContent = quotedMessage.content || '[image/attachment]';
+                messageWithContext = `${content || '[attachment]'} (replying to ${quotedMessage.userName}: ${quotedContent})`;
+
+                // Check if quoted message has images to include in context
+                const quotedImages = quotedMessage.attachments?.filter((a: any) => a.type === 'image') || [];
+                if (quotedImages.length > 0) {
+                  replyImageUrl = quotedImages[0].url;
+                  console.log('📝 Quote reply with image context from quoted message (queued):', quotedMessage.userName, 'Image URL:', replyImageUrl);
+                } else {
+                  console.log('📝 Quote reply context added for (queued):', quotedMessage.userName);
+                }
               }
             } catch (error) {
               console.error('❌ Failed to fetch quoted message for context:', error);
             }
           }
-          
+
           await queueGemmieMessage(userName, messageWithContext, countryCode);
           console.log('📝 Message queued as a Gemmie job is already active.');
-          
-          // Store the first image URL for AI processing if available
+
+          // Store the first image URL for AI processing - from current message OR quoted message
           const firstImage = attachments.find(attachment => attachment.type === 'image');
           if (firstImage) {
-            console.log('📸 Storing selected image URL for AI processing:', firstImage.url);
+            console.log('📸 Storing selected image URL for AI processing (current message, queued):', firstImage.url);
             await setSelectedImageUrl(firstImage.url);
+          } else if (replyImageUrl) {
+            // If current message has no images but quoted message does, use the quoted image
+            console.log('📸 Storing selected image URL for AI processing (quoted message, queued):', replyImageUrl);
+            await setSelectedImageUrl(replyImageUrl);
           }
         }
       } else {
