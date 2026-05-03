@@ -219,61 +219,36 @@ function getCountryFlag(countryCode: string, userName?: string): string {
   return String.fromCodePoint(...codePoints);
 }
 
-// Get current date and time information from WorldTimeAPI (accurate, free, no key needed)
-async function getCurrentDateTimeInfo(): Promise<string> {
-  try {
-    const response = await fetch('http://worldtimeapi.org/api/timezone/America/Los_Angeles', {
-      signal: AbortSignal.timeout(3000)
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Time API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    const now = new Date(data.datetime); // Use local Portland datetime
-    const isoString = now.toISOString();
-    const day = now.getDay();
-    const date = now.getDate();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
-    const hour = now.getHours();
-    const minute = now.getMinutes().toString().padStart(2, '0');
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    
-    const dayName = dayNames[day];
-    const monthName = monthNames[month - 1];
-    
-    return `${dayName}, ${monthName} ${date}, ${year} ${hour12}:${minute} ${ampm} (Portland, OR) | ISO timestamp: ${isoString}`;
-  } catch (error) {
-    console.log('WorldTimeAPI fetch failed, falling back to local time:', error);
-    // Fallback to local time if API fails - approximate Pacific time
-    const now = new Date();
-    const isoString = now.toISOString();
-    // Convert to Pacific (UTC-7 or UTC-8 roughly)
-    const pacificOffset = 7 * 60 * 60 * 1000; // PDT offset
-    const pacificDate = new Date(now.getTime() - pacificOffset);
-    const day = pacificDate.getUTCDay();
-    const date = pacificDate.getUTCDate();
-    const month = pacificDate.getUTCMonth() + 1;
-    const year = pacificDate.getUTCFullYear();
-    const hour = pacificDate.getUTCHours();
-    const minute = pacificDate.getUTCMinutes().toString().padStart(2, '0');
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    
-    const dayName = dayNames[day];
-    const monthName = monthNames[month - 1];
-    
-    return `${dayName}, ${monthName} ${date}, ${year} ${hour12}:${minute} ${ampm} (Portland, OR, estimated) | ISO timestamp: ${isoString}`;
-  }
+// Get current date and time information for Portland (native, no API needed)
+// Uses Intl.DateTimeFormat which handles timezone and DST automatically
+function getCurrentDateTimeInfo(): string {
+  const now = new Date();
+  const isoString = now.toISOString();
+
+  // Format Portland time using native Intl API - handles America/Los_Angeles timezone and DST
+  const portlandFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  const parts = portlandFormatter.formatToParts(now);
+  const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
+
+  const dayName = getPart('weekday');
+  const monthName = getPart('month');
+  const date = getPart('day');
+  const year = getPart('year');
+  const hour = getPart('hour');
+  const minute = getPart('minute');
+  const dayPeriod = getPart('dayPeriod'); // AM/PM
+
+  return `${dayName}, ${monthName} ${date}, ${year} ${hour}:${minute} ${dayPeriod} (Portland, OR) | ISO timestamp: ${isoString}`;
 }
 
 // Portland, Oregon coordinates
@@ -347,7 +322,7 @@ export async function generateGemmieResponse(
     const userFlag = getCountryFlag(userCountry, userName);
     
     const actualTimestamp = userTimestamp || new Date().toISOString();
-    const currentDateTime = await getCurrentDateTimeInfo();
+    const currentDateTime = getCurrentDateTimeInfo();
     const portlandWeather = await getPortlandWeather();
     
     // Determine model and prompt based on image presence
@@ -561,7 +536,7 @@ Recent chat context (before current batch):
 ${recentMessagesDb}` : '';
 
     // Get current date/time and Portland weather for context
-    const currentDateTime = await getCurrentDateTimeInfo();
+    const currentDateTime = getCurrentDateTimeInfo();
     const portlandWeather = await getPortlandWeather();
 
     // Get selected image URL for AI processing
