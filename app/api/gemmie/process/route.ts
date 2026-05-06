@@ -371,7 +371,12 @@ export async function POST(request: NextRequest) {
       const flag = getCountryFlag(user.userCountry, user.currentName);
       const timeAgo = Math.floor((Date.now() - new Date(user.lastSeenAt).getTime()) / (1000 * 60 * 60)); // hours ago
       const timeStr = timeAgo < 1 ? 'just now' : timeAgo < 24 ? `${timeAgo}h ago` : `${Math.floor(timeAgo / 24)}d ago`;
-      return `- ${user.currentName} ${flag} (${user.userCountry}) - last seen ${timeStr}`;
+      
+      // Include top 2 topics if available
+      const topics = (user.topics || []).slice(0, 2).map((t: any) => t.topic).join(', ');
+      const topicStr = topics ? ` - talked about: ${topics}` : '';
+      
+      return `- ${user.currentName} ${flag} (${user.userCountry}) - last seen ${timeStr}${topicStr}`;
     }).join('\n');
 
     const extractNameChange = (message: string) => {
