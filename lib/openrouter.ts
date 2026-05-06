@@ -611,6 +611,9 @@ ${memoryUserBlock}
 Current memory for GEMMIE-self (self facts only):
 ${memorySelfBlock}
 
+Other active users you may be asked about:
+${memoryContext?.otherUsersMemoryBlock || 'none'}
+
 QUOTE REPLY FORMAT (IMPORTANT):
 - If a message contains "(replying to USERNAME: quoted content)", this means the user is QUOTE REPLYING to a previous message.
 - The "quoted content" is what the previous message said.
