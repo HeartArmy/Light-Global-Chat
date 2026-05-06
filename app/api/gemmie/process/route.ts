@@ -305,6 +305,57 @@ export async function POST(request: NextRequest) {
       return aliasDoc || null;
     };
 
+    // Search for a user in memory by name and optionally country
+    const searchUserMemory = async (searchName: string, searchCountry?: string): Promise<any> => {
+      const nameLower = searchName.toLowerCase();
+      
+      // Try exact match with country first
+      if (searchCountry) {
+        const exactMatch = await GemmieMemory.findOne({
+          key: `${nameLower}:${searchCountry}`
+        }).lean();
+        if (exactMatch) return exactMatch;
+        
+        // Try alias match with country
+        const aliasMatch = await GemmieMemory.findOne({
+          userCountry: searchCountry,
+          knownNames: nameLower
+        }).lean();
+        if (aliasMatch) return aliasMatch;
+      }
+      
+      // If no country specified or no match with country, search by name only
+      const nameMatch = await GemmieMemory.findOne({
+        knownNames: nameLower
+      }).lean();
+      if (nameMatch) return nameMatch;
+      
+      // Try partial name match (contains)
+      const partialMatches = await GemmieMemory.find({
+        knownNames: { $regex: nameLower, $options: 'i' }
+      }).lean();
+      
+      if (partialMatches.length > 0) {
+        // Return the most recently seen match
+        return partialMatches.sort((a, b) => 
+          new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime()
+        )[0];
+      }
+      
+      return null;
+    };
+
+    // Get recent users from memory (excluding gemmie:self)
+    const getRecentUsers = async (limit: number = 10): Promise<any[]> => {
+      const recentUsers = await GemmieMemory.find({
+        key: { $ne: 'gemmie:self' }
+      })
+        .sort({ lastSeenAt: -1 })
+        .limit(limit)
+        .lean();
+      return recentUsers;
+    };
+
     const userMemoryDoc: any = await findUserMemoryDoc();
     const gemmieSelfMemoryDoc: any = await GemmieMemory.findOne({ key: gemmieSelfMemoryKey }).lean();
 
@@ -313,6 +364,15 @@ export async function POST(request: NextRequest) {
 
     const userMemoryBlock = userTopics.length ? userTopics.map((t: string) => `- ${t}`).join('\n') : 'none';
     const gemmieSelfMemoryBlock = gemmieSelfFacts.length ? gemmieSelfFacts.map((f: string) => `- ${f}`).join('\n') : 'none';
+
+    // Get recent users from memory for context
+    const recentUsers = await getRecentUsers(15);
+    const recentUsersBlock = recentUsers.map((user: any) => {
+      const flag = getCountryFlag(user.userCountry, user.currentName);
+      const timeAgo = Math.floor((Date.now() - new Date(user.lastSeenAt).getTime()) / (1000 * 60 * 60)); // hours ago
+      const timeStr = timeAgo < 1 ? 'just now' : timeAgo < 24 ? `${timeAgo}h ago` : `${Math.floor(timeAgo / 24)}d ago`;
+      return `- ${user.currentName} ${flag} (${user.userCountry}) - last seen ${timeStr}`;
+    }).join('\n');
 
     const extractNameChange = (message: string) => {
       const normalized = message.toLowerCase();
@@ -420,7 +480,7 @@ export async function POST(request: NextRequest) {
       contextString,
       userCountry,
       allMessagesForContext,
-      { userMemoryBlock, gemmieSelfMemoryBlock, otherUsersMemoryBlock }
+      { userMemoryBlock, gemmieSelfMemoryBlock, recentUsersBlock }
     );
 
     console.log('💬 Generated gemmie JSON:', {
@@ -924,47 +984,6 @@ newContent = typeof parsed.newContent === 'string' && parsed.newContent.length >
   } finally {
     // Ensure job active flag is cleared only if an error occurred before
     // the main logic could decide to reschedule or clear it normally.
-    // This is a fallback for unexpected errors.
-    try {
-      const { clearStuckJobActive, clearJobScheduled } = await import('@/lib/gemmie-timer');
-      const redis = (await import('@/lib/redis')).default;
-      const JOB_ACTIVE_KEY = 'gemmie:job-active';
-      const isActive = await redis.get(JOB_ACTIVE_KEY);
-      
-      if (isActive === 'active') {
-        // Use the stuck job detection logic in the finally block as well
-        const wasStuck = await clearStuckJobActive();
-        
-        if (wasStuck) {
-          await clearJobScheduled();
-          console.log('🔓 Cleared stuck job active flag and job scheduled key in finally block.');
-        } else {
-          // Check if there are queued messages
-          const { getAndClearGemmieQueue } = await import('@/lib/gemmie-timer');
-          const queuedMessages = await getAndClearGemmieQueue();
-          
-          if (queuedMessages.length === 0) {
-            await clearJobScheduled();
-            console.log('🔓 Cleared job scheduled key in finally block (no queued messages).');
-          } else {
-            // Put messages back in queue and don't clear flag
-            const { queueGemmieMessage } = await import('@/lib/gemmie-timer');
-            for (const msg of queuedMessages) {
-              await queueGemmieMessage(msg.userName, msg.userMessage, msg.userCountry);
-            }
-            console.log(`⚠️ Found ${queuedMessages.length} queued messages in finally block, keeping job active flag set.`);
-          }
-        }
-      } else {
-        console.log('ℹ️ Job active flag already cleared by main logic.');
-      }
-    } catch (releaseError) {
-      console.error('❌ Failed to clear job active flag in finally block:', releaseError);
-    }
-  }
-}
-
-export const dynamic = 'force-dynamic';
     // This is a fallback for unexpected errors.
     try {
       const { clearStuckJobActive, clearJobScheduled } = await import('@/lib/gemmie-timer');

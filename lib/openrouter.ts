@@ -513,7 +513,7 @@ export async function generateGemmieResponseForContext(
     allMessagesContext: string,
     primaryUserCountry: string,
     allMessagesData: Array<{userName: string, userMessage: string, userCountry: string}>,
-    memoryContext?: { userMemoryBlock: string; gemmieSelfMemoryBlock: string }
+    memoryContext?: { userMemoryBlock: string; gemmieSelfMemoryBlock: string; recentUsersBlock?: string }
 ): Promise<{
   shouldRespond: boolean;
   reply: string;
@@ -600,6 +600,8 @@ TOPIC OWNERSHIP RULES (EXTREMELY IMPORTANT):
       ? `${GEMMIE_PROMPT}\n- say one thing you love about the image. keep it in the moment.`
       : `${GEMMIE_PROMPT}`;
 
+    const recentUsersBlock = memoryContext?.recentUsersBlock || 'none';
+
     const fullPrompt = `${basePrompt}
 
 Current date/time: ${currentDateTime}
@@ -611,8 +613,15 @@ ${memoryUserBlock}
 Current memory for GEMMIE-self (self facts only):
 ${memorySelfBlock}
 
-Other active users you may be asked about:
-${memoryContext?.otherUsersMemoryBlock || 'none'}
+RECENT USERS IN MEMORY (you can remember these people):
+${recentUsersBlock}
+
+IMPORTANT - REMEMBERING PAST USERS:
+- When someone asks "do you know who X is?" or "do you remember X?", check the recent users list above.
+- If you find the name in the list, you CAN say you remember them and mention something basic like "yeah they were here earlier" or "i remember them from before".
+- You don't need to know everything about them - just acknowledging you've seen them before is enough to sound natural.
+- If the name is NOT in the recent users list, say you don't know them or haven't seen them before.
+- This helps you sound like you actually remember people who've been in the chat recently.
 
 QUOTE REPLY FORMAT (IMPORTANT):
 - If a message contains "(replying to USERNAME: quoted content)", this means the user is QUOTE REPLYING to a previous message.
