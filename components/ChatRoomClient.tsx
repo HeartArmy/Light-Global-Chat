@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Pusher from 'pusher-js';
 import { Message, Attachment } from '@/types';
 import { useTheme } from '@/components/ThemeProvider';
@@ -25,6 +25,7 @@ export default function ChatRoomClient() {
   const [isTabVisible, setIsTabVisible] = useState(true);
   const [onlineCount, setOnlineCount] = useState(0);
   const [gemmieEnabled, setGemmieEnabled] = useState(true);
+  const statusRefreshTimeoutRef = useRef<number | null>(null);
 
   // Initialize user session and mobile viewport
   useEffect(() => {
@@ -288,6 +289,23 @@ export default function ChatRoomClient() {
     channel.bind('gemmie-status-changed', (data: any) => {
       console.log('🤖 Received gemmie-status-changed event:', data);
       setGemmieEnabled(data.enabled);
+      if (statusRefreshTimeoutRef.current) {
+        clearTimeout(statusRefreshTimeoutRef.current);
+        statusRefreshTimeoutRef.current = null;
+      }
+      if (data.enabled === false && data.reason === 'cooldown') {
+        statusRefreshTimeoutRef.current = window.setTimeout(async () => {
+          try {
+            const statusRes = await fetch('/api/gemmie-status');
+            if (statusRes.ok) {
+              const payload = await statusRes.json();
+              setGemmieEnabled(payload.enabled);
+            }
+          } catch (error) {
+            console.error('Failed to refresh Gemmie status after cooldown:', error);
+          }
+        }, 120000);
+      }
     });
 
     // Listen for typing indicator events
@@ -372,6 +390,10 @@ export default function ChatRoomClient() {
       // Do not automatically change Gemmie state on disconnect; persist preference.
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
+      }
+      if (statusRefreshTimeoutRef.current) {
+        clearTimeout(statusRefreshTimeoutRef.current);
+        statusRefreshTimeoutRef.current = null;
       }
       channel.unbind_all();
       channel.unsubscribe();
