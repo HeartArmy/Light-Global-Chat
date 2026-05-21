@@ -293,6 +293,15 @@ export default function ChatRoomClient() {
         clearTimeout(statusRefreshTimeoutRef.current);
         statusRefreshTimeoutRef.current = null;
       }
+      if (data.enabled === false) {
+        const typingIndicator = document.getElementById('typing-indicator');
+        if (typingIndicator) {
+          typingIndicator.style.opacity = '0';
+          typingIndicator.style.transform = 'translateY(-10px)';
+          typingIndicator.style.pointerEvents = 'none';
+          console.log('🔇 Gemmie disabled - hiding typing indicator');
+        }
+      }
       if (data.enabled === false && data.reason === 'cooldown') {
         statusRefreshTimeoutRef.current = window.setTimeout(async () => {
           try {
@@ -314,6 +323,11 @@ export default function ChatRoomClient() {
       // Don't show typing indicator for current user
       if (data && data.userName === userName) {
         console.log('👤 Skipping typing indicator for current user:', userName);
+        return;
+      }
+      // Don't show typing indicator if Gemmie is disabled
+      if (!gemmieEnabled) {
+        console.log('🔇 Gemmie is disabled, not showing typing indicator');
         return;
       }
       const typingIndicator = document.getElementById('typing-indicator');
