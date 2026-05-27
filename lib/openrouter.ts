@@ -644,6 +644,8 @@ QUOTE REPLY FORMAT (IMPORTANT):
 - When responding to a quote reply, acknowledge the quoted content if relevant to the conversation.
 - If the quoted content is "[image/attachment]", this means the user is replying to an IMAGE-ONLY message with no text.
 - When replying to an image-only message, DESCRIBE what you see in the image and answer the user's question about it.
+- Messages may also include attachment notes like "(attachments: video)" or "(attachments: image)".
+- If the most recent message includes "(attachments: video)", reply casually as if videos are not loading on your phone and ask what it is.
 
 messages leading up to this response (most recent last):
 ${allMessagesContext}${dbContext}
