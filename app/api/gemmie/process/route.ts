@@ -364,10 +364,16 @@ export async function POST(request: NextRequest) {
     const userMemoryDoc: any = await findUserMemoryDoc();
     const gemmieSelfMemoryDoc: any = await GemmieMemory.findOne({ key: gemmieSelfMemoryKey }).lean();
 
-    const userTopics = (userMemoryDoc?.topics || []).slice(0, 3).map((t: any) => String(t.topic));
+    const allUserTopics = (userMemoryDoc?.topics || []).map((t: any) => String(t.topic));
+    const userTopics = allUserTopics.slice(0, 3);
+    const userIsAdversarial = Boolean(userMemoryDoc?.isAdversarial || allUserTopics.some((topic: string) => topic.toLowerCase().includes('adversarial')));
     const gemmieSelfFacts = (gemmieSelfMemoryDoc?.selfFacts || []).slice(0, 3).map((f: any) => String(f.fact));
 
-    const userMemoryBlock = userTopics.length ? userTopics.map((t: string) => `- ${t}`).join('\n') : 'none';
+    const userMemoryBlockItems = [
+      ...(userIsAdversarial ? [`- status: adversarial (${userMemoryDoc?.adversarialReason || 'hostile to gemmie'})`] : []),
+      ...userTopics.map((t: string) => `- ${t}`),
+    ];
+    const userMemoryBlock = userMemoryBlockItems.length ? userMemoryBlockItems.join('\n') : 'none';
     const gemmieSelfMemoryBlock = gemmieSelfFacts.length ? gemmieSelfFacts.map((f: string) => `- ${f}`).join('\n') : 'none';
 
     // Get recent users from memory for context
@@ -378,10 +384,12 @@ export async function POST(request: NextRequest) {
       const timeStr = timeAgo < 1 ? 'just now' : timeAgo < 24 ? `${timeAgo}h ago` : `${Math.floor(timeAgo / 24)}d ago`;
       
       // Include top 2 topics if available
-      const topics = (user.topics || []).slice(0, 2).map((t: any) => t.topic).join(', ');
+      const allTopics = (user.topics || []).map((t: any) => String(t.topic));
+      const topics = allTopics.slice(0, 2).join(', ');
       const topicStr = topics ? ` - talked about: ${topics}` : '';
+      const adversarialStr = user.isAdversarial || allTopics.some((topic: string) => topic.toLowerCase().includes('adversarial')) ? ' - status: adversarial' : '';
       
-      return `- ${user.currentName} ${flag} (${user.userCountry}) - last seen ${timeStr}${topicStr}`;
+      return `- ${user.currentName} ${flag} (${user.userCountry}) - last seen ${timeStr}${adversarialStr}${topicStr}`;
     }).join('\n');
 
     const extractNameChange = (message: string) => {
@@ -452,6 +460,9 @@ export async function POST(request: NextRequest) {
       if (memoryUpdate?.topics?.length) {
         const existingDoc: any = await GemmieMemory.findOne({ key: userMemoryKey }).exec();
         const doc: any = existingDoc || resolvedUserMemoryDoc || new GemmieMemory({ key: userMemoryKey });
+        const adversarialTopic = memoryUpdate.topics.find((topic: any) =>
+          String(topic.topic || '').toLowerCase().includes('adversarial')
+        );
         doc.userCountry = userCountry;
         doc.currentName = userName;
         doc.knownNames = Array.from(new Set([...(doc.knownNames || []).map((name: string) => name.toLowerCase()), userName.toLowerCase()]));
@@ -467,6 +478,11 @@ export async function POST(request: NextRequest) {
           (x: any) => Number(x.strength),
           'topics'
         );
+        if (adversarialTopic) {
+          doc.isAdversarial = true;
+          doc.adversarialReason = String(adversarialTopic.topic).slice(0, 120);
+          doc.adversarialUpdatedAt = now;
+        }
         await doc.save();
       }
 

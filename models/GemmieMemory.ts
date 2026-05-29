@@ -30,8 +30,10 @@ const GemmieMemorySchema = new mongoose.Schema({
 
   topics: { type: [TopicSchema], default: [] },
   selfFacts: { type: [SelfFactSchema], default: [] },
+  isAdversarial: { type: Boolean, default: false },
+  adversarialReason: { type: String, maxlength: 120 },
+  adversarialUpdatedAt: { type: Date },
 });
 
 const GemmieMemory = mongoose.models.GemmieMemory || mongoose.model('GemmieMemory', GemmieMemorySchema);
 export default GemmieMemory;
-
