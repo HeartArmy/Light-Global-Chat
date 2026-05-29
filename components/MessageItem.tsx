@@ -135,6 +135,8 @@ function MessageItem({
   }, {} as Record<string, string[]>);
 
   const replyToMessage = typeof message.replyTo === 'object' ? message.replyTo : null;
+  const hasAttachments = (message.attachments?.length || 0) > 0;
+  const desktopMessageWidth = hasAttachments ? 'md:max-w-[63%]' : 'md:max-w-[32%]';
 
   // Swipe gesture for reply
   const swipeHandlers = useSwipe(() => {
@@ -224,7 +226,7 @@ function MessageItem({
           </div>
         )}
 
-        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-full md:max-w-[63%]`}>
+        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-full ${desktopMessageWidth}`}>
           {/* User Info */}
           <div className="flex items-center gap-1.5 mb-1 px-0.5">
             <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
