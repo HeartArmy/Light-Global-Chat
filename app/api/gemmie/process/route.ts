@@ -80,7 +80,7 @@ Respond with JSON only:
       body: JSON.stringify({
         model: 'ibm-granite/granite-4.1-8b',
         messages: [{ role: 'user', content: similarityPrompt }],
-        max_tokens: 1000,
+        max_tokens: 100,
         temperature: 0.1
       })
     });
