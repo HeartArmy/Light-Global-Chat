@@ -23,7 +23,7 @@ function getCountryFlag(countryCode: string, userName?: string): string {
 }
 
 // Check if response is too similar to recent messages using AI
-async function checkResponseSimilarity(newResponse: string, recentMessages: any[]): Promise<{ shouldSkip: boolean; reason?: string; similarMessage?: string }> {
+async function checkResponseSimilarity(newResponse: string, recentMessages: any[], conversationMessages: any[] = recentMessages): Promise<{ shouldSkip: boolean; reason?: string; similarMessage?: string }> {
   if (recentMessages.length === 0) {
     return { shouldSkip: false };
   }
@@ -32,17 +32,20 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
   const mostRecentMessage = recentMessages[0].content;
   
   // Create comprehensive context showing the full conversation flow with country flags and timestamps
-  const contextMessages = recentMessages.slice(0, 10).map((msg, index) => {
-    const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
-    return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
-  }).join('\n');
+  const contextMessages = conversationMessages
+    .slice(0, 20)
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    .map((msg, index) => {
+      const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
+      return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
+    }).join('\n');
 
   const similarityPrompt = `Check if Gemmie should SKIP sending this new message.
 
 NEW MESSAGE TO SEND:
 "${newResponse}"
 
-RECENT CONVERSATION:
+RECENT CONVERSATION (oldest to newest):
 ${contextMessages}
 
 SKIP THE MESSAGE IF ANY OF THESE ARE TRUE:
@@ -57,6 +60,7 @@ DO NOT SKIP IF:
 - Responding to a different user than last time
 - More than 30 minutes since Gemmie's last message
 - User is asking about a different topic/subject
+- User replied to or agreed with Gemmie's previous message, and the new message is a natural acknowledgement of that reply
 - Message is a simple greeting or short response
 
 WHEN IN DOUBT, DO NOT SKIP. Better to send than to ignore a user.
@@ -74,9 +78,9 @@ Respond with JSON only:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'mistralai/mistral-small-3.2-24b-instruct',
+        model: 'ibm-granite/granite-4.1-8b',
         messages: [{ role: 'user', content: similarityPrompt }],
-        max_tokens: 500,
+        max_tokens: 1000,
         temperature: 0.1
       })
     });
@@ -555,7 +559,7 @@ export async function POST(request: NextRequest) {
       .lean();
 
     //Check if this response is too similar to recent Gemmie messages
-    const similarityCheck = await checkResponseSimilarity(originalResponse, gemmieMessages);
+    const similarityCheck = await checkResponseSimilarity(originalResponse, gemmieMessages, allRecentMessages);
     
     if (similarityCheck.shouldSkip) {
       console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
