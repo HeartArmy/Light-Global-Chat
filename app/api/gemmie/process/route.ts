@@ -568,7 +568,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Hard min-gap between Gemmie sends (race-proof via Redis lock)
-    const COOLDOWN_SECONDS = 11; // minimum gap you want
+    const COOLDOWN_SECONDS = 45; // minimum gap between Gemmie messages
     const SEND_COOLDOWN_LOCK_KEY = 'gemmie:send-cooldown';
     const lockTTL = COOLDOWN_SECONDS + 1; // extra buffer to avoid suspiciously close timestamps
 
