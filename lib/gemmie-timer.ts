@@ -15,7 +15,7 @@ const TYPING_INDICATOR_KEY = 'typing:indicator';
 // Key for tracking processed messages to prevent duplicates
 const GEMMIE_PROCESSED_MESSAGES_KEY = 'gemmie:processed-messages';
 // Time in seconds for the delay before Gemmie responds (random between 10-15 seconds to match job window)
-const GEMMIE_DELAY = 14; // Fixed short thinking delay before AI (typing added after)
+const GEMMIE_DELAY = 7; // Fixed short thinking delay before AI (typing added after)
 // TTL for job active flag should be longer than the entire processing time
 const JOB_ACTIVE_TTL = 300; // 5 minutes - covers full processing including cleanup
 
