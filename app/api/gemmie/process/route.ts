@@ -7,7 +7,7 @@ import Message from '@/models/Message';
 import GemmieMemory from '@/models/GemmieMemory';
 import DeletedMessageByGemmie from '@/models/DeletedMessageByGemmie';
 import EditedMessageByGemmie from '@/models/EditedMessageByGemmie';
-import { setGemmieTemporarilyDisabled } from '@/lib/gemmie-status';
+// import { setGemmieTemporarilyDisabled } from '@/lib/gemmie-status';
 import mongoose from 'mongoose'; 
 
 // Get country flag
@@ -520,10 +520,10 @@ export async function POST(request: NextRequest) {
     if (!gen.shouldRespond || !gen.reply) {
       const skipReason = gen.skipReason || 'no-reason-provided';
       console.log(`🚫 Gemmie decided NOT to respond. Reason: ${skipReason}`);
-      await setGemmieTemporarilyDisabled();
-      const pusher = getPusherInstance();
-      await pusher.trigger('chat-room', 'gemmie-status-changed', { enabled: false, reason: 'cooldown' });
-      console.log('⏳ Gemmie temporarily disabled for 2 minutes due to skip response');
+      // await setGemmieTemporarilyDisabled();
+      // const pusher = getPusherInstance();
+      // await pusher.trigger('chat-room', 'gemmie-status-changed', { enabled: false, reason: 'cooldown' });
+      // console.log('⏳ Gemmie temporarily disabled for 2 minutes due to skip response');
       const { setTypingIndicator } = await import('@/lib/gemmie-timer');
       await setTypingIndicator(false, 'gemmie');
       await scheduleNextFromQueue();
