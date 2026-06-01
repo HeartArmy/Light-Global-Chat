@@ -11,7 +11,7 @@ const TopicSchema = new mongoose.Schema(
 
 const SelfFactSchema = new mongoose.Schema(
   {
-    fact: { type: String, required: true, trim: true, maxlength: 120 },
+    fact: { type: String, required: true, trim: true, maxlength: 500 },
     strength: { type: Number, required: true, min: 0.0, max: 1.0 },
     lastMentionedAt: { type: Date, required: true },
   },
@@ -22,7 +22,7 @@ const GemmieMemorySchema = new mongoose.Schema({
   // Examples:
   // - `${userNameLower}:${userCountry}` for per-user topics
   // - `gemmie:self` for Gemmie self-facts
-  key: { type: String, required: true, unique: true, index: true, maxlength: 120 },
+  key: { type: String, required: true, unique: true, index: true, maxlength: 500 },
   userCountry: { type: String, maxlength: 4 },
   currentName: { type: String, maxlength: 40 },
   knownNames: { type: [String], default: [] },
