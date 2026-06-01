@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const TopicSchema = new mongoose.Schema(
   {
-    topic: { type: String, required: true, trim: true, maxlength: 80 },
+    topic: { type: String, required: true, trim: true, maxlength: 500 },
     strength: { type: Number, required: true, min: 0.0, max: 1.0 },
     lastMentionedAt: { type: Date, required: true },
   },
