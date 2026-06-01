@@ -431,11 +431,27 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '100');
     const before = searchParams.get('before');
+    const around = searchParams.get('around');
 
     await connectDB();
 
     const query: any = {};
-    if (before) {
+    if (around) {
+      if (!/^[a-f\d]{24}$/i.test(around)) {
+        return NextResponse.json(
+          { error: 'Invalid message ID', code: 'INVALID_INPUT' },
+          { status: 400 }
+        );
+      }
+      const targetMessage = await Message.findById(around).select('timestamp').lean();
+      if (!targetMessage) {
+        return NextResponse.json(
+          { error: 'Message not found', code: 'NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+      query.timestamp = { $lte: targetMessage.timestamp };
+    } else if (before) {
       query.timestamp = { $lt: new Date(before) };
     }
 

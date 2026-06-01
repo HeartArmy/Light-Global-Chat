@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { Message } from '@/types';
 import { default as MessageItem } from './MessageItem';
 
@@ -14,6 +14,7 @@ interface MessageListProps {
   onEdit: (messageId: string, newContent: string) => void;
   onDelete: (messageId: string) => void;
   onLoadMore: () => void;
+  onLoadAroundMessage: (messageId: string) => Promise<boolean>;
 }
 
 export default function MessageList({
@@ -26,6 +27,7 @@ export default function MessageList({
   onEdit,
   onDelete,
   onLoadMore,
+  onLoadAroundMessage,
 }: MessageListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -35,9 +37,30 @@ export default function MessageList({
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastScrollYRef = useRef(0);
   const isScrollingRef = useRef(false);
+  const prevScrollHeightRef = useRef(0);
+  const prevFirstMessageIdRef = useRef<string | null>(null);
 
   // Track if user is viewing old messages (not at bottom)
   const isViewingOldMessagesRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!listRef.current) return;
+
+    const previousFirstId = prevFirstMessageIdRef.current;
+    const nextFirstId = messages[0]?._id || null;
+    const didPrependMessages =
+      previousFirstId &&
+      nextFirstId &&
+      previousFirstId !== nextFirstId &&
+      messages.some((message) => message._id === previousFirstId);
+
+    if (didPrependMessages) {
+      listRef.current.scrollTop += listRef.current.scrollHeight - prevScrollHeightRef.current;
+    }
+
+    prevFirstMessageIdRef.current = nextFirstId;
+    prevScrollHeightRef.current = listRef.current.scrollHeight;
+  }, [messages]);
 
   // Auto-scroll to bottom on new messages only if user is near bottom
   useEffect(() => {
@@ -106,13 +129,26 @@ export default function MessageList({
   };
 
   // Scroll to specific message
-  const scrollToMessage = (messageId: string) => {
+  const scrollToMessage = async (messageId: string) => {
     const element = document.getElementById(`message-${messageId}`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setHighlightedMessageId(messageId);
       setTimeout(() => setHighlightedMessageId(null), 2000);
+      return;
     }
+
+    const loaded = await onLoadAroundMessage(messageId);
+    if (!loaded) return;
+
+    requestAnimationFrame(() => {
+      const loadedElement = document.getElementById(`message-${messageId}`);
+      if (!loadedElement) return;
+
+      loadedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedMessageId(messageId);
+      setTimeout(() => setHighlightedMessageId(null), 2000);
+    });
   };
 
   return (

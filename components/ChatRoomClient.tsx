@@ -9,6 +9,15 @@ import MessageList from '@/components/MessageList';
 import MessageInput from '@/components/MessageInput';
 import { setSelectedImageUrl } from '@/lib/gemmie-timer';
 
+const mergeMessages = (current: Message[], incoming: Message[]) => {
+  const byId = new Map<string, Message>();
+  current.forEach((message) => byId.set(message._id, message));
+  incoming.forEach((message) => byId.set(message._id, message));
+  return Array.from(byId.values()).sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+};
+
 export default function ChatRoomClient() {
   const { theme, toggleTheme } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -89,7 +98,7 @@ export default function ChatRoomClient() {
       const data = await res.json();
       // Reverse to maintain chronological order and get latest state
       const freshMessages = data.messages.reverse();
-      setMessages(freshMessages);
+      setMessages((prev) => mergeMessages(prev, freshMessages));
       setHasMore(data.hasMore);
       console.log('✅ Messages refreshed successfully, got', freshMessages.length, 'messages');
     } catch (error) {
@@ -563,7 +572,7 @@ export default function ChatRoomClient() {
         `/api/messages?limit=100&before=${new Date(oldestMessage.timestamp).toISOString()}`
       );
       const data = await res.json();
-      setMessages((prev) => [...data.messages.reverse(), ...prev]);
+      setMessages((prev) => mergeMessages(prev, data.messages.reverse()));
       setHasMore(data.hasMore);
     } catch (error) {
       console.error('Failed to load more messages:', error);
@@ -571,6 +580,22 @@ export default function ChatRoomClient() {
       setIsLoading(false);
     }
   }, [messages, hasMore, isLoading]);
+
+  const handleLoadAroundMessage = useCallback(async (messageId: string) => {
+    try {
+      const res = await fetch(`/api/messages?limit=100&around=${encodeURIComponent(messageId)}`);
+      if (!res.ok) return false;
+
+      const data = await res.json();
+      const loadedMessages = data.messages.reverse();
+      setMessages((prev) => mergeMessages(prev, loadedMessages));
+      setHasMore(data.hasMore);
+      return loadedMessages.some((message: Message) => message._id === messageId);
+    } catch (error) {
+      console.error('Failed to load quoted message:', error);
+      return false;
+    }
+  }, []);
 
 
   const handleToggleGemmie = async () => {
@@ -758,6 +783,7 @@ export default function ChatRoomClient() {
         onEdit={handleEditMessage}
         onDelete={handleDeleteMessage}
         onLoadMore={handleLoadMore}
+        onLoadAroundMessage={handleLoadAroundMessage}
       />
 
       {/* Typing Indicator */}
