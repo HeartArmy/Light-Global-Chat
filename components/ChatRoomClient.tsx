@@ -624,6 +624,8 @@ export default function ChatRoomClient() {
     event: React.MouseEvent<HTMLAnchorElement>,
     message: string
   ) => {
+    if (!isMobileDevice()) return;
+
     event.preventDefault();
     if (window.confirm(message)) {
       window.open(event.currentTarget.href, '_blank', 'noopener,noreferrer');
