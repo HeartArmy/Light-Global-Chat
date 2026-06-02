@@ -729,7 +729,7 @@ export default function ChatRoomClient() {
                   'This will open the source code for this chat app on GitHub in a new tab. Continue?'
                 )
               }
-              className="hidden md:inline-flex p-1 rounded-sm transition-all duration-fast hover:scale-110"
+              className="p-1 rounded-sm transition-all duration-fast hover:scale-110"
               style={{ color: 'var(--text-secondary)' }}
               title="Source code on GitHub"
             >
@@ -742,7 +742,7 @@ export default function ChatRoomClient() {
               onClick={() =>
                 window.alert('Developer email: arhampersonal@icloud.com\n\nOpen to feedback.')
               }
-              className="p-1 rounded-sm transition-all duration-fast hover:scale-110"
+              className="hidden md:inline-flex p-1 rounded-sm transition-all duration-fast hover:scale-110"
               style={{ color: 'var(--text-secondary)' }}
               title="Developer email"
             >
