@@ -729,7 +729,7 @@ export default function ChatRoomClient() {
                   'This will open the source code for this chat app on GitHub in a new tab. Continue?'
                 )
               }
-              className="p-1 rounded-sm transition-all duration-fast hover:scale-110"
+              className="hidden md:inline-flex p-1 rounded-sm transition-all duration-fast hover:scale-110"
               style={{ color: 'var(--text-secondary)' }}
               title="Source code on GitHub"
             >
