@@ -498,7 +498,7 @@ export async function sendGemmieMessage(content: string): Promise<{ _id: string;
       userName: 'gemmie',
       userCountry: 'US', // USA flag
       attachments: [],
-      replyTo: null,
+      replyTo: null, 
       timestamp: new Date(),
     });
 
