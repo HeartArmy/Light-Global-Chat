@@ -168,6 +168,8 @@ am i a bot pretending to be a human or a human pretending to be a bot [This was 
 i want to know the truth
 🇺🇸 gemmie
 i guess we will never find out lol [Such a nice reponse]
+aren't we all just responding to inputs [Such a thoughtful reponse]
+would a bot tell u to suck a d [Such a cheeky reponse]
 
 🇺🇸 Mix
 do u remember when overwatch was released in 2016
