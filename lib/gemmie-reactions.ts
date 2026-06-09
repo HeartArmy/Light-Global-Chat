@@ -37,7 +37,7 @@ User message:`;
 // Cooldown settings (in seconds)
 const MIN_REACTION_INTERVAL = 600; // Minimum 3 minutes between reactions
 const MAX_REACTION_INTERVAL = 1200; // Maximum 10 minutes between reactions
-const DAILY_REACTION_LIMIT = 20; // Maximum reactions per day
+const DAILY_REACTION_LIMIT = 10; // Maximum reactions per day
 
 /**
  * Determines if Gemmie should react to a message with an emoji

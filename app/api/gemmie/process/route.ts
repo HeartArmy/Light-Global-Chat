@@ -550,13 +550,14 @@ typingDelaySec = Math.max(1, Math.min(5, typingDelaySec));
 typingDelaySec *= (0.8 + Math.random() * 0.4);
 // Occasional distraction (5% chance)
 if (Math.random() < 0.05) {
-    const distractionDelaySec = 10 + Math.random() * 10; // 10-20s
+    const distractionDelaySec = 15 + Math.random() * 15; // 10-20s
     console.log(`🤔 Distraction delay: ${Math.round(distractionDelaySec)}s`);
     typingDelaySec += distractionDelaySec;
 }
 const typingDelayMs = typingDelaySec * 1000;
 console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
-await new Promise(resolve => setTimeout(resolve, typingDelayMs));
+const baseDelayMs = 5000 + Math.random() * 5000; 
+await new Promise(resolve => setTimeout(resolve, typingDelayMs+baseDelayMs));
 
     // Check for similarity with recent messages from GEMMIE only before sending
     console.log('🔍 Checking for similarity with recent Gemmie messages only...');
@@ -595,7 +596,7 @@ await new Promise(resolve => setTimeout(resolve, typingDelayMs));
     }
 
     // Hard min-gap between Gemmie sends (race-proof via Redis lock)
-    const COOLDOWN_SECONDS = 15; // minimum gap between Gemmie messages
+    const COOLDOWN_SECONDS = 25; // minimum gap between Gemmie messages
     const SEND_COOLDOWN_LOCK_KEY = 'gemmie:send-cooldown';
     const lockTTL = COOLDOWN_SECONDS + 1; // extra buffer to avoid suspiciously close timestamps
 
