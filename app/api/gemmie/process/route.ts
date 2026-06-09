@@ -542,14 +542,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Simulate realistic typing delay based on response length
-    const words = (responseWithTypos.match(/\S+/g) || []).length;
-    const typingSpeedWps = 0.2; // words/sec (chatgpt said 1.3 word per second for 100 wpm)
-    let typingDelaySec = words / typingSpeedWps;
-    typingDelaySec = Math.max(1, Math.min(1, typingDelaySec)); // cap 1-1s (maximum)
-    typingDelaySec *= (0.8 + Math.random() * 0.4); // 20% variance
-    const typingDelayMs = typingDelaySec * 1000;
-    console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
-    await new Promise(resolve => setTimeout(resolve, typingDelayMs));
+const words = (responseWithTypos.match(/\S+/g) || []).length;
+const typingSpeedWps = 0.2; // words/sec
+let typingDelaySec = words / typingSpeedWps;
+typingDelaySec = Math.max(1, Math.min(5, typingDelaySec));
+// 20% variance
+typingDelaySec *= (0.8 + Math.random() * 0.4);
+// Occasional distraction (5% chance)
+if (Math.random() < 0.05) {
+    const distractionDelaySec = 10 + Math.random() * 10; // 10-20s
+    console.log(`🤔 Distraction delay: ${Math.round(distractionDelaySec)}s`);
+    typingDelaySec += distractionDelaySec;
+}
+const typingDelayMs = typingDelaySec * 1000;
+console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
+await new Promise(resolve => setTimeout(resolve, typingDelayMs));
 
     // Check for similarity with recent messages from GEMMIE only before sending
     console.log('🔍 Checking for similarity with recent Gemmie messages only...');
