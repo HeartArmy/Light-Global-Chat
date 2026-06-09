@@ -543,7 +543,7 @@ export async function POST(request: NextRequest) {
 
     // Simulate realistic typing delay based on response length
     const words = (responseWithTypos.match(/\S+/g) || []).length;
-    const typingSpeedWps = 1.3; // words/sec (chatgpt said 1.3 word per second for 100 wpm)
+    const typingSpeedWps = 0.2; // words/sec (chatgpt said 1.3 word per second for 100 wpm)
     let typingDelaySec = words / typingSpeedWps;
     typingDelaySec = Math.max(1, Math.min(1, typingDelaySec)); // cap 1-1s (maximum)
     typingDelaySec *= (0.8 + Math.random() * 0.4); // 20% variance
