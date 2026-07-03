@@ -18,13 +18,13 @@ jobs:
       contents: read
     steps:
       - name: Delete old artifacts
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         with:
           name: mongodb-backup-*
           failOnError: false
 
       - name: Delete old workflow runs (keep only 2 most recent)
-        uses: Mattraks/delete-workflow-runs@v2
+        uses: Mattraks/delete-workflow-runs@v2.1.0
         with:
           token: ${{ github.token }}
           repository: "HeartArmy/Light-Global-Chat"
@@ -39,10 +39,10 @@ jobs:
       packages: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: 'npm'
@@ -56,10 +56,6 @@ jobs:
           const fs = require('fs');
           const path = require('path');
           const { MongoClient } = require('mongodb');
-          // EJSON is part of the bson package which ships with the mongodb driver.
-          // It serializes ObjectId, Date, and all other BSON types into MongoDB
-          // Extended JSON format ( { "$oid": "..." }, { "$date": "..." } etc. )
-          // so the backup is always importable without data type loss.
           const { EJSON } = require('bson');
 
           async function backupMongoDB() {
@@ -103,9 +99,6 @@ jobs:
 
                 const backupFile = path.join(backupDir, `${collectionName}.json`);
 
-                // EJSON.stringify preserves all BSON types. The resulting file can
-                // be reimported directly with:
-                //   mongoimport --uri <uri> --collection <name> --file <file> --jsonArray
                 fs.writeFileSync(backupFile, EJSON.stringify(documents, null, 2));
 
                 console.log(`✅ Backed up ${documents.length} documents from ${collectionName}`);
@@ -161,7 +154,7 @@ jobs:
           node backup-mongodb.js
 
       - name: Upload MongoDB Backup as Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mongodb-backup-${{ github.run_number }}
           path: mongodb-backup/

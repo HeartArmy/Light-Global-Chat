@@ -21,10 +21,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: 'npm'
@@ -55,17 +55,11 @@ jobs:
           function ensureScheme(uri) {
             if (!uri) throw new Error('MONGODB_URI is required in environment variables');
             if (uri.startsWith('mongodb://') || uri.startsWith('mongodb+srv://')) return uri;
-            // If user supplied a host:port style string, prefix with mongodb+srv
             return 'mongodb+srv://' + uri;
           }
 
-          // Safely extract database name from connection string
           function extractDbFromUri(uri) {
             try {
-              // Remove credentials portion first to avoid accidental matches
-              // Match the first slash after the host and capture the segment up to ? or /
-              // Example matches:
-              // mongodb+srv://user:pass@host/dbname?retryWrites=true -> captures dbname
               const match = uri.match(/^[^\/]+\/\/[^\/]+\/([^?\/]+)(?:[?\/]|$)/);
               if (match && match[1]) {
                 return decodeURIComponent(match[1]);
@@ -82,13 +76,11 @@ jobs:
               let dbName = DATABASE_NAME || extractDbFromUri(rawUri);
 
               if (dbName && dbName.includes('?')) {
-                // strip any accidental query part
                 dbName = dbName.split('?')[0];
               }
 
               if (dbName) {
                 const byteLen = Buffer.byteLength(dbName, 'utf8');
-                // Atlas error message you saw complained about max 38 bytes
                 if (byteLen > 38) {
                   throw new Error(`Extracted database name "${dbName}" is ${byteLen} bytes which is longer than allowed by your server (Atlas may enforce 38 bytes). Provide a shorter DATABASE_NAME secret or fix the URI.`);
                 }
@@ -105,7 +97,6 @@ jobs:
               await mongoose.connect(rawUri, connectOptions);
               console.log('✅ Connected to MongoDB');
 
-              // Define log schema
               const logSchema = new mongoose.Schema({
                 level: {
                   type: String,
@@ -144,7 +135,6 @@ jobs:
 
               const Log = mongoose.models.Log || mongoose.model('Log', logSchema);
 
-              // Calculate cutoff
               const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
               console.log(`🔍 Finding logs older than ${sevenDaysAgo.toISOString()}`);
 
@@ -160,7 +150,6 @@ jobs:
                 return process.exit(0);
               }
 
-              // Show a few samples
               const sampleLogs = await Log.find({
                 timestamp: { $lt: sevenDaysAgo }
               })
@@ -211,5 +200,4 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          # Remove the cleanup script
           rm -f cleanup-old-logs.js
