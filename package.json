@@ -10,7 +10,8 @@
     "test-h": "node scripts/test-huggingface.js",
     "test-o": "node scripts/test-openrouter.js",
     "test-e": "node scripts/emoji-testing.js",
-    "delete-messages": "node scripts/bulk-delete-messages.js"
+    "delete-messages": "node scripts/bulk-delete-messages.js",
+    "get-messages": "node scripts/get-messages-by-date.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.91.1",
