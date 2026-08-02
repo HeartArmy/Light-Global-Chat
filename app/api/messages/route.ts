@@ -281,9 +281,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: populatedMessage });
     }
 
-    // If message is from someone other than arham or gemmie, check if should trigger Gemmie response 
+    // If message is from someone other than arham or gemmie, check if should trigger Gemmie response removed ->  userName.toLowerCase() !== 'arham' && 
     console.log('🤖 Checking if should trigger Gemmie for user:', userName);
-    if (userName.toLowerCase() !== 'arham' && userName.toLowerCase() !== 'gemmie') {
+    if (userName.toLowerCase() !== 'gemmie') {
       const { getGemmieStatus } = await import('@/lib/gemmie-status');
       const isGemmieEnabled = await getGemmieStatus();
 
