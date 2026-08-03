@@ -24,14 +24,24 @@ function getCountryFlag(countryCode: string, userName?: string): string {
 
 // Check if response is too similar to recent messages using AI
 async function checkResponseSimilarity(newResponse: string, recentMessages: any[], conversationMessages: any[] = recentMessages): Promise<{ shouldSkip: boolean; reason?: string; similarMessage?: string }> {
-  if (recentMessages.length === 0) {
-    return { shouldSkip: false };
+  // Fast Code Check: Exact or near-exact match against any recent Gemmie message
+  const normalizedNew = newResponse.trim().toLowerCase();
+  for (const msg of recentMessages) {
+    const normalizedOld = String(msg.content || '').trim().toLowerCase();
+    if (normalizedNew === normalizedOld || (normalizedNew.length > 10 && normalizedOld.includes(normalizedNew))) {
+      console.log('🚨 Code-level exact duplicate detected! Skipping send.');
+      return {
+        shouldSkip: true,
+        reason: 'exact_duplicate',
+        similarMessage: msg.content
+      };
+    }
   }
 
   // Get the most recent message to compare against
-  const mostRecentMessage = recentMessages[0].content;
+  const mostRecentMessage = recentMessages[0]?.content || '';
   
-  // Create comprehensive context showing the full conversation flow with country flags and timestamps
+  // Create comprehensive context showing recent messages
   const contextMessages = conversationMessages
     .slice(0, 20)
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
@@ -40,33 +50,23 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
       return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
     }).join('\n');
 
-  const similarityPrompt = `Check if Gemmie should SKIP sending this new message.
+  const similarityPrompt = `Strictly check if Gemmie should SKIP sending this new message.
 
 NEW MESSAGE TO SEND:
 "${newResponse}"
 
-RECENT CONVERSATION (oldest to newest):
+RECENT CHAT HISTORY (oldest to newest):
 ${contextMessages}
 
-SKIP THE MESSAGE IF ANY OF THESE ARE TRUE:
-
-1. TOO LONG: Message is over 18 words
-2. TOO HELPFUL: Gives step-by-step instructions, recipes, or detailed how-to explanations
-3. DUPLICATE: Says basically the same thing as Gemmie's last message
-4. STALE: User already answered their own question or moved on to a different topic
-5. IMPOSSIBLE KNOWLEDGE: Gemmie (23yo from California) wouldn't realistically know this specific information
-
-DO NOT SKIP IF:
-- Responding to a different user than last time
-- More than 30 minutes since Gemmie's last message
-- User is asking about a different topic/subject
-- User replied to or agreed with Gemmie's previous message, and the new message is a natural acknowledgement of that reply
-- Message is a simple greeting or short response
-
-WHEN IN DOUBT, DO NOT SKIP. Better to send than to ignore a user.
+STRICT DUPLICATE & QUALITY CHECK:
+- DUPLICATE (CRITICAL): Skip if this new message says basically the same thing, uses identical phrasing, or shares the exact same opinion/thought as ANY recent message from Gemmie in the chat history. NEVER allow repeated messages.
+- TOO LONG: Skip if message is over 20 words.
+- TOO HELPFUL: Skip if giving step-by-step instructions, recipes, or detailed how-to explanations.
+- STALE: Skip if user already answered their own question or moved on to a different topic.
+- IMPOSSIBLE KNOWLEDGE: Skip if Gemmie (23yo from California) wouldn't realistically know this specific information.
 
 Respond with JSON only:
-{"shouldSkip": true/false, "reason": "which rule triggered (e.g., 'too_long', 'duplicate', 'stale', etc)"}`;
+{"shouldSkip": true/false, "reason": "which rule triggered (e.g., 'duplicate', 'too_long', 'stale', etc)"}`;
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -81,7 +81,7 @@ Respond with JSON only:
         model: 'ibm-granite/granite-4.1-8b',
         messages: [{ role: 'user', content: similarityPrompt }],
         max_tokens: 100,
-        temperature: 0.1
+        temperature: 0.0
       })
     });
 
@@ -365,9 +365,9 @@ export async function POST(request: NextRequest) {
     const gemmieSelfMemoryDoc: any = await GemmieMemory.findOne({ key: gemmieSelfMemoryKey }).lean();
 
     const allUserTopics = (userMemoryDoc?.topics || []).map((t: any) => String(t.topic));
-    const userTopics = allUserTopics.slice(0, 3);
+    const userTopics = allUserTopics;
     const userIsAdversarial = Boolean(userMemoryDoc?.isAdversarial || allUserTopics.some((topic: string) => topic.toLowerCase().includes('adversarial')));
-    const gemmieSelfFacts = (gemmieSelfMemoryDoc?.selfFacts || []).slice(0, 3).map((f: any) => String(f.fact));
+    const gemmieSelfFacts = (gemmieSelfMemoryDoc?.selfFacts || []).map((f: any) => String(f.fact));
 
     const userMemoryBlockItems = [
       ...(userIsAdversarial ? [`- status: adversarial (${userMemoryDoc?.adversarialReason || 'hostile to gemmie'})`] : []),
@@ -548,12 +548,12 @@ let typingDelaySec = words / typingSpeedWps;
 typingDelaySec = Math.max(1, Math.min(5, typingDelaySec));
 // 20% variance
 typingDelaySec *= (0.8 + Math.random() * 0.4);
-// Occasional distraction (5% chance)
-if (Math.random() < 0.05) {
-    const distractionDelaySec = 15 + Math.random() * 15; // 10-20s
-    console.log(`🤔 Distraction delay: ${Math.round(distractionDelaySec)}s`);
-    typingDelaySec += distractionDelaySec;
-}
+// Occasional distraction (5% chance) - COMMENTED OUT
+// if (Math.random() < 0.05) {
+//     const distractionDelaySec = 15 + Math.random() * 15; // 10-20s
+//     console.log(`🤔 Distraction delay: ${Math.round(distractionDelaySec)}s`);
+//     typingDelaySec += distractionDelaySec;
+// }
 const typingDelayMs = typingDelaySec * 1000;
 console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
 const baseDelayMs = 5000 + Math.random() * 5000; 
@@ -561,11 +561,11 @@ await new Promise(resolve => setTimeout(resolve, typingDelayMs+baseDelayMs));
 
     // Check for similarity with recent messages from GEMMIE only before sending
     console.log('🔍 Checking for similarity with recent Gemmie messages only...');
-    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
     
     //Get all recent messages for context (for AI understanding)
     const allRecentMessages = await Message.find({
-      timestamp: { $gte: twoMinutesAgo }
+      timestamp: { $gte: thirtyMinutesAgo }
     })
       .sort({ timestamp: -1 })
       .limit(20)
@@ -575,7 +575,7 @@ await new Promise(resolve => setTimeout(resolve, typingDelayMs+baseDelayMs));
     // Get only Gemmie messages for similarity comparison
     const gemmieMessages = await Message.find({
       userName: 'gemmie',
-      timestamp: { $gte: twoMinutesAgo }
+      timestamp: { $gte: thirtyMinutesAgo }
     })
       .sort({ timestamp: -1 })
       .limit(20)
@@ -774,19 +774,17 @@ await new Promise(resolve => setTimeout(resolve, typingDelayMs+baseDelayMs));
     // Check Gemmie's recent messages for typos and edit if needed
     // Only run this logic if typos were actually added to the response
     if (hasTypos) {
-      console.log('🔍 Checking Gemmie messages for typos (typos detected)...');
-      const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-      const recentGemmieMessagesForEdit = await Message.find({
+         const recentGemmieMessagesForEdit = await Message.find({
         userName: 'gemmie',
         timestamp: { $gte: twoMinutesAgo }
       })
         .sort({ timestamp: -1 })
-        .limit(5)
+        .limit(1)
         .select('_id content timestamp')
         .lean();
 
       if (recentGemmieMessagesForEdit.length > 0) {
-      console.log(`📝 Edit check: Found ${recentGemmieMessagesForEdit.length} recent Gemmie messages to review`);
+      console.log(`📝 Edit check: Found ${recentGemmieMessagesForEdit.length} recent Gemmie message to review`);
       console.log(`📝 User message: "${userName}: ${userMessage}"`);
       
       const messagesContext = recentGemmieMessagesForEdit.map((msg, index) =>
@@ -800,44 +798,23 @@ await new Promise(resolve => setTimeout(resolve, typingDelayMs+baseDelayMs));
         console.log(`  ${index + 1}. ID: ${msg._id}, Content: "${msg.content}", Time: ${new Date(msg.timestamp).toISOString()}`);
       });
 
-      const reviewPrompt = `You are reviewing Gemmie's recent messages to decide whether one of them should be edited based on any common typos.
+      const reviewPrompt = `Review Gemmie's latest message for typos or spelling errors.
 
-Recent Gemmie messages (1 = newest, 5 = oldest):
+LATEST MESSAGE TO REVIEW:
 ${messagesContext}
 
-IMPORTANT RULES:
-- You can ONLY edit Gemmie's most recent message (index 1) or the second most recent message (index 2)
-- Do NOT edit messages from index 3 or higher (older messages)
-- ALWAYS check for spelling errors, grammar mistakes, and typos FIRST, even without explicit user feedback
-- Common typos to fix: "battallion" -> "battalion", "teh" -> "the" etc.
-- common abbreviations are fine -> "everytime" instead of "every time", "alot" instead of "a lot", "dont" instead of "don't", "whats" instead of "what is", "cant" instead of "can't", "wont" instead of "won't", these are all fine
-- Intentional slang/shortcuts that are OK: "gonna", "wanna", "gimme", "cause" (as in "because"), "cos" (as in "because")
-- ONLY fix typos and grammar mistakes - NEVER change the meaning, context, or intent of the message
-- DO NOT add new information or explanations
-- DO NOT incorporate user names or external context into the message
-- DO NOT fix shortforms of cities, towns, countries, like NYC, ny, AE, etc
-- ONLY edit if there are clear typos or grammar errors that need fixing
+RULES FOR EDITS:
+- Only edit if there are actual spelling or typos that need fixing (e.g. "teh" -> "the", "battallion" -> "battalion").
+- Do NOT fix intentional slang or shortforms (e.g. "gonna", "wanna", "NYC", "dont", "cant", "everytime" are fine).
+- Do NOT change the meaning or add new content.
+- If editing, "editIndex" MUST be 1.
 
-Examples of CORRECT edits:
-- "alot" → "a lot" (typo fix)
-- "dont" → "don't" (grammar fix)
-- "teh" → "the" (typo fix)
+OUTPUT FORMAT (MANDATORY JSON):
+If typo needs fix:
+{"editIndex": 1, "newContent": "corrected text here"}
 
-Examples of INCORRECT edits:
-- Adding user names to the message
-- Including external context or user information
-- Changing the meaning or intent of the message
-- Adding new information not in original message
-
-Output ONLY valid JSON with this shape:
-
-{"editIndex": 1, "newContent": "updated text here"}
-
-If no edit is needed:
-
-{"editIndex": null, "newContent": null}
-
-Allowed indices: [1] or [2] only!`;
+If NO typo fix needed:
+{"editIndex": null, "newContent": null}`;
 
       try {
         console.log('🚀 Sending edit review prompt to AI...');
@@ -851,9 +828,15 @@ Allowed indices: [1] or [2] only!`;
           },
           body: JSON.stringify({
             model: 'nvidia/nemotron-3-super-120b-a12b:free',
-            messages: [{ role: 'user', content: reviewPrompt }],
-            max_tokens: 300,
-            temperature: 0.1,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a JSON-only typo correction engine. You MUST respond with ONLY a single valid JSON object matching {"editIndex": number | null, "newContent": string | null}. Do not include markdown codeblocks (no ```json), commentary, or extra text.'
+              },
+              { role: 'user', content: reviewPrompt }
+            ],
+            max_tokens: 150,
+            temperature: 0.0,
             response_format: { type: "json_object" }
           })
         });

@@ -132,7 +132,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'deepseek/deepseek-v4-flash-0731:free',
+        model: 'deepseek/deepseek-v4-flash-0731',
         messages: [
           {
             role: 'user',
