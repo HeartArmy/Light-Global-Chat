@@ -352,7 +352,7 @@ button {
   }
 
   /* Disable hover scale effects on mobile */
-  .hover\\:scale-110:hover {
+  .hover\:scale-110:hover {
     transform: none;
   }
   
