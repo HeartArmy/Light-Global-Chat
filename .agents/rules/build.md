@@ -1,5 +1,5 @@
-# Command Execution & Build Rules
+# Build & Verification Rules
 
-- **NEVER** run `npx tsc --noEmit` or any TypeScript type-check background tasks.
-- **NEVER** run `npm run build` or full production build commands.
-- Simply edit files directly as instructed without triggering background build or tsc commands.
+- **NEVER** run `npm run build` or any npm build commands.
+- **NEVER** run `npx tsc --noEmit` or any TypeScript compiler commands.
+- Do not run any build or type check commands automatically.
