@@ -80,82 +80,124 @@ export default function MessageActions({
     onEmojiPickerChange?.(false);
   };
 
-  return (
-    <div className="flex items-center gap-0.5 bg-opacity-90 backdrop-blur-sm rounded-full px-1 py-0.25 shadow-lg" style={{ background: 'var(--surface-elevated)' }}>
-      {/* Reply Button */}
-      <button
-        onClick={onReply}
-        className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
-        style={{
-          background: 'transparent',
-          color: 'var(--text-secondary)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'var(--surface)';
-          e.currentTarget.style.color = 'var(--text-primary)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = 'var(--text-secondary)';
-        }}
-        title="Reply"
-      >
-        ↩️
-      </button>
+  const pcQuickEmojis = [
+    { emoji: '👍', name: 'Thumbs Up' },
+    { emoji: '❤️', name: 'Heart' },
+    { emoji: '😂', name: 'Laughing' },
+    { emoji: '😮', name: 'Surprised' },
+    { emoji: '😢', name: 'Sad' },
+  ];
 
-      {/* React Button */}
-      <div className="relative">
-        <button
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
+  return (
+    <>
+      {/* DESKTOP VIEW: Dual Pills (Action Pill on Left, Accent Emoji Pill on Right) */}
+      <div className="hidden md:flex items-center gap-2">
+        {/* Left Pill: Action Controls */}
+        <div
+          className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 shadow-lg border"
           style={{
-            background: showEmojiPicker ? 'var(--surface)' : 'transparent',
-            color: 'var(--text-secondary)',
+            background: 'var(--surface-elevated)',
+            borderColor: 'var(--border)',
           }}
-          onMouseEnter={(e) => {
-            if (!showEmojiPicker) {
+        >
+          {/* Reply Button */}
+          <button
+            onClick={onReply}
+            className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
+            style={{
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+            }}
+            onMouseEnter={(e) => {
               e.currentTarget.style.background = 'var(--surface)';
               e.currentTarget.style.color = 'var(--text-primary)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!showEmojiPicker) {
+            }}
+            onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
               e.currentTarget.style.color = 'var(--text-secondary)';
-            }
-          }}
-          title="React"
-        >
-          😊
-        </button>
+            }}
+            title="Reply to message"
+          >
+            ↩️
+          </button>
 
-        {showEmojiPicker && (
-          <div className="absolute bottom-full left-0 transform translate-x-0 mb-2 z-50 min-w-max">
-            <div className="flex flex-col gap-1.5 shadow-2xl">
-              <EmojiPicker mode="quick" onSelect={handleEmojiSelect} onClose={handleCloseEmojiPicker} />
-              <button
-                onClick={() => setShowExtendedPicker(!showExtendedPicker)}
-                className="px-2.5 py-1.5 text-xs rounded-lg transition-all duration-fast"
-                style={{
-                  background: 'var(--surface-elevated)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                {showExtendedPicker ? '−' : '+'}
-              </button>
-              {showExtendedPicker && (
-                <EmojiPicker mode="extended" onSelect={handleEmojiSelect} onClose={handleCloseEmojiPicker} />
-              )}
-            </div>
-          </div>
-        )}
+          {/* Edit Button */}
+          {canEditOrDelete && (
+            <button
+              onClick={onEdit}
+              className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
+              style={{
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--surface)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+              title="Edit message"
+            >
+              ✏️
+            </button>
+          )}
+
+          {/* Delete Button */}
+          {canEditOrDelete && (
+            <button
+              onClick={onDelete}
+              className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
+              style={{
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--surface)';
+                e.currentTarget.style.color = 'var(--error)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+              title="Delete message"
+            >
+              🗑️
+            </button>
+          )}
+        </div>
+
+        {/* Right Pill: 5 Quick Emojis with Distinct Accent Color */}
+        <div
+          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 shadow-lg border"
+          style={{
+            background: 'rgba(99, 102, 241, 0.18)',
+            borderColor: 'rgba(99, 102, 241, 0.4)',
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15)',
+          }}
+        >
+          {pcQuickEmojis.map(({ emoji, name }) => (
+            <button
+              key={emoji}
+              onClick={() => onReact(emoji)}
+              className="p-0.5 rounded-full transition-transform duration-fast text-sm hover:scale-125 active:scale-95"
+              title={`React with ${name}`}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Edit Button (only for own messages within 10 minutes, or for privileged users) */}
-      {canEditOrDelete && (
+      {/* MOBILE VIEW: Classic Single Bar (Untouched) */}
+      <div
+        className="flex md:hidden items-center gap-0.5 bg-opacity-90 backdrop-blur-sm rounded-full px-1 py-0.25 shadow-lg"
+        style={{ background: 'var(--surface-elevated)' }}
+      >
+        {/* Reply Button */}
         <button
-          onClick={onEdit}
+          onClick={onReply}
           className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
           style={{
             background: 'transparent',
@@ -169,45 +211,117 @@ export default function MessageActions({
             e.currentTarget.style.background = 'transparent';
             e.currentTarget.style.color = 'var(--text-secondary)';
           }}
-          title="Edit"
+          title="Reply"
         >
-          ✏️
+          ↩️
         </button>
-      )}
 
-      {/* Delete Button (only for own messages within 10 minutes, or for privileged users) */}
-      {canEditOrDelete && (
-        <button
-          onClick={onDelete}
-          className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
-          style={{
-            background: 'transparent',
-            color: 'var(--text-secondary)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--surface)';
-            e.currentTarget.style.color = 'var(--error)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = 'var(--text-secondary)';
-          }}
-          title="Delete"
-        >
-          🗑️
-        </button>
-      )}
+        {/* React Button */}
+        <div className="relative">
+          <button
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
+            style={{
+              background: showEmojiPicker ? 'var(--surface)' : 'transparent',
+              color: 'var(--text-secondary)',
+            }}
+            onMouseEnter={(e) => {
+              if (!showEmojiPicker) {
+                e.currentTarget.style.background = 'var(--surface)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!showEmojiPicker) {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }
+            }}
+            title="React"
+          >
+            😊
+          </button>
 
-      {/* Click outside to close emoji picker */}
-      {showEmojiPicker && (
-        <div
-          className="fixed inset-0 z-0"
-          onClick={() => {
-            setShowEmojiPicker(false);
-            setShowExtendedPicker(false);
-          }}
-        />
-      )}
-    </div>
+          {showEmojiPicker && (
+            <div className="absolute bottom-full left-0 transform translate-x-0 mb-2 z-50 min-w-max">
+              <div className="flex flex-col gap-1.5 shadow-2xl">
+                <EmojiPicker mode="quick" onSelect={handleEmojiSelect} onClose={handleCloseEmojiPicker} />
+                <button
+                  onClick={() => setShowExtendedPicker(!showExtendedPicker)}
+                  className="px-2.5 py-1.5 text-xs rounded-lg transition-all duration-fast"
+                  style={{
+                    background: 'var(--surface-elevated)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {showExtendedPicker ? '−' : '+'}
+                </button>
+                {showExtendedPicker && (
+                  <EmojiPicker mode="extended" onSelect={handleEmojiSelect} onClose={handleCloseEmojiPicker} />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Edit Button */}
+        {canEditOrDelete && (
+          <button
+            onClick={onEdit}
+            className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
+            style={{
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--surface)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }}
+            title="Edit"
+          >
+            ✏️
+          </button>
+        )}
+
+        {/* Delete Button */}
+        {canEditOrDelete && (
+          <button
+            onClick={onDelete}
+            className="p-1 rounded-full transition-all duration-fast text-xs hover:scale-110"
+            style={{
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--surface)';
+              e.currentTarget.style.color = 'var(--error)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }}
+            title="Delete"
+          >
+            🗑️
+          </button>
+        )}
+
+        {/* Click outside to close emoji picker */}
+        {showEmojiPicker && (
+          <div
+            className="fixed inset-0 z-0"
+            onClick={() => {
+              setShowEmojiPicker(false);
+              setShowExtendedPicker(false);
+            }}
+          />
+        )}
+      </div>
+    </>
   );
 }
