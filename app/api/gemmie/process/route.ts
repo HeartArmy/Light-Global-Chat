@@ -579,8 +579,9 @@ export async function POST(request: NextRequest) {
     // // }
     // const typingDelayMs = typingDelaySec * 1000;
     // console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
-    const baseDelayMs = 1000 + Math.random() * 4000; 
-    await new Promise(resolve => setTimeout(resolve, baseDelayMs));
+    // Artificial thinking pause - COMMENTED OUT
+    // const baseDelayMs = 1000 + Math.random() * 4000; 
+    // await new Promise(resolve => setTimeout(resolve, baseDelayMs));
 
     // Check for similarity with recent messages from GEMMIE only before sending
     console.log('🔍 Checking for similarity with recent Gemmie messages only...');
