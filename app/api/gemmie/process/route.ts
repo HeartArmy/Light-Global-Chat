@@ -452,9 +452,9 @@ export async function POST(request: NextRequest) {
             });
           }
         }
-        // cap growth: keep strongest/recent, max 10 items
+        // cap growth: keep strongest/recent, max 20 items
         out.sort((a, b) => (Number(b.strength) - Number(a.strength)) || (Number(new Date(b.lastMentionedAt).getTime()) - Number(new Date(a.lastMentionedAt).getTime())));
-        return out.slice(0, 10);
+        return out.slice(0, 20);
       };
 
       if (memoryUpdate?.topics?.length) {
@@ -835,7 +835,7 @@ If NO typo fix needed:
               },
               { role: 'user', content: reviewPrompt }
             ],
-            max_tokens: 150,
+            max_tokens: 3000,
             temperature: 0.0,
             response_format: { type: "json_object" }
           })
