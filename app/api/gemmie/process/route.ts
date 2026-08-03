@@ -80,9 +80,9 @@ Respond with JSON only:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'ibm-granite/granite-4.1-8b',
+        model: 'qwen/qwen3.7-flash',
         messages: [{ role: 'user', content: similarityPrompt }],
-        max_tokens: 100,
+        max_tokens: 1000,
         temperature: 0.0
       })
     });
@@ -579,7 +579,7 @@ export async function POST(request: NextRequest) {
     // // }
     // const typingDelayMs = typingDelaySec * 1000;
     // console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
-    const baseDelayMs = 5000 + Math.random() * 5000; 
+    const baseDelayMs = 1000 + Math.random() * 4000; 
     await new Promise(resolve => setTimeout(resolve, baseDelayMs));
 
     // Check for similarity with recent messages from GEMMIE only before sending
