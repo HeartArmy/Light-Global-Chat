@@ -7,6 +7,7 @@ import Message from '@/models/Message';
 import GemmieMemory from '@/models/GemmieMemory';
 import DeletedMessageByGemmie from '@/models/DeletedMessageByGemmie';
 import EditedMessageByGemmie from '@/models/EditedMessageByGemmie';
+import { setTypingIndicator } from '@/lib/gemmie-timer';
 // import { setGemmieTemporarilyDisabled } from '@/lib/gemmie-status';
 import mongoose from 'mongoose'; 
 
@@ -563,8 +564,6 @@ export async function POST(request: NextRequest) {
     await new Promise(resolve => setTimeout(resolve, baseThinkingMs));
 
     // Realistic human typing pauses (typing dots appear, disappear to think of next word, then reappear)
-    const { setTypingIndicator } = await import('@/lib/gemmie-timer');
-
     // First typing burst (2 - 3.5 seconds)
     await setTypingIndicator(true, 'gemmie');
     await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1500));
@@ -610,7 +609,6 @@ export async function POST(request: NextRequest) {
       console.log(`⚠️ Response is a duplicate of recent message, skipping send`);
       console.log(`📝 Reason: ${similarityCheck.reason || 'unknown'}`);
       console.log(`📝 Similar message: "${similarityCheck.similarMessage}"`);
-      const { setTypingIndicator } = await import('@/lib/gemmie-timer');
       await setTypingIndicator(false, 'gemmie');
       await scheduleNextFromQueue();
       return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
@@ -628,14 +626,12 @@ export async function POST(request: NextRequest) {
 
     if (lockAcquired !== 'OK') {
       console.log('⏰ Gemmie is in cooldown (Redis lock), skipping message send');
-      const { setTypingIndicator } = await import('@/lib/gemmie-timer');
       await setTypingIndicator(false, 'gemmie');
       await scheduleNextFromQueue();
       return NextResponse.json({ success: true, skipped: true, reason: 'cooldown' });
     }
 
     // Clear typing indicator before sending message
-    const { setTypingIndicator } = await import('@/lib/gemmie-timer');
     await setTypingIndicator(false, 'gemmie');
     // console.log('💬 Gemmie typing indicator cleared');
 
