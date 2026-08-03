@@ -776,7 +776,7 @@ await new Promise(resolve => setTimeout(resolve, typingDelayMs+baseDelayMs));
     if (hasTypos) {
          const recentGemmieMessagesForEdit = await Message.find({
         userName: 'gemmie',
-        timestamp: { $gte: twoMinutesAgo }
+        timestamp: { $gte: thirtyMinutesAgo }
       })
         .sort({ timestamp: -1 })
         .limit(1)
