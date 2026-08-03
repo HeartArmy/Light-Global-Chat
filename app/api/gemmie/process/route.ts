@@ -50,7 +50,7 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
       return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
     }).join('\n');
 
-  const similarityPrompt = `Strictly check if Gemmie should SKIP sending this new message.
+  const similarityPrompt = `Check if Gemmie should SKIP sending this new message.
 
 NEW MESSAGE TO SEND:
 "${newResponse}"
@@ -58,15 +58,16 @@ NEW MESSAGE TO SEND:
 RECENT CHAT HISTORY (oldest to newest):
 ${contextMessages}
 
-STRICT DUPLICATE & QUALITY CHECK:
-- DUPLICATE (CRITICAL): Skip if this new message says basically the same thing, uses identical phrasing, or shares the exact same opinion/thought as ANY recent message from Gemmie in the chat history. NEVER allow repeated messages.
-- TOO LONG: Skip if message is over 20 words.
+CHECK RULES:
+- DUPLICATE: Skip ONLY if this new message is an obvious repeat of a message Gemmie already sent (saying the exact same thought or opinion).
 - TOO HELPFUL: Skip if giving step-by-step instructions, recipes, or detailed how-to explanations.
 - STALE: Skip if user already answered their own question or moved on to a different topic.
 - IMPOSSIBLE KNOWLEDGE: Skip if Gemmie (23yo from California) wouldn't realistically know this specific information.
 
+DEFAULT TO shouldSkip: false. WHEN IN DOUBT, DO NOT SKIP. Only skip if it is clearly repetitive or violating a rule.
+
 Respond with JSON only:
-{"shouldSkip": true/false, "reason": "which rule triggered (e.g., 'duplicate', 'too_long', 'stale', etc)"}`;
+{"shouldSkip": true/false, "reason": "which rule triggered (e.g., 'duplicate', 'stale', etc)"}`;
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
