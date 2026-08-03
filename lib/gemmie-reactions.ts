@@ -108,15 +108,15 @@ export async function selectEmojiForMessage(content: string): Promise<string> {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openrouter/free',
+        model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
         messages: [
           {
             role: 'user',
             content: EMOJI_SELECTION_PROMPT + ` "${content}"`
           }
         ],
-        max_tokens: 10,
-        temperature: 0.1
+        max_tokens: 3000,
+        temperature: 0.0
       })
     });
     
@@ -126,10 +126,12 @@ export async function selectEmojiForMessage(content: string): Promise<string> {
     
     const data = await response.json();
     const aiResponse = data.choices[0]?.message?.content?.trim() || '';
+    console.log('🤖 AI emoji reaction choice raw output:', aiResponse);
     
-    // Extract vibe word from response and map to emoji
-    const vibeWord = aiResponse.trim().toLowerCase();
-    return mapVibeToEmoji(vibeWord) || '❤️'; // Default to heart emoji
+    // Extract vibe word from response (check for exact words love, funny, greeting, sad, approval)
+    const vibeText = aiResponse.trim().toLowerCase();
+    const matchedEmoji = mapVibeToEmoji(vibeText);
+    return matchedEmoji || '❤️'; // Default to heart emoji
     
   } catch (error) {
     console.error('AI emoji selection failed, using default:', error);
