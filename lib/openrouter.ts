@@ -334,7 +334,7 @@ export async function generateGemmieResponse(
     const portlandWeather = await getPortlandWeather();
     
     // Determine model and prompt based on image presence
-    const modelToUse = selectedImageUrl ? 'google/gemma-3-27b-it' : 'google/gemma-4-26b-a4b-it'; // the first one before the : should be a image model
+    const modelToUse = selectedImageUrl ? 'google/gemma-3-27b-it' : 'deepseek/deepseek-v4-flash-0731'; // the first one before the : should be a image model
     
     const prompt = selectedImageUrl
       ? `Respond as gemmie.
@@ -558,7 +558,7 @@ ${recentMessagesDb}` : '';
     }
 
     // Determine which model to use based on image presence
-    const modelToUse = selectedImageUrl ? 'gemma-4-26b-a4b-it' : 'google/gemma-4-26b-a4b-it'; //the first one before the : should be a image model
+    const modelToUse = selectedImageUrl ? 'gemma-4-26b-a4b-it' : 'deepseek/deepseek-v4-flash-0731'; //the first one before the : should be a image model
     
     // Construct the full prompt
     const memoryUserBlock = memoryContext?.userMemoryBlock?.trim() || 'none';
