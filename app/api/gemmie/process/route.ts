@@ -363,13 +363,35 @@ export async function POST(request: NextRequest) {
       return recentUsers;
     };
 
+    const formatRelativeTime = (dateInput?: Date | string): string => {
+      if (!dateInput) return 'recently';
+      const date = new Date(dateInput);
+      const diffMs = Date.now() - date.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      if (diffHours < 24) return 'today';
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 30) return `${diffDays} days ago`;
+      const diffMonths = Math.floor(diffDays / 30);
+      if (diffMonths < 12) return `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`;
+      const diffYears = Math.floor(diffDays / 365);
+      return `${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`;
+    };
+
     const userMemoryDoc: any = await findUserMemoryDoc();
     const gemmieSelfMemoryDoc: any = await GemmieMemory.findOne({ key: gemmieSelfMemoryKey }).lean();
 
-    const allUserTopics = (userMemoryDoc?.topics || []).map((t: any) => String(t.topic));
-    const userTopics = allUserTopics;
-    const userIsAdversarial = Boolean(userMemoryDoc?.isAdversarial || allUserTopics.some((topic: string) => topic.toLowerCase().includes('adversarial')));
-    const gemmieSelfFacts = (gemmieSelfMemoryDoc?.selfFacts || []).map((f: any) => String(f.fact));
+    const rawUserTopics = userMemoryDoc?.topics || [];
+    const userTopics = rawUserTopics.map((t: any) => `[${formatRelativeTime(t.lastMentionedAt)}] ${t.topic}`);
+    const userIsAdversarial = Boolean(
+      userMemoryDoc?.isAdversarial ||
+      rawUserTopics.some((t: any) => {
+        const str = String(t.topic || '').toLowerCase();
+        return str.includes('adversarial') || str.includes('hostile');
+      })
+    );
+
+    const rawSelfFacts = gemmieSelfMemoryDoc?.selfFacts || [];
+    const gemmieSelfFacts = rawSelfFacts.map((f: any) => `[${formatRelativeTime(f.lastMentionedAt)}] ${f.fact}`);
 
     const userMemoryBlockItems = [
       ...(userIsAdversarial ? [`- status: adversarial (${userMemoryDoc?.adversarialReason || 'hostile to gemmie'})`] : []),
