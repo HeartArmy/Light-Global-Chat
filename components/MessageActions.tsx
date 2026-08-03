@@ -90,8 +90,8 @@ export default function MessageActions({
 
   return (
     <>
-      {/* DESKTOP VIEW: Dual Pills (Action Pill on Left, Accent Emoji Pill on Right) */}
-      <div className="hidden md:flex items-center gap-2">
+      {/* DESKTOP VIEW: Dual Pills (Emoji Pill on Left for own messages, on Right for others) */}
+      <div className={`hidden md:flex items-center gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
         {/* Left Pill: Action Controls */}
         <div
           className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 shadow-lg border"
