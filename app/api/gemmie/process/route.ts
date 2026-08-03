@@ -542,23 +542,43 @@ export async function POST(request: NextRequest) {
       console.log('✅ No typos added, skipping editing logic');
     }
 
-    // Simulate realistic typing delay based on response length
-const words = (responseWithTypos.match(/\S+/g) || []).length;
-const typingSpeedWps = 0.2; // words/sec
-let typingDelaySec = words / typingSpeedWps;
-typingDelaySec = Math.max(1, Math.min(5, typingDelaySec));
-// 20% variance
-typingDelaySec *= (0.8 + Math.random() * 0.4);
-// Occasional distraction (5% chance) - COMMENTED OUT
-// if (Math.random() < 0.05) {
-//     const distractionDelaySec = 15 + Math.random() * 15; // 10-20s
-//     console.log(`🤔 Distraction delay: ${Math.round(distractionDelaySec)}s`);
-//     typingDelaySec += distractionDelaySec;
-// }
-const typingDelayMs = typingDelaySec * 1000;
-console.log(`⌨️ Typing ${words} words: ~${Math.round(typingDelayMs)}ms`);
-const baseDelayMs = 5000 + Math.random() * 5000; 
-await new Promise(resolve => setTimeout(resolve, typingDelayMs+baseDelayMs));
+    // 3. Typing Speed Simulation (1 – 5 seconds) - COMMENTED OUT
+    // const words = (responseWithTypos.match(/\S+/g) || []).length;
+    // const typingSpeedWps = 0.2; // words/sec
+    // let typingDelaySec = words / typingSpeedWps;
+    // typingDelaySec = Math.max(1, Math.min(5, typingDelaySec));
+    // typingDelaySec *= (0.8 + Math.random() * 0.4);
+    // const typingDelayMs = typingDelaySec * 1000;
+
+    // Base Thinking Pause (incorporating word length 1–5s into the silent pause before typing starts)
+    const words = (responseWithTypos.match(/\S+/g) || []).length;
+    let wordThinkingSec = words * 0.15; // ~150ms per word
+    wordThinkingSec = Math.max(1, Math.min(5, wordThinkingSec)); // Clamped 1 to 5 seconds
+    wordThinkingSec *= (0.8 + Math.random() * 0.4); // 20% random variance
+
+    const baseThinkingMs = (2000 + Math.random() * 2000) + (wordThinkingSec * 1000); // 2-4s base + 1-5s word scale
+    console.log(`🤔 Base Thinking Pause (${words} words): ~${Math.round(baseThinkingMs)}ms silent pause before typing starts`);
+    
+    // Silent thinking pause before typing dots appear
+    await new Promise(resolve => setTimeout(resolve, baseThinkingMs));
+
+    // Realistic human typing pauses (typing dots appear, disappear to think of next word, then reappear)
+    const { setTypingIndicator } = await import('@/lib/gemmie-timer');
+
+    // First typing burst (2 - 3.5 seconds)
+    await setTypingIndicator(true, 'gemmie');
+    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1500));
+
+    // Random pause (50% chance): typing dots disappear as if Gemmie is thinking of the next word
+    if (Math.random() < 0.5) {
+      await setTypingIndicator(false, 'gemmie');
+      console.log('💭 Gemmie paused typing to think of the next word...');
+      await new Promise(resolve => setTimeout(resolve, 1200 + Math.random() * 1200));
+      await setTypingIndicator(true, 'gemmie');
+    }
+
+    // Final typing burst before sending (1.5 - 2.5 seconds)
+    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
 
     // Check for similarity with recent messages from GEMMIE only before sending
     console.log('🔍 Checking for similarity with recent Gemmie messages only...');
