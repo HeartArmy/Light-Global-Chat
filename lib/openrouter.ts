@@ -569,12 +569,16 @@ OUTPUT RULES (STRICT JSON ONLY):
 {
   "shouldRespond": boolean,
   "reply": string,
+  "burstFollowUps": string[],
+  "deletePastMessageId": string or null,
   "skipReason": string,
   "memoryUpdate": {
     "topics": [{ "topic": string, "strength": number }],
     "selfFacts": [{ "fact": string, "strength": number }]
   }
 }
+- "burstFollowUps": optional array of 0 to 3 short follow-up lines to text right after "reply" (e.g. ["i thought they broke up last year lol", "wait no way"]). Keep [] if sending only 1 message.
+- "deletePastMessageId": optional MongoDB ID string of a recent Gemmie message to delete/regret (or null if not deleting).
 - If "shouldRespond" is false, "reply" must be "" and "skipReason" must explain WHY.
 - If "shouldRespond" is true, "skipReason" must be "".
 - "memoryUpdate.topics" may be empty.

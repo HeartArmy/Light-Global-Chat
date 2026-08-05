@@ -698,8 +698,14 @@ export async function POST(request: NextRequest) {
     // Send Multi-Burst follow-up messages if AI requested
     if (gen.burstFollowUps && gen.burstFollowUps.length > 0) {
       for (const followUpText of gen.burstFollowUps) {
-        const burstPauseMs = 3000 + Math.random() * 2000; // 3 to 5s pause between double/triple texts
+        // Show typing indicator during pause between burst messages
+        await setTypingIndicator(true, 'gemmie');
+
+        const burstPauseMs = 4000 + Math.random() * 4000; // 4 to 8s pause between double/triple texts
         await new Promise(resolve => setTimeout(resolve, burstPauseMs));
+
+        // Clear typing indicator right before sending burst message
+        await setTypingIndicator(false, 'gemmie');
 
         const followUpWithTypos = addProbabilisticTypos(followUpText);
         const burstMsg = await sendGemmieMessage(followUpWithTypos);
