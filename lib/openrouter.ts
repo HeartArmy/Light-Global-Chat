@@ -193,7 +193,7 @@ async function getRecentMessages(): Promise<string> {
     const messages = await Message.find({})
       .sort({ timestamp: -1 })
       .limit(50)
-      .select('userName userCountry content timestamp')
+      .select('_id userName userCountry content timestamp')
       .lean();
 
     // Format messages for context (newest first, so reverse)
@@ -201,7 +201,8 @@ async function getRecentMessages(): Promise<string> {
       const flag = getCountryFlag(msg.userCountry, msg.userName);
       // Only include text content, ignore attachments
       const content = msg.content || '[attachment]';
-      return `${msg.userName} ${flag} from ${msg.userCountry} [${msg.timestamp}]: ${content}`;
+      const idTag = msg.userName?.toLowerCase() === 'gemmie' && msg._id ? ` [id: ${msg._id}]` : '';
+      return `${msg.userName} ${flag} from ${msg.userCountry}${idTag} [${msg.timestamp}]: ${content}`;
     }).join('\n');
 
     return context;
