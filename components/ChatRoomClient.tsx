@@ -334,12 +334,13 @@ export default function ChatRoomClient() {
         console.log('👤 Skipping typing indicator for current user:', userName);
         return;
       }
-      // Don't show typing indicator if Gemmie is disabled
-      if (!gemmieEnabled) {
-        console.log('🔇 Gemmie is disabled, not showing typing indicator');
-        return;
-      }
+      
       const typingIndicator = document.getElementById('typing-indicator');
+      const typingTextEl = document.getElementById('typing-indicator-text');
+      if (typingTextEl) {
+        typingTextEl.textContent = '📝 Someone is typing';
+      }
+
       if (typingIndicator) {
         // Smoothly show typing indicator with animation
         typingIndicator.style.opacity = '1';
@@ -829,7 +830,7 @@ export default function ChatRoomClient() {
         }}
         title="Someone is typing..."
       >
-        <span className="animate-pulse">📝 Someone is typing</span>
+        <span id="typing-indicator-text" className="animate-pulse">📝 Someone is typing</span>
         <span className="typing-dots">
           <span>.</span>
           <span>.</span>
