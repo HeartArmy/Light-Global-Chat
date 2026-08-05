@@ -292,7 +292,8 @@ export async function POST(request: NextRequest) {
     // Format messages for context with timestamp and country flag
     const formatMessageWithContext = (msg: any) => {
       const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
-      return `${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp * 1000).toISOString()}]: ${msg.userMessage}`;
+      const idTag = msg.userName?.toLowerCase() === 'gemmie' && msg._id ? ` [id: ${msg._id}]` : '';
+      return `${msg.userName} ${flag} from ${msg.userCountry}${idTag} [${new Date(msg.timestamp * 1000).toISOString()}]: ${msg.userMessage}`;
     };
 
     const contextString = allMessagesForContext.map(formatMessageWithContext).join('\n---\n');
@@ -618,26 +619,54 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, skipped: true, reason: 'similarity' });
     }
 
-    // Hard min-gap between Gemmie sends (race-proof via Redis lock)
-    const COOLDOWN_SECONDS = 25; // minimum gap between Gemmie messages
-    const SEND_COOLDOWN_LOCK_KEY = 'gemmie:send-cooldown';
-    const lockTTL = COOLDOWN_SECONDS + 1; // extra buffer to avoid suspiciously close timestamps
-
-    const lockAcquired = await redisClient.default.set(SEND_COOLDOWN_LOCK_KEY, '1', {
-      ex: lockTTL,
-      nx: true,
-    });
-
-    if (lockAcquired !== 'OK') {
-      console.log('⏰ Gemmie is in cooldown (Redis lock), skipping message send');
-      await setTypingIndicator(false, 'gemmie');
-      await scheduleNextFromQueue();
-      return NextResponse.json({ success: true, skipped: true, reason: 'cooldown' });
-    }
+    // Hard min-gap between Gemmie sends (race-proof via Redis lock) - COMMENTED OUT
+    // const COOLDOWN_SECONDS = 25; // minimum gap between Gemmie messages
+    // const SEND_COOLDOWN_LOCK_KEY = 'gemmie:send-cooldown';
+    // const lockTTL = COOLDOWN_SECONDS + 1; // extra buffer to avoid suspiciously close timestamps
+    // const lockAcquired = await redisClient.default.set(SEND_COOLDOWN_LOCK_KEY, '1', {
+    //   ex: lockTTL,
+    //   nx: true,
+    // });
+    // if (lockAcquired !== 'OK') {
+    //   console.log('⏰ Gemmie is in cooldown (Redis lock), skipping message send');
+    //   await setTypingIndicator(false, 'gemmie');
+    //   await scheduleNextFromQueue();
+    //   return NextResponse.json({ success: true, skipped: true, reason: 'cooldown' });
+    // }
 
     // Clear typing indicator before sending message
     await setTypingIndicator(false, 'gemmie');
     // console.log('💬 Gemmie typing indicator cleared');
+
+    // Execute Gemmie regret message deletion if requested
+    if (gen.deletePastMessageId) {
+      try {
+        const msgToDelete = await Message.findById(gen.deletePastMessageId);
+        if (msgToDelete && msgToDelete.userName.toLowerCase() === 'gemmie') {
+          const DeletedMessageByGemmie = (await import('@/models/DeletedMessageByGemmie')).default;
+          await DeletedMessageByGemmie.create({
+            originalMessageId: msgToDelete._id,
+            content: msgToDelete.content,
+            userName: msgToDelete.userName,
+            userCountry: msgToDelete.userCountry || 'US',
+            timestamp: msgToDelete.timestamp,
+            deletedAt: new Date(),
+            attachments: msgToDelete.attachments || [],
+            replyTo: msgToDelete.replyTo || null,
+            reactions: msgToDelete.reactions || [],
+            edited: msgToDelete.edited || false,
+            editedAt: msgToDelete.editedAt || null,
+            deletionReason: 'self-correction',
+          });
+          await Message.findByIdAndDelete(msgToDelete._id);
+          const pusherInstance = getPusherInstance();
+          await pusherInstance.trigger('chat-room', 'delete-message', { messageId: msgToDelete._id.toString() });
+          console.log('🗑️ Gemmie regretted and deleted past message:', msgToDelete._id.toString());
+        }
+      } catch (deleteError) {
+        console.error('❌ Failed to process Gemmie regret deletion:', deleteError);
+      }
+    }
 
     // Send to chat
     console.log('📤 Sending Gemmie message to chat...');
@@ -665,6 +694,32 @@ export async function POST(request: NextRequest) {
 
     await pusher.trigger('chat-room', 'new-message', gemmieMessage);
     console.log('✅ Delayed Gemmie response sent for the initial message(s).');
+
+    // Send Multi-Burst follow-up messages if AI requested
+    if (gen.burstFollowUps && gen.burstFollowUps.length > 0) {
+      for (const followUpText of gen.burstFollowUps) {
+        const burstPauseMs = 3000 + Math.random() * 2000; // 3 to 5s pause between double/triple texts
+        await new Promise(resolve => setTimeout(resolve, burstPauseMs));
+
+        const followUpWithTypos = addProbabilisticTypos(followUpText);
+        const burstMsg = await sendGemmieMessage(followUpWithTypos);
+        if (burstMsg) {
+          await pusher.trigger('chat-room', 'new-message', {
+            _id: burstMsg._id,
+            content: burstMsg.content,
+            userName: burstMsg.userName,
+            userCountry: burstMsg.userCountry,
+            timestamp: burstMsg.timestamp,
+            attachments: burstMsg.attachments,
+            replyTo: burstMsg.replyTo,
+            reactions: burstMsg.reactions,
+            edited: burstMsg.edited,
+            editedAt: burstMsg.editedAt
+          });
+          console.log('📲 Multi-burst follow-up sent:', burstMsg.content);
+        }
+      }
+    }
     
     // Check for new messages that arrived during processing and schedule next job immediately.
     // This allows the next job to start while editing happens concurrently.
