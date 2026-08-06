@@ -565,7 +565,7 @@ export async function POST(request: NextRequest) {
       console.log('✅ No typos added, skipping editing logic');
     }
 
-    // Simulate realistic typing delay based on response length - COMMENTED OUT
+    // Simulate realistic typing delay based on response length - handled after similarity check below
     // const words = (responseWithTypos.match(/\S+/g) || []).length;
     // const typingSpeedWps = 0.2; // words/sec
     // let typingDelaySec = words / typingSpeedWps;
@@ -633,6 +633,14 @@ export async function POST(request: NextRequest) {
     //   await scheduleNextFromQueue();
     //   return NextResponse.json({ success: true, skipped: true, reason: 'cooldown' });
     // }
+
+    // Word-based typing delay before sending the main reply (8-15s, more words = longer)
+    // Keeps the typing indicator up so it feels like Gemmie is actually typing.
+    const replyWords = (responseWithTypos.match(/\S+/g) || []).length;
+    const typingDelayMs = (8 + Math.min(replyWords / 3, 7)) * 1000; // 8s + up to 7s → 8-15s
+    await setTypingIndicator(true, 'gemmie');
+    console.log(`⌨️ Gemmie typing ${replyWords} words: ~${Math.round(typingDelayMs / 1000)}s delay`);
+    await new Promise(resolve => setTimeout(resolve, typingDelayMs));
 
     // Clear typing indicator before sending message
     await setTypingIndicator(false, 'gemmie');
