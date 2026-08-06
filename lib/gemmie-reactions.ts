@@ -115,7 +115,7 @@ export async function selectEmojiForMessage(content: string): Promise<string> {
             content: EMOJI_SELECTION_PROMPT + ` "${content}"`
           }
         ],
-        max_tokens: 3000,
+        max_tokens: 800,
         temperature: 0.0
       })
     });

@@ -359,7 +359,7 @@ Respond ONLY as gemmie with casual text. NO dates/times/countries/flags/username
             ]
           }
         ],
-        max_tokens: selectedImageUrl ? 32000 : 15000, // Reduced to 15000 for text outputs, 32000 for image inputs
+        max_tokens: selectedImageUrl ? 2000 : 1500, // 1500 for text, 2000 for image (reply is short + reasoning headroom)
         temperature: selectedImageUrl ? 0.9 : 1.2 // Slightly less creative for image responses
       })
     });
@@ -655,7 +655,7 @@ ${jsonOutputRules}`;
             ]
           }
         ],
-        max_tokens: selectedImageUrl ? 32000 : 15000, // Reduced to 15000 for text outputs, 32000 for image inputs
+        max_tokens: selectedImageUrl ? 2000 : 1500, // 1500 for text, 2000 for image (JSON reply is short + reasoning headroom)
         temperature: selectedImageUrl ? 0.9 : 0.8 // Slightly more creative for image responses
       })
     });

@@ -917,7 +917,7 @@ If NO typo fix needed:
               },
               { role: 'user', content: reviewPrompt }
             ],
-            max_tokens: 3000,
+            max_tokens: 1500,
             temperature: 0.0,
             response_format: { type: "json_object" }
           })
