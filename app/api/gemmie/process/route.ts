@@ -634,12 +634,13 @@ export async function POST(request: NextRequest) {
     //   return NextResponse.json({ success: true, skipped: true, reason: 'cooldown' });
     // }
 
-    // Word-based typing delay before sending the main reply (8-15s, more words = longer)
+    // Word-based typing delay before sending the main reply (1-10s, more words = longer)
     // Keeps the typing indicator up so it feels like Gemmie is actually typing.
     const replyWords = (responseWithTypos.match(/\S+/g) || []).length;
-    const typingDelayMs = (8 + Math.min(replyWords / 3, 7)) * 1000; // 8s + up to 7s → 8-15s
+    const typingDelaySec = Math.max(1, Math.min(10, Math.round(replyWords * 0.4))); // ~2 words → 1s, ~25 words → 10s
+    const typingDelayMs = typingDelaySec * 1000;
     await setTypingIndicator(true, 'gemmie');
-    console.log(`⌨️ Gemmie typing ${replyWords} words: ~${Math.round(typingDelayMs / 1000)}s delay`);
+    console.log(`⌨️ Gemmie typing ${replyWords} words: ~${typingDelaySec}s delay`);
     await new Promise(resolve => setTimeout(resolve, typingDelayMs));
 
     // Clear typing indicator before sending message
