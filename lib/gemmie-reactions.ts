@@ -1,5 +1,4 @@
 import redis from '@/lib/redis';
-import { generateGemmieResponse } from '@/lib/openrouter';
 
 // Key for tracking last emoji reaction
 const LAST_REACTION_KEY = 'gemmie:last-emoji-reaction';

@@ -84,8 +84,14 @@ export async function PATCH(
 
     // Update message
     message.content = content;
-    message.edited = true;
-    message.editedAt = new Date();
+
+    // Hide the "edited" marker when a privileged user (arham/gemmie) edits a Gemmie message
+    // so the developer can change Gemmie's messages without other people noticing.
+    const isGemmieMessage = message.userName?.toLowerCase() === 'gemmie';
+    if (!(isPrivileged && isGemmieMessage)) {
+      message.edited = true;
+      message.editedAt = new Date();
+    }
     await message.save();
 
     const updatedMessage = await Message.findById(new mongoose.Types.ObjectId(id)).populate('replyTo').lean();
@@ -95,7 +101,7 @@ export async function PATCH(
     await pusher.trigger('chat-room', 'edit-message', {
       messageId: id,
       newContent: content,
-      edited: true,
+      edited: message.edited,
       editedAt: message.editedAt,
     });
 

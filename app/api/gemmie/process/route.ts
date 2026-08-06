@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Receiver } from '@upstash/qstash';
-import { generateGemmieResponse, generateGemmieResponseForContext, sendGemmieMessage, addProbabilisticTypos } from '@/lib/openrouter';
+import { generateGemmieResponseForContext, sendGemmieMessage, addProbabilisticTypos } from '@/lib/openrouter';
 import { getPusherInstance } from '@/lib/pusher';
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
@@ -23,9 +23,9 @@ function getCountryFlag(countryCode: string, userName?: string): string {
   return String.fromCodePoint(...codePoints);
 }
 
-// Check if response is too similar to recent messages using AI
+// Check if response is too similar to recent messages
 async function checkResponseSimilarity(newResponse: string, recentMessages: any[], conversationMessages: any[] = recentMessages): Promise<{ shouldSkip: boolean; reason?: string; similarMessage?: string }> {
-  // Fast Code Check: Exact or near-exact match against any recent Gemmie message
+  // Fast Code Check: Exact or near-exact match against any recent Gemmie message (deterministic, no API call)
   const normalizedNew = newResponse.trim().toLowerCase();
   for (const msg of recentMessages) {
     const normalizedOld = String(msg.content || '').trim().toLowerCase();
@@ -39,77 +39,77 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
     }
   }
 
-  // Get the most recent message to compare against
-  const mostRecentMessage = recentMessages[0]?.content || '';
-  
-  // Create comprehensive context showing recent messages
-  const contextMessages = conversationMessages
-    .slice(0, 20)
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    .map((msg, index) => {
-      const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
-      return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
-    }).join('\n');
+  // AI similarity check prompt - COMMENTED OUT to avoid extra API calls
+  // const mostRecentMessage = recentMessages[0]?.content || '';
+  //
+  // // Create comprehensive context showing recent messages
+  // const contextMessages = conversationMessages
+  //   .slice(0, 20)
+  //   .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+  //   .map((msg, index) => {
+  //     const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
+  //     return `${index + 1}. ${msg.userName} ${flag} from ${msg.userCountry} [${new Date(msg.timestamp).toISOString()}]: "${msg.content}"`;
+  //   }).join('\n');
+  //
+  // const similarityPrompt = `Check if Gemmie should SKIP sending this new message.
+  //
+  // NEW MESSAGE TO SEND:
+  // "${newResponse}"
+  //
+  // RECENT CHAT HISTORY (oldest to newest):
+  // ${contextMessages}
+  //
+  // CHECK RULES:
+  // - DUPLICATE: Skip ONLY if this new message is an obvious repeat of a message Gemmie already sent (saying the exact same thought or opinion).
+  // - TOO HELPFUL: Skip if giving step-by-step instructions, recipes, or detailed how-to explanations.
+  // - STALE: Skip if user already answered their own question or moved on to a different topic.
+  // - IMPOSSIBLE KNOWLEDGE: Skip if Gemmie (23yo from California) wouldn't realistically know this specific information.
+  //
+  // DEFAULT TO shouldSkip: false. WHEN IN DOUBT, DO NOT SKIP. Only skip if it is clearly repetitive or violating a rule.
+  //
+  // Respond with JSON only:
+  // {"shouldSkip": true/false, "reason": "which rule triggered (e.g., 'duplicate', 'stale', etc)"}`;
+  //
+  // try {
+  //   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  //     method: 'POST',
+  //     headers: {
+  //       'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+  //       'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
+  //       'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App', 
+  //       'Content-Type': 'application/json'
+  //     },
+  //     body: JSON.stringify({
+  //       model: 'qwen/qwen3.7-flash',
+  //       messages: [{ role: 'user', content: similarityPrompt }],
+  //       max_tokens: 1000,
+  //       temperature: 0.0
+  //     })
+  //   });
+  //
+  //   if (response.ok) {
+  //     const data = await response.json();
+  //     const resultText = data.choices[0]?.message?.content?.trim();
+  //     
+  //     try {
+  //       const jsonMatch = resultText.match(/\{[\s\S]*\}/);
+  //       if (jsonMatch) {
+  //         const parsed = JSON.parse(jsonMatch[0]);
+  //         return {
+  //           shouldSkip: parsed.shouldSkip || false,
+  //           reason: parsed.reason || 'unknown',
+  //           similarMessage: mostRecentMessage
+  //         };
+  //       }
+  //     } catch (parseError) {
+  //       console.error('Failed to parse similarity check JSON:', parseError);
+  //     }
+  //   }
+  // } catch (error) {
+  //   console.error('Error in similarity check:', error);
+  // }
 
-  const similarityPrompt = `Check if Gemmie should SKIP sending this new message.
-
-NEW MESSAGE TO SEND:
-"${newResponse}"
-
-RECENT CHAT HISTORY (oldest to newest):
-${contextMessages}
-
-CHECK RULES:
-- DUPLICATE: Skip ONLY if this new message is an obvious repeat of a message Gemmie already sent (saying the exact same thought or opinion).
-- TOO HELPFUL: Skip if giving step-by-step instructions, recipes, or detailed how-to explanations.
-- STALE: Skip if user already answered their own question or moved on to a different topic.
-- IMPOSSIBLE KNOWLEDGE: Skip if Gemmie (23yo from California) wouldn't realistically know this specific information.
-
-DEFAULT TO shouldSkip: false. WHEN IN DOUBT, DO NOT SKIP. Only skip if it is clearly repetitive or violating a rule.
-
-Respond with JSON only:
-{"shouldSkip": true/false, "reason": "which rule triggered (e.g., 'duplicate', 'stale', etc)"}`;
-
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
-        'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App', 
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'qwen/qwen3.7-flash',
-        messages: [{ role: 'user', content: similarityPrompt }],
-        max_tokens: 1000,
-        temperature: 0.0
-      })
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      const resultText = data.choices[0]?.message?.content?.trim();
-      
-      try {
-        const jsonMatch = resultText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          return {
-            shouldSkip: parsed.shouldSkip || false,
-            reason: parsed.reason || 'unknown',
-            similarMessage: mostRecentMessage
-          };
-        }
-      } catch (parseError) {
-        console.error('Failed to parse similarity check JSON:', parseError);
-      }
-    }
-  } catch (error) {
-    console.error('Error in similarity check:', error);
-  }
-
-  return { shouldSkip: false, reason: 'check_failed' };
+  return { shouldSkip: false, reason: 'ai_similarity_check_disabled' };
 }
 
 // This API route handles the delayed Gemmie response

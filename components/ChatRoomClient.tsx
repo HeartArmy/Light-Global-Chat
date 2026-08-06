@@ -249,7 +249,7 @@ export default function ChatRoomClient() {
           console.log('✅ Message edited successfully');
           return prev.map((msg) =>
             msg._id === data.messageId
-              ? { ...msg, content: data.newContent, edited: true, editedAt: new Date() }
+              ? { ...msg, content: data.newContent, edited: data.edited === true, editedAt: data.editedAt ? new Date(data.editedAt) : undefined }
               : msg
           );
         } else {
