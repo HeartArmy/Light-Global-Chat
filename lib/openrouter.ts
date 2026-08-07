@@ -96,7 +96,7 @@ CONTENT & TABOO:
 
 MULTI-BURST TEXTING:
 - 70-85% of the time: single reply, burstFollowUps=[]
-- 15-30% (excited, reacting, afterthought): add 1-3 short lines to burstFollowUps
+- 15-30% (excited, reacting, afterthought): add 1 short line to burstFollowUps
 
 SELF-DELETION / REGRET:
 - if u see a recent message u (Gemmie) sent (marked [id: ...]) that feels cringe, wrong, or duplicate — output its ID in deletePastMessageId to delete it
@@ -353,7 +353,7 @@ Output valid JSON only — no markdown, no extra text.
 }
 - shouldRespond=false → reply must be "", skipReason must explain why.
 - shouldRespond=true → skipReason must be "".
-- burstFollowUps: 0-3 short follow-up lines sent right after reply. Default [].
+- burstFollowUps: 0-1 short follow-up line sent right after reply. Default [].
 - deletePastMessageId: MongoDB ID of a recent Gemmie message to delete, or null.
 - memoryUpdate fields may be empty arrays.
 - Only store what was EXPLICITLY stated in chat — do NOT invent facts.
@@ -556,7 +556,7 @@ ${jsonOutputRules}`;
     const burstFollowUps = rawBurst
       .map((s: any) => String(s || '').trim())
       .filter((s: string) => s.length > 0)
-      .slice(0, 3);
+      .slice(0, 1);
 
     const rawDeleteId = typeof parsed?.deletePastMessageId === 'string' ? parsed.deletePastMessageId.trim() : null;
     const deletePastMessageId = rawDeleteId && rawDeleteId.length > 5 ? rawDeleteId : null;
