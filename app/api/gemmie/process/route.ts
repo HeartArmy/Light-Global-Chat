@@ -710,7 +710,7 @@ export async function POST(request: NextRequest) {
         // Show typing indicator during pause between burst messages
         await setTypingIndicator(true, 'gemmie');
 
-        const burstPauseMs = 4000 + Math.random() * 4000; // 4 to 8s pause between double/triple texts
+        const burstPauseMs = 10000; // 10s pause between double/triple texts
         await new Promise(resolve => setTimeout(resolve, burstPauseMs));
 
         // Clear typing indicator right before sending burst message
