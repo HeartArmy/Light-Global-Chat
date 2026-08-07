@@ -685,7 +685,7 @@ ${jsonOutputRules}`;
  */
 export async function evaluateHostileApology(userName: string, userMessage: string): Promise<boolean> {
   try {
-    const reviewPrompt = `A user named "${userName}" was marked hostile in a public chatroom for being a time-waster (demanding gemmie reply after unreasonably long delays), demanding gemmie prove she's human / calling her a bot repeatedly, or dumping sob stories to force her into being their therapist, or otherwise being adversarial. They just sent this message:
+    const reviewPrompt = `A user named "${userName}" was marked hostile in a public chatroom for being a time-waster (demanding gemmie reply after unreasonably long delays), demanding gemmie prove she's human / calling her a bot repeatedly, or otherwise being adversarial. They just sent this message:
 
 "${userMessage}"
 
