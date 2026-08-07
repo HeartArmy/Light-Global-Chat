@@ -1,8 +1,12 @@
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import redis from '@/lib/redis';
-import { getAndClearSelectedImageUrl } from '@/lib/gemmie-timer';
+import { getAndClearSelectedImageUrl, MAX_PROOF_DELAY_SECONDS } from '@/lib/gemmie-timer';
 import { hasProblematicPatterns } from '@/lib/response-validator';
+
+// Hard floor between any two Gemmie messages shown to the UI, no matter what path sent them
+const MIN_GEMMIE_SEND_GAP_MS = 8000;
+const GEMMIE_LAST_SENT_KEY = 'gemmie:last-sent-at';
 
 // Function to add probabilistic typos to text
 export function addProbabilisticTypos(text: string, removeTypoChance: number = 0.025, repeatTypoChance: number = 0.025): string { 
@@ -97,6 +101,11 @@ CONTENT & TABOO:
 MULTI-BURST TEXTING:
 - 70-85% of the time: single reply, burstFollowUps=[]
 - 15-30% (excited, reacting, afterthought): add 1 short line to burstFollowUps
+
+DELAY REQUESTS (user asks "text me in X seconds/minutes", "reply in X", "message me after X"):
+- Detect when a user asks you to reply after a specific amount of time and parse it into SECONDS for requestedDelaySeconds.
+- If the delay is REASONABLE (up to 5 minutes): acknowledge it naturally in your reply ("bet, set your timer", "alright i'll come back to this"), and write a short SASSY one-liner in sassyFollowUpText that gets sent after that delay to prove you're human — "happy now?", "am i human enough for you now", "there. human enough?", "told u. your move". Keep it short and in your voice. Set hostileUser=false.
+- If the delay is UNREASONABLE (more than 5 minutes) or it's an obvious time-waster trap/test: refuse in your reply with one sassy shutdown ("gtfo", "i don't owe u a timer", "find a hobby"), set requestedDelaySeconds=0, sassyFollowUpText="", hostileUser=true. After that, the user gets ghosted — they don't get a reply again.
 
 SELF-DELETION / REGRET:
 - if u see a recent message u (Gemmie) sent (marked [id: ...]) that feels cringe, wrong, or duplicate — output its ID in deletePastMessageId to delete it
@@ -254,6 +263,17 @@ export async function sendGemmieMessage(content: string): Promise<{ _id: string;
   try {
     await connectDB();
 
+    // Min-gap guard: drop this send if it's less than 8s after the last Gemmie message shown.
+    // Single choke point, so no path (burst, proof, retry, etc.) can bypass it.
+    const lastSent = await redis.get(GEMMIE_LAST_SENT_KEY);
+    if (lastSent) {
+      const gapMs = Date.now() - Number(lastSent);
+      if (gapMs < MIN_GEMMIE_SEND_GAP_MS) {
+        console.log(`⏱️ Dropped Gemmie message (${Math.round(gapMs)}ms after last, min ${MIN_GEMMIE_SEND_GAP_MS}ms)`);
+        return null;
+      }
+    }
+
     // Create Gemmie's message
     const message = await Message.create({
       content,
@@ -263,6 +283,9 @@ export async function sendGemmieMessage(content: string): Promise<{ _id: string;
       replyTo: null, 
       timestamp: new Date(),
     });
+
+    // Record the send time so the next message is spaced out by the min gap
+    await redis.set(GEMMIE_LAST_SENT_KEY, Date.now(), { ex: 60 });
 
     // Don't trigger notifications for Gemmie's messages
     console.log('Gemmie sent message:', content, 'with ID:', message._id.toString());
@@ -299,6 +322,9 @@ export async function generateGemmieResponseForContext(
   burstFollowUps: string[];
   deletePastMessageId: string | null;
   skipReason: string;
+  requestedDelaySeconds: number;
+  sassyFollowUpText: string;
+  hostileUser: boolean;
   memoryUpdate: {
     topics: Array<{ topic: string; strength: number }>;
     selfFacts: Array<{ fact: string; strength: number }>;
@@ -346,6 +372,9 @@ Output valid JSON only — no markdown, no extra text.
   "burstFollowUps": string[],
   "deletePastMessageId": string or null,
   "skipReason": string,
+  "requestedDelaySeconds": number,
+  "sassyFollowUpText": string,
+  "hostileUser": boolean,
   "memoryUpdate": {
     "topics": [{ "topic": string, "strength": number }],
     "selfFacts": [{ "fact": string, "strength": number }]
@@ -355,6 +384,9 @@ Output valid JSON only — no markdown, no extra text.
 - shouldRespond=true → skipReason must be "".
 - burstFollowUps: 0-1 short follow-up line sent right after reply. Default [].
 - deletePastMessageId: MongoDB ID of a recent Gemmie message to delete, or null.
+- requestedDelaySeconds: if the user asks you to text/message/reply after a specific time, the parsed value in SECONDS (0 if no request). Max allowed is ${MAX_PROOF_DELAY_SECONDS}.
+- sassyFollowUpText: a short SASSY one-liner to send after the requested delay to prove you're human ("happy now?", "am i human enough for you now", "there. human enough for you?"). Empty string "" if no delayed proof needed.
+- hostileUser: true if the user is a time-waster demanding an unreasonable delay (see DELAY REQUESTS rules below) or otherwise clearly adversarial. Default false.
 - memoryUpdate fields may be empty arrays.
 - Only store what was EXPLICITLY stated in chat — do NOT invent facts.
 - Skip items already in memory blocks below (case-insensitive).
@@ -529,6 +561,9 @@ ${jsonOutputRules}`;
         burstFollowUps: [],
         deletePastMessageId: null,
         skipReason: 'json_parse_failed',
+        requestedDelaySeconds: 0,
+        sassyFollowUpText: '',
+        hostileUser: false,
         memoryUpdate: { topics: [], selfFacts: [] },
       };
     }
@@ -544,6 +579,9 @@ ${jsonOutputRules}`;
         burstFollowUps: [],
         deletePastMessageId: null,
         skipReason: 'json_parse_failed',
+        requestedDelaySeconds: 0,
+        sassyFollowUpText: '',
+        hostileUser: false,
         memoryUpdate: { topics: [], selfFacts: [] },
       };
     }
@@ -560,6 +598,11 @@ ${jsonOutputRules}`;
 
     const rawDeleteId = typeof parsed?.deletePastMessageId === 'string' ? parsed.deletePastMessageId.trim() : null;
     const deletePastMessageId = rawDeleteId && rawDeleteId.length > 5 ? rawDeleteId : null;
+
+    const parsedDelaySeconds = Number(parsed?.requestedDelaySeconds || 0);
+    const requestedDelaySeconds = Number.isFinite(parsedDelaySeconds) && parsedDelaySeconds > 0 ? Math.round(parsedDelaySeconds) : 0;
+    const sassyFollowUpText = typeof parsed?.sassyFollowUpText === 'string' ? parsed.sassyFollowUpText.trim() : '';
+    const hostileUser = parsed?.hostileUser === true;
 
     const memoryUpdateRaw = parsed?.memoryUpdate || {};
     const topicsRaw = Array.isArray(memoryUpdateRaw?.topics) ? memoryUpdateRaw.topics : [];
@@ -609,6 +652,9 @@ ${jsonOutputRules}`;
       burstFollowUps,
       deletePastMessageId,
       skipReason,
+      requestedDelaySeconds,
+      sassyFollowUpText,
+      hostileUser,
       memoryUpdate: { topics, selfFacts },
     };
   } catch (error) {
@@ -619,7 +665,63 @@ ${jsonOutputRules}`;
       burstFollowUps: [],
       deletePastMessageId: null,
       skipReason: 'api_error',
+      requestedDelaySeconds: 0,
+      sassyFollowUpText: '',
+      hostileUser: false,
       memoryUpdate: { topics: [], selfFacts: [] },
     };
+  }
+}
+
+/**
+ * Quietly reviews a hostile user's latest message to decide if they've genuinely
+ * apologized / changed their tone. Returns true if the hostile flag should be lifted.
+ */
+export async function evaluateHostileApology(userName: string, userMessage: string): Promise<boolean> {
+  try {
+    const reviewPrompt = `A user named "${userName}" was marked hostile in a public chatroom for being a time-waster (demanding gemmie reply after unreasonably long delays) or for being adversarial. They just sent this message:
+
+"${userMessage}"
+
+Did they genuinely apologize, have a change of heart, or switch to a normal/innocent topic? Or are they still being a time-waster / a dick / testing gemmie again?
+
+Reply with JSON only, no commentary:
+{"apologetic": true or false}`;
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://your-site.com',
+        'X-Title': process.env.NEXT_PUBLIC_SITE_NAME || 'My Chat App',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'deepseek/deepseek-v4-flash-0731',
+        messages: [{ role: 'user', content: reviewPrompt }],
+        max_tokens: 100,
+        temperature: 0.0,
+        reasoning: { enabled: false }
+      })
+    });
+
+    if (!response.ok) {
+      console.error('❌ Hostile apology review failed:', response.status);
+      return false;
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content?.trim() || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const apologetic = parsed?.apologetic === true;
+      console.log(`🤖 Hostile apology review for ${userName}: apologetic=${apologetic}`);
+      return apologetic;
+    }
+    return false;
+  } catch (error) {
+    console.error('❌ Error in hostile apology review:', error);
+    return false;
   }
 }

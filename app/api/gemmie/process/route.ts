@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Receiver } from '@upstash/qstash';
-import { generateGemmieResponseForContext, sendGemmieMessage, addProbabilisticTypos } from '@/lib/openrouter';
+import { generateGemmieResponseForContext, sendGemmieMessage, addProbabilisticTypos, evaluateHostileApology } from '@/lib/openrouter';
 import { getPusherInstance } from '@/lib/pusher';
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
@@ -112,6 +112,84 @@ async function checkResponseSimilarity(newResponse: string, recentMessages: any[
   return { shouldSkip: false, reason: 'ai_similarity_check_disabled' };
 }
 
+/**
+ * Handles a delayed proof-of-humanity job: sends the sassy line, clears the
+ * delay-pending flag, then catches up on anyone who messaged during the wait.
+ */
+async function handleProofMode(payload: any): Promise<NextResponse> {
+  const { setTypingIndicator: setTyping, clearDelayPending, getAndClearGemmieQueue, resetGemmieTimer, queueGemmieMessage } = await import('@/lib/gemmie-timer');
+  const sassyText = String(payload?.sassyText || '').trim();
+
+  if (sassyText) {
+    await setTyping(true, 'gemmie');
+    await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000));
+    await setTyping(false, 'gemmie');
+
+    const proofMsg = await sendGemmieMessage(sassyText);
+    if (proofMsg) {
+      const pusher = getPusherInstance();
+      await pusher.trigger('chat-room', 'new-message', {
+        _id: proofMsg._id,
+        content: proofMsg.content,
+        userName: proofMsg.userName,
+        userCountry: proofMsg.userCountry,
+        timestamp: proofMsg.timestamp,
+        attachments: proofMsg.attachments,
+        replyTo: proofMsg.replyTo,
+        reactions: proofMsg.reactions,
+        edited: proofMsg.edited,
+        editedAt: proofMsg.editedAt
+      });
+      console.log('⏰ Proof-of-humanity message sent:', proofMsg.content);
+    }
+  }
+
+  await clearDelayPending();
+
+  // Catch up on anyone who messaged during the wait (drop messages older than 5 min)
+  const queued = await getAndClearGemmieQueue();
+  const now = Math.floor(Date.now() / 1000);
+  const fresh = queued.filter((q: any) => now - q.timestamp <= 300);
+  if (fresh.length > 0) {
+    await resetGemmieTimer(fresh[0].userName, fresh[0].userMessage, fresh[0].userCountry, now);
+    for (const remainingMsg of fresh.slice(1)) {
+      await queueGemmieMessage(remainingMsg.userName, remainingMsg.userMessage, remainingMsg.userCountry);
+    }
+    console.log(`📥 Scheduled next job for ${fresh.length} queued message(s) after proof.`);
+  }
+
+  return NextResponse.json({ success: true, mode: 'proof' });
+}
+
+/**
+ * Reviews a hostile user's latest message. If they've genuinely apologized,
+ * clears their hostile flag and schedules a normal response.
+ */
+async function handleHostileReview(payload: any): Promise<NextResponse> {
+  const { isUserHostile, clearUserHostile, resetGemmieTimer } = await import('@/lib/gemmie-timer');
+
+  const userName = String(payload?.userName || '').trim();
+  const userMessage = String(payload?.userMessage || '').trim();
+  const userCountry = String(payload?.userCountry || 'XX').trim();
+
+  if (userName && userMessage) {
+    const stillHostile = await isUserHostile(userName);
+    if (stillHostile) {
+      const apologetic = await evaluateHostileApology(userName, userMessage);
+      if (apologetic) {
+        await clearUserHostile(userName);
+        const now = Math.floor(Date.now() / 1000);
+        await resetGemmieTimer(userName, userMessage, userCountry, now);
+        console.log('✅ User apologized, hostile flag cleared:', userName);
+      } else {
+        console.log('🚫 User still hostile, staying ghosted:', userName);
+      }
+    }
+  }
+
+  return NextResponse.json({ success: true, mode: 'hostile-review' });
+}
+
 // This API route handles the delayed Gemmie response
 export async function POST(request: NextRequest) {
   // Create a receiver for signature verification
@@ -148,12 +226,24 @@ export async function POST(request: NextRequest) {
   try {
     // Connect to database early for similarity checks
     await connectDB();
-    
+
+    // Detect special job modes before the orphan-job check, since proof/hostile-review
+    // jobs are legitimately scheduled without a job-active flag.
+    let earlyParsedBody: any = null;
+    try {
+      earlyParsedBody = JSON.parse(body);
+    } catch {
+      // ignore
+    }
+    const isProofJob = earlyParsedBody?.mode === 'proof';
+    const isHostileReviewJob = earlyParsedBody?.mode === 'hostile-review';
+    const isSpecialJob = isProofJob || isHostileReviewJob;
+
     // Check if this is an orphan job by verifying job activity
     const { isJobActive } = await import('@/lib/gemmie-timer');
     const jobIsActive = await isJobActive();
     
-    if (!jobIsActive) {
+    if (!jobIsActive && !isSpecialJob) {
       console.log('⚠️ Job active flag not set - checking if this is a legitimate orphan job...');
       
       // Check if there are any recent messages that might indicate this is a valid job
@@ -216,6 +306,23 @@ export async function POST(request: NextRequest) {
       throw new Error('Missing required fields in request body: userName, userMessage, or userCountry');
     }
 
+    // Special job modes (proof-of-humanity, hostile-review) are handled before the
+    // normal response flow, and skip the age/hash checks entirely.
+    if (parsedBody.mode === 'proof') {
+      return await handleProofMode(parsedBody);
+    }
+    if (parsedBody.mode === 'hostile-review') {
+      return await handleHostileReview(parsedBody);
+    }
+
+    // While a proof-of-humanity delay is pending, Gemmie stays silent for everyone.
+    // Preserve the queue so the proof job can catch up on these messages later.
+    const { isDelayPending } = await import('@/lib/gemmie-timer');
+    if (await isDelayPending()) {
+      console.log('⏳ Delay pending — skipping Gemmie response, queue preserved.');
+      return NextResponse.json({ success: true, skipped: true, reason: 'delay-pending' });
+    }
+
     // Message Age Check - Prevent processing old messages
     const MAX_MESSAGE_AGE_SECONDS = 20;
     const messageTimestamp =
@@ -264,10 +371,21 @@ export async function POST(request: NextRequest) {
         getAndClearGemmieQueue: getQueueAgain,
         resetGemmieTimer: scheduleNextJob,
         queueGemmieMessage: queueGemmieMessageFn,
+        isDelayPending: checkDelayPending,
       } = await import('@/lib/gemmie-timer');
 
       const newlyQueuedMessages = await getQueueAgain();
       if (newlyQueuedMessages.length === 0) return;
+
+      // During a pending proof delay, don't schedule more responses — just re-queue
+      // so the proof job can catch up on everyone when it fires.
+      if (await checkDelayPending()) {
+        console.log('⏳ Delay pending — re-queuing messages, no immediate reschedule.');
+        for (const qm of newlyQueuedMessages) {
+          await queueGemmieMessageFn(qm.userName, qm.userMessage, qm.userCountry);
+        }
+        return;
+      }
 
       console.log(`📥 Found ${newlyQueuedMessages.length} new message(s) in queue. Scheduling next job immediately.`);
 
@@ -681,61 +799,76 @@ export async function POST(request: NextRequest) {
     console.log('📤 Sending Gemmie message to chat...');
     const createdMessage = await sendGemmieMessage(responseWithTypos);
 
-    if (!createdMessage) {
-      console.error('❌ Failed to create Gemmie message');
-      return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
-    }
+    if (createdMessage) {
+      // Trigger Pusher event for real-time update using the REAL ObjectId
+      const pusher = getPusherInstance();
+      await pusher.trigger('chat-room', 'new-message', {
+        _id: createdMessage._id, // Real MongoDB ObjectId
+        content: createdMessage.content,
+        userName: createdMessage.userName,
+        userCountry: createdMessage.userCountry,
+        timestamp: createdMessage.timestamp,
+        attachments: createdMessage.attachments,
+        replyTo: createdMessage.replyTo,
+        reactions: createdMessage.reactions,
+        edited: createdMessage.edited,
+        editedAt: createdMessage.editedAt
+      });
+      console.log('✅ Delayed Gemmie response sent for the initial message(s).');
 
-    // Trigger Pusher event for real-time update using the REAL ObjectId
-    const pusher = getPusherInstance();
-    const gemmieMessage = {
-      _id: createdMessage._id, // Real MongoDB ObjectId
-      content: createdMessage.content,
-      userName: createdMessage.userName,
-      userCountry: createdMessage.userCountry,
-      timestamp: createdMessage.timestamp,
-      attachments: createdMessage.attachments,
-      replyTo: createdMessage.replyTo,
-      reactions: createdMessage.reactions,
-      edited: createdMessage.edited,
-      editedAt: createdMessage.editedAt
-    };
+      // Send Multi-Burst follow-up messages if AI requested
+      if (gen.burstFollowUps && gen.burstFollowUps.length > 0) {
+        for (const followUpText of gen.burstFollowUps) {
+          // Show typing indicator during pause between burst messages
+          await setTypingIndicator(true, 'gemmie');
 
-    await pusher.trigger('chat-room', 'new-message', gemmieMessage);
-    console.log('✅ Delayed Gemmie response sent for the initial message(s).');
+          const burstPauseMs = 10000; // 10s pause between double/triple texts
+          await new Promise(resolve => setTimeout(resolve, burstPauseMs));
 
-    // Send Multi-Burst follow-up messages if AI requested
-    if (gen.burstFollowUps && gen.burstFollowUps.length > 0) {
-      for (const followUpText of gen.burstFollowUps) {
-        // Show typing indicator during pause between burst messages
-        await setTypingIndicator(true, 'gemmie');
+          // Clear typing indicator right before sending burst message
+          await setTypingIndicator(false, 'gemmie');
 
-        const burstPauseMs = 10000; // 10s pause between double/triple texts
-        await new Promise(resolve => setTimeout(resolve, burstPauseMs));
-
-        // Clear typing indicator right before sending burst message
-        await setTypingIndicator(false, 'gemmie');
-
-        const followUpWithTypos = addProbabilisticTypos(followUpText);
-        const burstMsg = await sendGemmieMessage(followUpWithTypos);
-        if (burstMsg) {
-          await pusher.trigger('chat-room', 'new-message', {
-            _id: burstMsg._id,
-            content: burstMsg.content,
-            userName: burstMsg.userName,
-            userCountry: burstMsg.userCountry,
-            timestamp: burstMsg.timestamp,
-            attachments: burstMsg.attachments,
-            replyTo: burstMsg.replyTo,
-            reactions: burstMsg.reactions,
-            edited: burstMsg.edited,
-            editedAt: burstMsg.editedAt
-          });
-          console.log('📲 Multi-burst follow-up sent:', burstMsg.content);
+          const followUpWithTypos = addProbabilisticTypos(followUpText);
+          const burstMsg = await sendGemmieMessage(followUpWithTypos);
+          if (burstMsg) {
+            await pusher.trigger('chat-room', 'new-message', {
+              _id: burstMsg._id,
+              content: burstMsg.content,
+              userName: burstMsg.userName,
+              userCountry: burstMsg.userCountry,
+              timestamp: burstMsg.timestamp,
+              attachments: burstMsg.attachments,
+              replyTo: burstMsg.replyTo,
+              reactions: burstMsg.reactions,
+              edited: burstMsg.edited,
+              editedAt: burstMsg.editedAt
+            });
+            console.log('📲 Multi-burst follow-up sent:', burstMsg.content);
+          }
         }
       }
+    } else {
+      // Dropped (min-gap guard) or failed to create — continue so the queue doesn't stall.
+      console.warn('⚠️ Gemmie reply dropped or failed to create. Continuing to queue handling.');
     }
-    
+
+    // --- DELAY REQUEST / HOSTILE HANDLING (proof-of-humanity + ghosting) ---
+    if (gen.requestedDelaySeconds > 0 && gen.sassyFollowUpText) {
+      const { scheduleProofOfHumanity, markUserHostile } = await import('@/lib/gemmie-timer');
+      if (gen.requestedDelaySeconds <= 300) {
+        await scheduleProofOfHumanity(gen.sassyFollowUpText, gen.requestedDelaySeconds);
+        console.log(`⏱️ Proof-of-humanity scheduled in ${gen.requestedDelaySeconds}s.`);
+      } else {
+        await markUserHostile(userName);
+        console.log('🚫 User requested unreasonable delay, marked hostile:', userName);
+      }
+    }
+    if (gen.hostileUser) {
+      const { markUserHostile } = await import('@/lib/gemmie-timer');
+      await markUserHostile(userName);
+      console.log('🚫 AI flagged user as hostile:', userName);
+    }
+
     // Check for new messages that arrived during processing and schedule next job immediately.
     // This allows the next job to start while editing happens concurrently.
     await scheduleNextFromQueue();
@@ -1044,12 +1177,12 @@ newContent = typeof parsed.newContent === 'string' && parsed.newContent.length >
     // Add a small delay to ensure Pusher events are processed before checking queue
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    const { getAndClearGemmieQueue: getQueueAgain2, resetGemmieTimer: rescheduleJob, queueGemmieMessage: queueGemmieMessage2 } = await import('@/lib/gemmie-timer');
+    const { getAndClearGemmieQueue: getQueueAgain2, resetGemmieTimer: rescheduleJob, queueGemmieMessage: queueGemmieMessage2, isDelayPending: checkDelayPending2 } = await import('@/lib/gemmie-timer');
     const newlyQueuedMessages2 = await getQueueAgain2();
     
     let shouldClearJobActive = true; // Assume we'll clear the flag
 
-    if (newlyQueuedMessages2.length > 0) {
+    if (newlyQueuedMessages2.length > 0 && !(await checkDelayPending2())) {
       console.log(`📥 Found ${newlyQueuedMessages2.length} new message(s) in queue after processing. Rescheduling for the next one.`);
       
       const nextMessageToProcess = newlyQueuedMessages2[0]; // Process the oldest one next
@@ -1067,6 +1200,11 @@ newContent = typeof parsed.newContent === 'string' && parsed.newContent.length >
       
       console.log('✅ Next QStash job scheduled and remaining messages re-queued. gemmie:job-active remains set.');
       shouldClearJobActive = false; // Do not clear the flag, a new job is scheduled
+    } else if (newlyQueuedMessages2.length > 0) {
+      console.log('⏳ Delay pending — re-queuing messages in tail, no immediate reschedule.');
+      for (const qm of newlyQueuedMessages2) {
+        await queueGemmieMessage2(qm.userName, qm.userMessage, qm.userCountry);
+      }
     } else {
       console.log('🧹 No new messages found in queue after processing.');
     }

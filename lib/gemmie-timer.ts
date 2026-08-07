@@ -18,6 +18,16 @@ const GEMMIE_PROCESSED_MESSAGES_KEY = 'gemmie:processed-messages';
 const GEMMIE_DELAY = 7; // Fixed short thinking delay before AI (typing added after)
 // TTL for job active flag should be longer than the entire processing time
 const JOB_ACTIVE_TTL = 300; // 5 minutes - covers full processing including cleanup
+// Key for tracking a pending proof-of-humanity delay (gemmie stays silent while set)
+const DELAY_PENDING_KEY = 'gemmie:delay-pending';
+// Prefix for per-user hostile flags (user marked as time-waster / adversarial)
+const HOSTILE_KEY_PREFIX = 'gemmie:hostile:';
+// Throttle key so hostile users don't spam apology-review jobs
+const HOSTILE_REVIEW_THROTTLE_KEY = 'gemmie:hostile-review-throttle';
+// Max seconds a user can request for a delayed proof-of-humanity reply
+export const MAX_PROOF_DELAY_SECONDS = 300; // 5 minutes
+// TTL for the hostile flag (1 hour)
+const HOSTILE_TTL = 3600;
 
 /**
  * Resets the Gemmie response timer when a user sends a message
@@ -460,5 +470,139 @@ export function createMessageHash(userName: string, userMessage: string, timesta
   // Create a simple hash from user, message, and timestamp (rounded to minute)
   const timestampMinute = Math.floor(timestamp / 60);
   return `${userName}:${userMessage}:${timestampMinute}`;
+}
+
+/**
+ * Checks if a proof-of-humanity delayed reply is currently pending.
+ * While pending, Gemmie stays silent and queues messages instead of responding.
+ */
+export async function isDelayPending(): Promise<boolean> {
+  try {
+    return (await redis.get(DELAY_PENDING_KEY)) === '1';
+  } catch (error) {
+    console.error('❌ Error checking delay pending status:', error);
+    return false;
+  }
+}
+
+/**
+ * Clears the pending proof-of-humanity delay flag
+ */
+export async function clearDelayPending(): Promise<void> {
+  try {
+    await redis.del(DELAY_PENDING_KEY);
+    console.log('🔓 Cleared gemmie:delay-pending flag.');
+  } catch (error) {
+    console.error('❌ Error clearing delay pending flag:', error);
+  }
+}
+
+/**
+ * Marks a user as hostile (time-waster) for 1 hour. Gemmie stops responding to them.
+ */
+export async function markUserHostile(userName: string): Promise<void> {
+  try {
+    const key = `${HOSTILE_KEY_PREFIX}${userName.toLowerCase()}`;
+    await redis.set(key, '1', { ex: HOSTILE_TTL });
+    console.log('🚫 Marked user as hostile:', userName);
+  } catch (error) {
+    console.error('❌ Error marking user hostile:', error);
+  }
+}
+
+/**
+ * Checks if a user is currently marked hostile
+ */
+export async function isUserHostile(userName: string): Promise<boolean> {
+  try {
+    const key = `${HOSTILE_KEY_PREFIX}${userName.toLowerCase()}`;
+    return (await redis.get(key)) === '1';
+  } catch (error) {
+    console.error('❌ Error checking hostile status:', error);
+    return false;
+  }
+}
+
+/**
+ * Removes the hostile flag for a user (e.g. after a genuine apology)
+ */
+export async function clearUserHostile(userName: string): Promise<void> {
+  try {
+    const key = `${HOSTILE_KEY_PREFIX}${userName.toLowerCase()}`;
+    await redis.del(key);
+    console.log('🔓 Cleared hostile flag for user:', userName);
+  } catch (error) {
+    console.error('❌ Error clearing hostile flag:', error);
+  }
+}
+
+/**
+ * Schedules a delayed proof-of-humanity message.
+ * Sets the delay-pending flag so Gemmie stays silent for everyone during the wait,
+ * then publishes a QStash job that fires after delaySeconds and sends sassyText.
+ */
+export async function scheduleProofOfHumanity(sassyText: string, delaySeconds: number): Promise<void> {
+  try {
+    // Keep Gemmie silent for everyone while the proof delay is pending
+    await redis.set(DELAY_PENDING_KEY, '1', { ex: delaySeconds + 120 });
+    console.log(`⏱️ Delay pending set for ${delaySeconds}s (sassy follow-up scheduled).`);
+
+    const qstash = await import('@/lib/qstash');
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const endpoint = `${baseUrl}/api/gemmie/process`;
+
+    await qstash.default.publishJSON({
+      url: endpoint,
+      body: {
+        mode: 'proof',
+        userName: 'gemmie',
+        userMessage: '__proof__',
+        userCountry: 'US',
+        sassyText,
+        timestamp: Math.floor(Date.now() / 1000),
+      },
+      delay: Math.max(1, Math.round(delaySeconds)),
+    });
+    console.log(`🚀 Scheduled proof-of-humanity QStash job in ${delaySeconds}s.`);
+  } catch (error) {
+    console.error('❌ Error scheduling proof-of-humanity:', error);
+    await redis.del(DELAY_PENDING_KEY);
+  }
+}
+
+/**
+ * Schedules a quiet AI review for a hostile user's latest message so Gemmie can
+ * un-hostile them if they've genuinely apologized. Throttled to avoid spam.
+ */
+export async function tryScheduleHostileReview(userName: string, userMessage: string, userCountry: string): Promise<boolean> {
+  try {
+    // Throttle: only one review per 30s to avoid spam jobs from a hostile user
+    const throttleResult = await redis.set(HOSTILE_REVIEW_THROTTLE_KEY, '1', { ex: 30, nx: true });
+    if (throttleResult !== 'OK') {
+      console.log('⏳ Hostile review already pending, skipping:', userName);
+      return false;
+    }
+
+    const qstash = await import('@/lib/qstash');
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const endpoint = `${baseUrl}/api/gemmie/process`;
+
+    await qstash.default.publishJSON({
+      url: endpoint,
+      body: {
+        mode: 'hostile-review',
+        userName,
+        userMessage,
+        userCountry,
+        timestamp: Math.floor(Date.now() / 1000),
+      },
+      delay: 3,
+    });
+    console.log(`🤖 Scheduled hostile-review job for user: ${userName}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error scheduling hostile review:', error);
+    return false;
+  }
 }
 
