@@ -260,24 +260,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if message contains any attachments - Gemmie should ignore all attachment messages
+    // Check if message contains any attachments - Gemmie should ignore file attachments,
+    // and video attachments WITHOUT a thumbnail (frame extraction failed). Videos with a
+    // thumbnail are treated like images so Gemmie can comment on the extracted frame.
     const hasImageAttachments = attachments.some((attachment: Attachment) => attachment.type === 'image');
     const hasVideoAttachments = attachments.some((attachment: Attachment) => attachment.type === 'video');
     const hasFileAttachments = attachments.some((attachment: Attachment) => attachment.type === 'file');
-    const hasAnyAttachments =  hasVideoAttachments || hasFileAttachments; //messages with images, gemmie will react to
+    const hasVideoWithThumbnail = attachments.some((attachment: Attachment) => attachment.type === 'video' && attachment.thumbnailUrl);
+    const hasAnyAttachments = (hasVideoAttachments && !hasVideoWithThumbnail) || hasFileAttachments;
     
     console.log('Content analysis:', {
       hasTextContent: content && typeof content === 'string' && content.trim().length > 0,
       hasImageAttachments,
       hasVideoAttachments,
       hasFileAttachments,
+      hasVideoWithThumbnail,
       hasAnyAttachments,
       attachmentTypes: attachments.map((a: Attachment) => a.type)
     });
     
-    // Skip Gemmie response if message contains any attachments (image, video, or file) regardless of text content
+    // Skip Gemmie response if message contains attachments that Gemmie can't react to
     if (hasAnyAttachments) {
-      console.log('🎬 Message contains attachments (other than image files), Gemmie will not respond (behaving like arham)');
+      console.log('🎬 Message contains attachments (video without thumbnail or file), Gemmie will not respond (behaving like arham)');
       return NextResponse.json({ message: populatedMessage });
     }
 
@@ -347,30 +351,40 @@ export async function POST(request: NextRequest) {
           // Schedule Gemmie typing indicator after delay
           scheduleGemmieTypingIndicator(userName, messageWithContext, countryCode);
 
-          // Store the first image URL for AI processing - from current message OR quoted message
+          // Store the first image URL for AI processing - from current message OR quoted message.
+          // Preference: current image > current video thumbnail > quoted image.
           const firstImage = attachments.find(attachment => attachment.type === 'image');
+          const firstVideoWithThumb = attachments.find((attachment: Attachment) => attachment.type === 'video' && attachment.thumbnailUrl);
           if (firstImage) {
             console.log('📸 Storing selected image URL for AI processing (current message):', firstImage.url);
-            await setSelectedImageUrl(firstImage.url);
+            await setSelectedImageUrl(firstImage.url, false);
+          } else if (firstVideoWithThumb) {
+            console.log('🎬 Storing selected video frame URL for AI processing (current message):', firstVideoWithThumb.thumbnailUrl);
+            await setSelectedImageUrl(firstVideoWithThumb.thumbnailUrl!, true);
           } else if (replyImageUrl) {
             // If current message has no images but quoted message does, use the quoted image
             console.log('📸 Storing selected image URL for AI processing (quoted message):', replyImageUrl);
-            await setSelectedImageUrl(replyImageUrl);
+            await setSelectedImageUrl(replyImageUrl, false);
           }
         } else {
           // If job already active, queue this message
           await queueGemmieMessage(userName, messageWithContext, countryCode);
           console.log('📝 Message queued as a Gemmie job is already active.');
 
-          // Store the first image URL for AI processing - from current message OR quoted message
+          // Store the first image URL for AI processing - from current message OR quoted message.
+          // Preference: current image > current video thumbnail > quoted image.
           const firstImage = attachments.find(attachment => attachment.type === 'image');
+          const firstVideoWithThumb = attachments.find((attachment: Attachment) => attachment.type === 'video' && attachment.thumbnailUrl);
           if (firstImage) {
             console.log('📸 Storing selected image URL for AI processing (current message, queued):', firstImage.url);
-            await setSelectedImageUrl(firstImage.url);
+            await setSelectedImageUrl(firstImage.url, false);
+          } else if (firstVideoWithThumb) {
+            console.log('🎬 Storing selected video frame URL for AI processing (current message, queued):', firstVideoWithThumb.thumbnailUrl);
+            await setSelectedImageUrl(firstVideoWithThumb.thumbnailUrl!, true);
           } else if (replyImageUrl) {
             // If current message has no images but quoted message does, use the quoted image
             console.log('📸 Storing selected image URL for AI processing (quoted message, queued):', replyImageUrl);
-            await setSelectedImageUrl(replyImageUrl);
+            await setSelectedImageUrl(replyImageUrl, false);
           }
         }
       } else {

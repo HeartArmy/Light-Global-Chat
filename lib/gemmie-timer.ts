@@ -12,6 +12,8 @@ const GEMMIE_MESSAGE_QUEUE_KEY = 'gemmie:message-queue';
 const JOB_ACTIVE_KEY = 'gemmie:job-active';
 // Key for storing the URL of the single image selected for AI processing in the current burst
 const GEMMIE_SELECTED_IMAGE_URL_KEY = 'gemmie:selected-image-url';
+// Key for flagging that the selected image is a frame extracted from a video
+const GEMMIE_SELECTED_IS_VIDEO_FRAME_KEY = 'gemmie:selected-image-is-video-frame';
 // Key for tracking typing indicator status
 const TYPING_INDICATOR_KEY = 'typing:indicator';
 // Key for tracking processed messages to prevent duplicates
@@ -312,11 +314,17 @@ export async function clearJobScheduled(): Promise<void> {
  * Stores the URL of the selected image for AI processing.
  * This should be called when an image is chosen to be sent to the AI.
  * @param imageUrl The URL of the selected image.
+ * @param isVideoFrame Whether this image is a frame extracted from a video.
  */
-export async function setSelectedImageUrl(imageUrl: string): Promise<void> {
+export async function setSelectedImageUrl(imageUrl: string, isVideoFrame: boolean = false): Promise<void> {
   try {
     await redis.set(GEMMIE_SELECTED_IMAGE_URL_KEY, String(imageUrl), { ex: GEMMIE_DELAY + 60 }); // TTL slightly more than processing delay
-    console.log('🖼️ Stored selected image URL for AI processing:', imageUrl);
+    if (isVideoFrame) {
+      await redis.set(GEMMIE_SELECTED_IS_VIDEO_FRAME_KEY, '1', { ex: GEMMIE_DELAY + 60 });
+    } else {
+      await redis.del(GEMMIE_SELECTED_IS_VIDEO_FRAME_KEY);
+    }
+    console.log('🖼️ Stored selected image URL for AI processing:', imageUrl, isVideoFrame ? '(video frame)' : '(image)');
   } catch (error) {
     console.error('❌ Error storing selected image URL:', error);
   }
@@ -327,13 +335,15 @@ export async function setSelectedImageUrl(imageUrl: string): Promise<void> {
  * This should be called after the image has been processed by the AI.
  * @returns The URL of the selected image, or null if none.
  */
-export async function getAndClearSelectedImageUrl(): Promise<string | null> {
+export async function getAndClearSelectedImageUrl(): Promise<{ url: string; isVideoFrame: boolean } | null> {
   try {
     const imageUrl = await redis.get(GEMMIE_SELECTED_IMAGE_URL_KEY);
     if (imageUrl) {
       await redis.del(GEMMIE_SELECTED_IMAGE_URL_KEY);
-      console.log('🔄 Retrieved and cleared selected image URL:', imageUrl);
-      return String(imageUrl);
+      const isVideoFrame = (await redis.get(GEMMIE_SELECTED_IS_VIDEO_FRAME_KEY)) === '1';
+      await redis.del(GEMMIE_SELECTED_IS_VIDEO_FRAME_KEY);
+      console.log('🔄 Retrieved and cleared selected image URL:', imageUrl, isVideoFrame ? '(video frame)' : '(image)');
+      return { url: String(imageUrl), isVideoFrame };
     }
     console.log('ℹ️ No selected image URL found for AI processing.');
     return null;

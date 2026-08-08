@@ -3,6 +3,7 @@ export interface Attachment {
   url: string;
   name: string;
   size: number;
+  thumbnailUrl?: string;
 }
 
 export interface Reaction {

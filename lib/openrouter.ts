@@ -361,11 +361,15 @@ ${recentMessagesDb}` : '';
     const portlandWeather = await getPortlandWeather();
 
     // Get selected image URL for AI processing
-    const selectedImageUrl = await getAndClearSelectedImageUrl();
+    const selectedImage = await getAndClearSelectedImageUrl();
+    const selectedImageUrl = selectedImage?.url || null;
+    const isVideoFrame = selectedImage?.isVideoFrame || false;
     let imageContext = '';
     if (selectedImageUrl) {
-      imageContext = `\n\nImage provided by user: ${selectedImageUrl}`;
-      console.log('🖼️ Image included in AI prompt:', selectedImageUrl);
+      imageContext = isVideoFrame
+        ? `\n\nImage provided by user: ${selectedImageUrl} (this is a single frame extracted from a video the user shared)`
+        : `\n\nImage provided by user: ${selectedImageUrl}`;
+      console.log('🖼️ Image included in AI prompt:', selectedImageUrl, isVideoFrame ? '(video frame)' : '(image)');
     }
 
     // Determine which model to use based on image presence
@@ -445,8 +449,16 @@ TOPIC OWNERSHIP (CRITICAL):
 - Exception: facts about Gemmie herself go in selfFacts only.
 `;
 
+    const videoFrameRules = isVideoFrame
+      ? `
+VIDEO FRAME RULES (the image is ONE frame from a video the user shared — u can't see motion or hear audio):
+- comment on what u can actually see in the frame: subject, setting, vibe, action.
+- if the frame shows nothing significant (dark, blurry, boring, empty, or meaningless): base ur reply on the TEXT the user wrote alongside the video or the surrounding chat context instead.
+- if u still have nothing genuine to say and ur not confident: set shouldRespond=false and pick a skipReason like "unclear video frame".`
+      : '';
+
     const basePrompt = selectedImageUrl
-      ? `${GEMMIE_PROMPT}\n- say one thing you love about the image. keep it in the moment.`
+      ? `${GEMMIE_PROMPT}${videoFrameRules}\n- say one thing you love about the image. keep it in the moment.`
       : `${GEMMIE_PROMPT}`;
 
     const recentUsersBlock = memoryContext?.recentUsersBlock || 'none';

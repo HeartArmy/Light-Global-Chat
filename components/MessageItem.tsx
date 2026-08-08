@@ -360,6 +360,7 @@ function MessageItem({
                                 playsInline
                                 webkit-playsinline="true"
                                 preload="metadata"
+                                poster={attachment.thumbnailUrl}
                                 className="max-w-full w-auto h-auto"
                                 style={{
                                   maxHeight: '300px',

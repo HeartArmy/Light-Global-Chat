@@ -119,6 +119,71 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
     }
   };
 
+  // Extract a frame at ~1s from a video file (client-side, no server processing)
+  const extractVideoThumbnail = (file: File): Promise<File | null> => {
+    return new Promise((resolve) => {
+      const videoUrl = URL.createObjectURL(file);
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'auto';
+      video.src = videoUrl;
+
+      const cleanup = () => {
+        URL.revokeObjectURL(videoUrl);
+        video.removeAttribute('src');
+        video.load();
+      };
+
+      video.onerror = () => { cleanup(); resolve(null); };
+
+      video.onloadedmetadata = () => {
+        if (video.duration > 1) {
+          video.currentTime = 1;
+        } else {
+          video.currentTime = Math.max(0, (video.duration || 0) / 2);
+        }
+      };
+
+      video.onseeked = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          if (!canvas.width || !canvas.height) {
+            cleanup();
+            resolve(null);
+            return;
+          }
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            cleanup();
+            resolve(null);
+            return;
+          }
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(
+            (blob) => {
+              cleanup();
+              if (!blob) {
+                resolve(null);
+                return;
+              }
+              const thumbnailFile = new File([blob], `${file.name}-thumb.jpg`, { type: 'image/jpeg' });
+              resolve(thumbnailFile);
+            },
+            'image/jpeg',
+            0.8
+          );
+        } catch (e) {
+          console.error('Video thumbnail extraction error:', e);
+          cleanup();
+          resolve(null);
+        }
+      };
+    });
+  };
+
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
@@ -453,11 +518,30 @@ export default function MessageInput({ onSend, replyingTo, onCancelReply, onTypi
             }
             
             console.log(`Video uploaded successfully: ${videoData.url}`);
+
+            // Extract a frame at ~1s and upload it as a thumbnail for AI context
+            let thumbnailUrl: string | undefined;
+            try {
+              const thumbnailFile = await extractVideoThumbnail(videoFile);
+              if (thumbnailFile) {
+                const thumbResults = await startImageUpload([thumbnailFile]);
+                if (thumbResults && thumbResults[0]?.url) {
+                  thumbnailUrl = thumbResults[0].url;
+                  console.log(`🖼️ Video thumbnail uploaded for AI context: ${thumbnailUrl}`);
+                }
+              } else {
+                console.log('⚠️ Could not extract video thumbnail, continuing without one');
+              }
+            } catch (thumbError) {
+              console.error('❌ Video thumbnail upload failed, continuing without one:', thumbError);
+            }
+
             newAttachments.push({
               type: 'video',
               url: videoData.url,
               name: videoFile.name,
               size: videoFile.size,
+              thumbnailUrl,
             });
             completed++;
             setUploadProgress({ current: completed, total: fileArray.length });
