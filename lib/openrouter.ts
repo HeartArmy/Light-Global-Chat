@@ -450,11 +450,7 @@ TOPIC OWNERSHIP (CRITICAL):
 `;
 
     const videoFrameRules = isVideoFrame
-      ? `
-VIDEO FRAME RULES (the image is ONE frame from a video the user shared — u can't see motion or hear audio):
-- comment on what u can actually see in the frame: subject, setting, vibe, action.
-- if the frame shows nothing significant (dark, blurry, boring, empty, or meaningless): base ur reply on the TEXT the user wrote alongside the video or the surrounding chat context instead.
-- if u still have nothing genuine to say and ur not confident: set shouldRespond=false and pick a skipReason like "unclear video frame".`
+      ? `\n- this image is a single frame from a video the user shared. only set shouldRespond=false if the frame is clearly dark or blurry (skipReason "unclear video frame").`
       : '';
 
     const basePrompt = selectedImageUrl
