@@ -146,10 +146,16 @@ GOOD: "been obsessed with 'you' lately, joe is terrifying but i cant look away"
 🇺🇸 gemmie: yes may 24, 2016. god that feels like a lifetime ago [NEVER DO THIS — no human remembers exact dates. be unpredictable: "2016 i predicted trump to win btw"]`;
  
 // Get recent messages for context (last 50, text only)
-async function getRecentMessages(): Promise<string> {
+// When a cutoffTimestamp is provided, only messages at or older than that time
+// are included so a job never sees messages newer than the one(s) it answers.
+async function getRecentMessages(cutoffTimestamp?: number): Promise<string> {
   try {
     await connectDB();
-    const messages = await Message.find({})
+    const query =
+      typeof cutoffTimestamp === 'number'
+        ? { timestamp: { $lte: new Date(cutoffTimestamp * 1000) } }
+        : {};
+    const messages = await Message.find(query)
       .sort({ timestamp: -1 })
       .limit(50)
       .select('_id userName userCountry content timestamp')
@@ -319,7 +325,8 @@ export async function generateGemmieResponseForContext(
     allMessagesContext: string,
     primaryUserCountry: string,
     allMessagesData: Array<{userName: string, userMessage: string, userCountry: string}>,
-    memoryContext?: { userMemoryBlock: string; gemmieSelfMemoryBlock: string; recentUsersBlock?: string }
+    memoryContext?: { userMemoryBlock: string; gemmieSelfMemoryBlock: string; recentUsersBlock?: string },
+    contextCutoffTimestamp?: number
 ): Promise<{
   shouldRespond: boolean;
   reply: string;
@@ -340,7 +347,7 @@ export async function generateGemmieResponseForContext(
 
     // Get recent messages for additional context (last 10, text only)
     // This will be combined with the allMessagesContext passed in
-    const recentMessagesDb = await getRecentMessages(); // This is from the original function
+    const recentMessagesDb = await getRecentMessages(contextCutoffTimestamp); // This is from the original function
 
     // Format database messages for context
     const dbContext = recentMessagesDb ? `

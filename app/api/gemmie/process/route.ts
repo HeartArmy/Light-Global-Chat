@@ -363,9 +363,17 @@ export async function POST(request: NextRequest) {
     
     // Prepare messages for context (current message + only recent queued messages)
     const allMessagesForContext = [
-      { userName, userMessage, userCountry, timestamp: currentTimestamp },
+      { userName, userMessage, userCountry, timestamp: messageTimestamp },
       ...recentQueuedMessages
     ];
+
+    // Scope the AI's recent-history context to messages this job is answering.
+    // The model must not see anything newer than the newest message in this
+    // batch, otherwise a slow job can answer a message it wasn't scheduled for.
+    const contextCutoffTimestamp = Math.max(
+      messageTimestamp,
+      ...recentQueuedMessages.map((m: any) => Number(m.timestamp) || 0)
+    );
 
     // Helper: even if we skip sending, we still need to drain any queued messages
     // that arrived during processing and schedule the next job, otherwise the chat can stall.
@@ -652,7 +660,8 @@ export async function POST(request: NextRequest) {
       contextString,
       userCountry,
       allMessagesForContext,
-      { userMemoryBlock, gemmieSelfMemoryBlock, recentUsersBlock }
+      { userMemoryBlock, gemmieSelfMemoryBlock, recentUsersBlock },
+      contextCutoffTimestamp
     );
 
     console.log('💬 Generated gemmie JSON:', {
