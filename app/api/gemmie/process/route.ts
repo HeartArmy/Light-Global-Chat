@@ -8,6 +8,7 @@ import GemmieMemory from '@/models/GemmieMemory';
 import DeletedMessageByGemmie from '@/models/DeletedMessageByGemmie';
 import EditedMessageByGemmie from '@/models/EditedMessageByGemmie';
 import { setTypingIndicator } from '@/lib/gemmie-timer';
+import { enrichYouTubeLinks } from '@/lib/youtube';
 // import { setGemmieTemporarilyDisabled } from '@/lib/gemmie-status';
 import mongoose from 'mongoose'; 
 
@@ -419,13 +420,14 @@ export async function POST(request: NextRequest) {
     console.log(`🧠 Generating AI response based on ${allMessagesForContext.length} messages...`);
 
     // Format messages for context with timestamp and country flag
-    const formatMessageWithContext = (msg: any) => {
+    const formatMessageWithContext = async (msg: any) => {
       const flag = msg.userCountry ? getCountryFlag(msg.userCountry, msg.userName) : '🌍';
       const idTag = msg.userName?.toLowerCase() === 'gemmie' && msg._id ? ` [id: ${msg._id}]` : '';
-      return `${msg.userName} ${flag} from ${msg.userCountry}${idTag} [${new Date(msg.timestamp * 1000).toISOString()}]: ${msg.userMessage}`;
+      const enrichedMessage = await enrichYouTubeLinks(msg.userMessage);
+      return `${msg.userName} ${flag} from ${msg.userCountry}${idTag} [${new Date(msg.timestamp * 1000).toISOString()}]: ${enrichedMessage}`;
     };
 
-    const contextString = allMessagesForContext.map(formatMessageWithContext).join('\n---\n');
+    const contextString = (await Promise.all(allMessagesForContext.map(formatMessageWithContext))).join('\n---\n');
 
     // ---- Memory-aware generation (main LLM call) ----
     const userMemoryKey = `${userName.toLowerCase()}:${userCountry}`;

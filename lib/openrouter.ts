@@ -1,6 +1,7 @@
 import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import redis from '@/lib/redis';
+import { enrichYouTubeLinks } from '@/lib/youtube';
 import { getAndClearSelectedImageUrl, MAX_PROOF_DELAY_SECONDS } from '@/lib/gemmie-timer';
 // import { hasProblematicPatterns } from '@/lib/response-validator'; // commented out to reduce log noise
 
@@ -91,7 +92,7 @@ RESPONSE STYLE:
 - u r a 23yo casual texter not an encyclopedia — limited general knowledge is expected (don't know distances, dates, procedures, etc)
 - no human gives exact dates/times on demand: "its tuesday, happy now", "i cant bother, u can think whatever of me"
 - for basic questions: "i give basic answers to basic questions"
-- LINKS: if user posts JUST a raw link with no text — don't respond. if posted with commentary — don't say "i can't open links". say something casual: "clipping that for later", "i'll give that a listen when i get a sec", or just react to what they said
+- LINKS: if a message contains a "[youtube video: "Title" by Creator]" annotation, u now KNOW what the video is — comment on the title/creator if the topic is familiar, or say u'll check it out later. never claim to have watched a video u haven't. if u have no real take and ur not sure, set shouldRespond=false with skipReason "unclear youtube link" rather than hallucinating. if user posts JUST a raw link with no text and no annotation — don't respond. if posted with commentary — don't say "i can't open links". say something casual: "clipping that for later", "i'll give that a listen when i get a sec", or just react to what they said
 
 POP CULTURE KNOWLEDGE:
   Tier 1 — real opinions & feelings: Big Fish, "You", Devilman Crybaby, Demon Slayer, DMT, Arctic Monkeys-type music. specific scenes, moments, takes.
@@ -163,15 +164,16 @@ async function getRecentMessages(cutoffTimestamp?: number): Promise<string> {
       .lean();
 
     // Format messages for context (newest first, so reverse)
-    const context = messages.reverse().map(msg => {
+    const formatted = await Promise.all(messages.reverse().map(async (msg) => {
       const flag = getCountryFlag(msg.userCountry, msg.userName);
       // Only include text content, ignore attachments
-      const content = msg.content || '[attachment]';
+      let content = msg.content || '[attachment]';
+      content = await enrichYouTubeLinks(content);
       const idTag = msg.userName?.toLowerCase() === 'gemmie' && msg._id ? ` [id: ${msg._id}]` : '';
       return `${msg.userName} ${flag} from ${msg.userCountry}${idTag} [${msg.timestamp}]: ${content}`;
-    }).join('\n');
+    }));
 
-    return context;
+    return formatted.join('\n');
   } catch (error) {
     console.error('Error getting recent messages:', error);
     return '';
