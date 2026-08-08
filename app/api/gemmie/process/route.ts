@@ -1063,7 +1063,7 @@ If NO typo fix needed:
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+            model: 'deepseek/deepseek-v4-flash-0731',
             messages: [
               {
                 role: 'system',
@@ -1071,15 +1071,16 @@ If NO typo fix needed:
               },
               { role: 'user', content: reviewPrompt }
             ],
-            max_tokens: 1500,
+            max_tokens: 500,
             temperature: 0.0,
-            response_format: { type: "json_object" }
+            response_format: { type: "json_object" },
+            reasoning: { enabled: false }
           })
         });
 
         if (reviewResponse.ok) {
           const data = await reviewResponse.json();
-          const reviewText = data.choices[0]?.message?.content?.trim();
+          const reviewText = data?.choices?.[0]?.message?.content?.trim();
           console.log('🤖 AI review for editing:', reviewText);
 
           let editIndex: number | null = null;
@@ -1088,7 +1089,7 @@ If NO typo fix needed:
           
           try {
             console.log('🔍 Attempting to parse JSON from AI response...');
-            const jsonMatch = reviewText.match(/\{[\s\S]*\}/);
+            const jsonMatch = reviewText ? reviewText.match(/\{[\s\S]*\}/) : null;
             if (jsonMatch) {
               console.log('✅ Found JSON object in response:', jsonMatch[0]);
               const parsed = JSON.parse(jsonMatch[0]);

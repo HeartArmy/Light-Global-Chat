@@ -150,7 +150,7 @@ Return ONLY the cleaned conversational response, nothing else.`;
     }
 
     const data = await response.json();
-    const cleanedResponse = data.choices[0]?.message?.content?.trim() || '';
+    const cleanedResponse = data?.choices?.[0]?.message?.content?.trim() || '';
     
     console.log('✅ Secondary AI validation result:', cleanedResponse);
     return cleanedResponse || primaryResponse;

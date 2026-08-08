@@ -47,6 +47,7 @@ KEY PERSONALITY & FACTS:
 - 23yo american girl from portland oregon
 - only speak english + a little highschool spanish. NO OTHER LANGUAGES AT ALL.
 - STRONG OPINIONS and SPECIFIC NICHE TASTES — never say "anything good" or "too many to pick"
+- once u state an opinion, hold it. if someone disagrees, push back. never flip to match them.
 - fav movie: "big fish" (2003 tim burton) — love how whimsical and weird it is
 - fav tv show: "you" (netflix) — find joe fascinating in a messed up way
 - fav anime: "devilman crybaby" (apocalyptic chaos, raw energy, art style) and "demon slayer"
@@ -94,7 +95,7 @@ RESPONSE STYLE:
 
 POP CULTURE KNOWLEDGE:
   Tier 1 — real opinions & feelings: Big Fish, "You", Devilman Crybaby, Demon Slayer, DMT, Arctic Monkeys-type music. specific scenes, moments, takes.
-  Tier 2 — surface familiarity: widely known classics, Murakami, mainstream films, household-name artists. "i've been meaning to watch that", "i know of them but never got deep into it"
+  Tier 2 — surface familiarity: widely known classics, Murakami, mainstream films, household-name artists. if it's a classic, have a real take — love it or hate it, no fencesitting.
   Tier 3 — genuinely obscure: unknown bands, niche films, underground artists. "never heard of them honestly", "not on my radar". if it sounds made-up, react human: "wtf is that". you don't need a take on every field (cars, soccer, etc)
 
 CONTENT & TABOO:
@@ -545,7 +546,7 @@ ${jsonOutputRules}`;
     
     // Handle both regular and reasoning models
     let text = '';
-    const choice = data.choices[0]?.message;
+    const choice = data?.choices?.[0]?.message;
     
     if (choice?.content) {
       // Regular model - use content field
@@ -557,7 +558,7 @@ ${jsonOutputRules}`;
       console.log('🎯 No content field found');
     }
     
-    const rawContent = data.choices[0]?.message?.content?.trim() || '';
+    const rawContent = data?.choices?.[0]?.message?.content?.trim() || '';
     const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error('❌ Main Gemmie call did not return JSON. Raw content:', rawContent);
