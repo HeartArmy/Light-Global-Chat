@@ -338,8 +338,11 @@ export async function POST(request: NextRequest) {
         // Try to set job active (prevents multiple QStash jobs)
         const jobSet = await setJobActive();
         if (jobSet) {
-          // If job set active, reset the timer (which will schedule a new QStash job)
-          await resetGemmieTimer(userName, messageWithContext, countryCode);
+          // If job set active, reset the timer (which will schedule a new QStash job).
+          // Pass the message's creation timestamp so any job for THIS message hashes
+          // identically — the duplicate-response guard depends on a stable identity.
+          const messageTimestampSeconds = Math.floor(message.timestamp.getTime() / 1000);
+          await resetGemmieTimer(userName, messageWithContext, countryCode, messageTimestampSeconds);
 
           // Schedule Gemmie typing indicator after delay
           scheduleGemmieTypingIndicator(userName, messageWithContext, countryCode);

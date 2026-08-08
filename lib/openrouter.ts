@@ -2,7 +2,7 @@ import connectDB from '@/lib/mongodb';
 import Message from '@/models/Message';
 import redis from '@/lib/redis';
 import { getAndClearSelectedImageUrl, MAX_PROOF_DELAY_SECONDS } from '@/lib/gemmie-timer';
-import { hasProblematicPatterns } from '@/lib/response-validator';
+// import { hasProblematicPatterns } from '@/lib/response-validator'; // commented out to reduce log noise
 
 // Hard floor between any two Gemmie messages shown to the UI, no matter what path sent them
 const MIN_GEMMIE_SEND_GAP_MS = 8000;
@@ -486,7 +486,7 @@ Your task:
 
 ${jsonOutputRules}`;
 
-    console.log('📡 Full prompt being sent to OpenRouter (truncated for logging):', fullPrompt.substring(0, 500) + '...');
+    // console.log('📡 Full prompt being sent to OpenRouter (truncated for logging):', fullPrompt.substring(0, 500) + '...'); // commented out to reduce log noise
     console.log('🤖 Using model:', modelToUse, selectedImageUrl ? '(with image)' : '(text only)');
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -534,7 +534,7 @@ ${jsonOutputRules}`;
     }
 
     const data = await response.json();
-    console.log('📡 OpenRouter API response:', data);
+    // console.log('📡 OpenRouter API response:', data); // commented out to reduce log noise
     
     // Handle both regular and reasoning models
     let text = '';
@@ -550,13 +550,6 @@ ${jsonOutputRules}`;
       console.log('🎯 No content field found');
     }
     
-    // Check for problematic patterns (no extra API calls; we rely on JSON parsing + cleanup below)
-    console.log('🔍 Checking for problematic patterns...');
-    const patternCheck = hasProblematicPatterns(text);
-    if (patternCheck.hasProblem) {
-      console.log('🚨 Problematic pattern detected:', patternCheck.reason);
-    }
-
     const rawContent = data.choices[0]?.message?.content?.trim() || '';
     const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
@@ -651,6 +644,17 @@ ${jsonOutputRules}`;
         reply = '';
       }
     }
+
+    // Check for problematic patterns (log-only, never blocks/truncates).
+    // COMMENTED OUT to reduce log noise — hasProblematicPatterns diluted the logs
+    // with "too long" warnings that counted the raw JSON wrapper, not the reply.
+    // if (shouldRespond && reply.trim().length > 0) {
+    //   console.log('🔍 Checking for problematic patterns in reply...');
+    //   const patternCheck = hasProblematicPatterns(reply);
+    //   if (patternCheck.hasProblem) {
+    //     console.log('🚨 Problematic pattern detected in reply:', patternCheck.reason);
+    //   }
+    // }
 
     return {
       shouldRespond,

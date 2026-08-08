@@ -347,6 +347,9 @@ export async function POST(request: NextRequest) {
 
     console.log('🤖 Starting delayed Gemmie response process for:', userName);
 
+    const userMessageWordCount = String(userMessage || '').trim().split(/\s+/).filter(Boolean).length;
+    console.log(`💬 Responding to ${userName} (${userCountry}) — message: "${userMessage}" (${userMessageWordCount} words)`);
+
     // Get queued messages that were present before this QStash job started processing.
     const { getAndClearGemmieQueue } = await import('@/lib/gemmie-timer');
     const queuedMessagesAtStart = await getAndClearGemmieQueue();

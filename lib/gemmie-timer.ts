@@ -4,6 +4,8 @@ import redis from '@/lib/redis';
 const LAST_MESSAGE_KEY = 'gemmie:last-message-timestamp';
 // Key for tracking whether a QStash job is already scheduled
 const JOB_SCHEDULED_KEY = 'gemmie:job-scheduled';
+// Placeholder value while a QStash publish is in-flight (before the real messageId is stored)
+const JOB_SCHEDULED_PENDING_VALUE = 'pending';
 // Key for storing messages that arrive during the cooldown
 const GEMMIE_MESSAGE_QUEUE_KEY = 'gemmie:message-queue';
 // Key for tracking if a Gemmie job is active
@@ -51,10 +53,14 @@ export async function resetGemmieTimer(
   await redis.del(GEMMIE_SELECTED_IMAGE_URL_KEY);
   console.log('🗑️ Cleared previously selected image URL for new message burst.');
 
-  // Clear any existing scheduled job before scheduling a new one
-  const existingJobId = await redis.get(JOB_SCHEDULED_KEY);
-  if (existingJobId) {
-    console.log('🗑️ Clearing existing QStash job ID:', existingJobId);
+  // Clear any existing scheduled job before scheduling a new one.
+  // Cancels the REAL QStash message by ID (not just the Redis key) so a
+  // superseded job can never fire later — deleting only the key allowed stale
+  // jobs to fire, which caused duplicate responses to the same message.
+  const existingJobId = await redis.get<string>(JOB_SCHEDULED_KEY);
+  if (existingJobId && existingJobId !== JOB_SCHEDULED_PENDING_VALUE) {
+    console.log('🗑️ Cancelling existing QStash job:', existingJobId);
+    await cancelQStashMessage(existingJobId);
     await redis.del(JOB_SCHEDULED_KEY);
   }
   
@@ -131,10 +137,12 @@ async function scheduleDelayedResponse(
   const qstash = await import('@/lib/qstash');
   console.log('🚀 Attempting to schedule QStash message for:', userName, 'with delay:', GEMMIE_DELAY, 's');
 
-  // Check if a job is already scheduled to prevent duplicates
-  const existingJobId = await redis.get(JOB_SCHEDULED_KEY);
-  if (existingJobId) {
-    console.log('⚠️ QStash job already scheduled, skipping new schedule. Existing ID:', existingJobId);
+  // Atomically claim the right to schedule. SET NX means only one publisher can
+  // hold the job-scheduled key, so concurrent resets can't double-publish.
+  // The 'pending' placeholder is swapped for the real messageId after a successful publish.
+  const claim = await redis.set(JOB_SCHEDULED_KEY, JOB_SCHEDULED_PENDING_VALUE, { ex: JOB_ACTIVE_TTL, nx: true });
+  if (claim !== 'OK') {
+    console.log('⚠️ QStash job already scheduled, skipping new schedule.');
     return;
   }
 
@@ -174,6 +182,21 @@ async function scheduleDelayedResponse(
     // Ensure we don't leave a stale job scheduled key
     await redis.del(JOB_SCHEDULED_KEY);
     throw qstashError; // Re-throw to be caught by the caller
+  }
+}
+
+/**
+ * Cancels a pending QStash message by ID so a reset/superseded job never fires.
+ * Best-effort: already-delivered or already-cancelled messages simply return 0.
+ */
+async function cancelQStashMessage(messageId: string): Promise<void> {
+  try {
+    const qstash = await import('@/lib/qstash');
+    const result = await qstash.default.messages.cancel(messageId);
+    console.log('🗑️ QStash message cancelled:', messageId, JSON.stringify(result));
+  } catch (error: any) {
+    // A message that already fired or was already cancelled will error — that's fine.
+    console.error('❌ Failed to cancel QStash message:', messageId, error?.message || error);
   }
 }
 
@@ -467,9 +490,10 @@ export async function isMessageAlreadyProcessed(messageHash: string): Promise<bo
  * @returns A hash string
  */
 export function createMessageHash(userName: string, userMessage: string, timestamp: number): string {
-  // Create a simple hash from user, message, and timestamp (rounded to minute)
-  const timestampMinute = Math.floor(timestamp / 60);
-  return `${userName}:${userMessage}:${timestampMinute}`;
+  // Use the EXACT timestamp (seconds) — NOT rounded to the minute. Rounding made two
+  // jobs scheduled for the same message in different minutes hash differently, so the
+  // duplicate-response guard missed them and Gemmie replied twice to one message.
+  return `${userName}:${userMessage}:${timestamp}`;
 }
 
 /**
