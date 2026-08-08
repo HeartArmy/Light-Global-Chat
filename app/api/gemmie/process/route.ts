@@ -769,7 +769,7 @@ export async function POST(request: NextRequest) {
     // Word-based typing delay before sending the main reply (1-10s, more words = longer)
     // Keeps the typing indicator up so it feels like Gemmie is actually typing.
     const replyWords = (responseWithTypos.match(/\S+/g) || []).length;
-    const typingDelaySec = Math.max(1, Math.min(10, Math.round(replyWords * 0.4))); // ~2 words → 1s, ~25 words → 10s
+    const typingDelaySec = Math.max(1, Math.min(20, Math.round(replyWords * 1))); // ~1s per word, clamped 1-20s
     const typingDelayMs = typingDelaySec * 1000;
     await setTypingIndicator(true, 'gemmie');
     console.log(`⌨️ Gemmie typing ${replyWords} words: ~${typingDelaySec}s delay`);
