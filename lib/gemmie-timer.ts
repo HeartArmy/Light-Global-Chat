@@ -187,13 +187,13 @@ async function scheduleDelayedResponse(
 
 /**
  * Cancels a pending QStash message by ID so a reset/superseded job never fires.
- * Best-effort: already-delivered or already-cancelled messages simply return 0.
+ * Best-effort: already-delivered or already-cancelled messages simply no-op.
  */
 async function cancelQStashMessage(messageId: string): Promise<void> {
   try {
     const qstash = await import('@/lib/qstash');
-    const result = await qstash.default.messages.cancel(messageId);
-    console.log('🗑️ QStash message cancelled:', messageId, JSON.stringify(result));
+    await qstash.default.messages.delete(messageId);
+    console.log('🗑️ QStash message cancelled:', messageId);
   } catch (error: any) {
     // A message that already fired or was already cancelled will error — that's fine.
     console.error('❌ Failed to cancel QStash message:', messageId, error?.message || error);
